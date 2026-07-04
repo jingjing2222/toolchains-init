@@ -167,7 +167,7 @@ function parseRouterMode(args: string[]): RouterMode | "invalid" | null {
   return "invalid";
 }
 
-async function selectFeatures(
+export async function selectFeatures(
   availableToolchains: Awaited<ReturnType<typeof getAvailableToolchains>>,
 ): Promise<Feature[] | null> {
   const selected = await multiselect({
@@ -178,7 +178,7 @@ async function selectFeatures(
       hint: toolchain.hint,
     })),
     required: true,
-    initialValues: availableToolchains.map((toolchain) => toolchain.feature),
+    initialValues: [],
   });
 
   return isCancel(selected) ? null : (selected as Feature[]);
