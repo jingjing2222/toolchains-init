@@ -1,5 +1,11 @@
 # toolchains-init
 
+## 0.0.4
+
+### Patch Changes
+
+- 93a79aa: Preserve existing package.json fields and dependency versions when running the TanStack Router initializer, keeping only newly added dependencies from the official CLI output.
+
 ## 0.0.3
 
 ### Patch Changes
