@@ -2,7 +2,10 @@ import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { normalizeOxlintConfig } from "../src/stacks/oxlint";
+import {
+  normalizeOxlintConfig,
+  normalizeOxlintConfigForPackageManager,
+} from "../src/stacks/oxlint";
 
 describe("oxlint stack", () => {
   it("removes node_modules schema for PnP projects", async () => {
@@ -17,6 +20,32 @@ describe("oxlint stack", () => {
     const cwd = await createProject();
 
     await normalizeOxlintConfig(cwd, false);
+
+    expect((await readConfig(cwd)).$schema).toBe("./node_modules/oxlint/configuration_schema.json");
+  });
+
+  it("removes node_modules schema when Yarn has no nodeLinker override", async () => {
+    const cwd = await createProject();
+
+    await normalizeOxlintConfigForPackageManager(cwd, "yarn");
+
+    expect(await readConfig(cwd)).not.toHaveProperty("$schema");
+  });
+
+  it("removes node_modules schema when nodeLinker is PnP", async () => {
+    const cwd = await createProject();
+    await writeFile(path.join(cwd, ".yarnrc.yml"), "nodeLinker: pnp\n");
+
+    await normalizeOxlintConfigForPackageManager(cwd, "yarn");
+
+    expect(await readConfig(cwd)).not.toHaveProperty("$schema");
+  });
+
+  it("keeps node_modules schema for Yarn node_modules projects", async () => {
+    const cwd = await createProject();
+    await writeFile(path.join(cwd, ".yarnrc.yml"), "nodeLinker: node-modules\n");
+
+    await normalizeOxlintConfigForPackageManager(cwd, "yarn");
 
     expect((await readConfig(cwd)).$schema).toBe("./node_modules/oxlint/configuration_schema.json");
   });
