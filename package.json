@@ -1,7 +1,7 @@
 {
   "name": "toolchains-init",
   "version": "0.0.4",
-  "description": "Initialize an opinionated Vite React toolchain in a fresh repository.",
+  "description": "Run setup commands for selected toolchains.",
   "keywords": [
     "cli",
     "react",

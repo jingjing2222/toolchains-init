@@ -15,10 +15,13 @@ describe("TanStack Router stack", () => {
           build: "vite build",
         },
         dependencies: {
+          "@tanstack/router-plugin": "^1.132.0",
+          "@toss/tds-mobile": "latest",
           react: "^19.0.0",
         },
         devDependencies: {
           "@vitejs/plugin-react": "^5.0.0",
+          eslint: "^9.0.0",
           vite: "^7.0.0",
         },
       },
@@ -38,6 +41,7 @@ describe("TanStack Router stack", () => {
         },
         devDependencies: {
           "@tanstack/router-cli": "latest",
+          "@tanstack/router-plugin": "latest",
           "@vitejs/plugin-react": "^6.0.0",
           vite: "^8.0.0",
         },
@@ -56,11 +60,15 @@ describe("TanStack Router stack", () => {
       },
       dependencies: {
         "@tanstack/react-router": "latest",
+        "@tanstack/router-plugin": "^1.132.0",
+        "@toss/tds-mobile": "latest",
         react: "^19.0.0",
       },
       devDependencies: {
         "@tanstack/router-cli": "latest",
+        "@tanstack/router-plugin": "latest",
         "@vitejs/plugin-react": "^5.0.0",
+        eslint: "^9.0.0",
         vite: "^7.0.0",
       },
     });
