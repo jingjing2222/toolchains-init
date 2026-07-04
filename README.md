@@ -18,7 +18,9 @@ cd my-app
 Then run `toolchains-init`:
 
 ```bash
+npx toolchains-init
 yarn dlx toolchains-init
+pnpm dlx toolchains-init
 ```
 
 You will get an interactive prompt for the toolchains to add.
@@ -28,7 +30,9 @@ You will get an interactive prompt for the toolchains to add.
 In a monorepo, run from the workspace root and point at the app package:
 
 ```bash
+npx toolchains-init --target apps/web
 yarn dlx toolchains-init --target apps/web
+pnpm dlx toolchains-init --target apps/web
 ```
 
 All files, installs, and official initializers run in the target directory. The workspace root is left alone unless it is the target.
