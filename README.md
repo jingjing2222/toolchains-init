@@ -8,14 +8,7 @@ Use it when you already have a new Vite React app and want to add router, E2E, f
 
 ## Quick Start
 
-Create a Vite React app first:
-
-```bash
-npm create vite@latest my-app -- --template react-ts
-cd my-app
-```
-
-Then run `toolchains-init`:
+Run `toolchains-init` from the app directory:
 
 ```bash
 npx toolchains-init
