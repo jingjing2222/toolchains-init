@@ -1,5 +1,15 @@
 # toolchains-init
 
+## 0.0.3
+
+### Patch Changes
+
+- f3692d6: Detect Yarn PnP projects from target project files so oxlint schema cleanup and Yarn SDK setup run correctly when using `yarn dlx`.
+
+  Change the interactive prompt defaults so no toolchains are preselected.
+
+- 3ab25f1: Simplify the README quick start so it starts from an existing app directory instead of showing Vite app creation steps.
+
 ## 0.0.2
 
 ### Patch Changes
