@@ -7,13 +7,16 @@ import { describe, expect, it } from "vitest";
 const cliPath = path.resolve("dist/cli.mjs");
 
 describe("toolchains-init CLI", () => {
-  it("prints the package version", () => {
+  it("prints the package version", async () => {
     const result = spawnSync(process.execPath, [cliPath, "--version"], {
       encoding: "utf8",
     });
+    const packageJson = JSON.parse(await readFile(path.resolve("package.json"), "utf8")) as {
+      version: string;
+    };
 
     expect(result.status).toBe(0);
-    expect(result.stdout.trim()).toBe("0.0.0");
+    expect(result.stdout.trim()).toBe(packageJson.version);
   });
 
   it("prints help", () => {
