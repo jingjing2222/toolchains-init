@@ -38,7 +38,7 @@
     "registry": "https://registry.npmjs.org/"
   },
   "scripts": {
-    "build": "tsdown --config-loader tsx",
+    "build": "tsdown",
     "changeset": "changeset",
     "dev": "tsx src/cli.ts",
     "format": "oxfmt --write",
@@ -61,7 +61,7 @@
     "oxfmt": "^0.57.0",
     "oxlint": "^1.72.0",
     "tsdown": "^0.22.3",
-    "tsx": "^4.21.0",
+    "tsx": "^4.23.0",
     "typescript": "^5.9.3",
     "vitest": "^4.0.16"
   },
