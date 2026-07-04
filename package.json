@@ -1,0 +1,78 @@
+{
+  "name": "toolchains-init",
+  "version": "0.0.0",
+  "description": "Initialize an opinionated Vite React toolchain in a fresh repository.",
+  "keywords": [
+    "cli",
+    "react",
+    "scaffold",
+    "toolchain",
+    "vite"
+  ],
+  "homepage": "https://github.com/jingjing2222/toolchains-init#readme",
+  "bugs": {
+    "url": "https://github.com/jingjing2222/toolchains-init/issues"
+  },
+  "license": "MIT",
+  "author": "jingjing2222 <hj.jingjing2222@gmail.com> (https://github.com/jingjing2222)",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jingjing2222/toolchains-init.git"
+  },
+  "bin": {
+    "toolchains-init": "./dist/cli.mjs"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "type": "module",
+  "exports": {
+    ".": "./dist/index.mjs",
+    "./cli": "./dist/cli.mjs",
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "scripts": {
+    "build": "tsdown --config-loader tsx",
+    "changeset": "changeset",
+    "dev": "tsx src/cli.ts",
+    "format": "oxfmt --write",
+    "format:check": "oxfmt --check",
+    "lint": "oxlint --deny-warnings",
+    "pack:check": "npm pack --dry-run",
+    "prepack": "yarn build",
+    "release": "yarn build && changeset publish",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "verify": "yarn format:check && yarn lint && yarn typecheck && yarn build && yarn test && yarn pack:check"
+  },
+  "dependencies": {
+    "@clack/prompts": "^0.11.0",
+    "picocolors": "^1.1.1"
+  },
+  "devDependencies": {
+    "@changesets/cli": "^2.31.0",
+    "@types/node": "^24.10.3",
+    "oxfmt": "^0.57.0",
+    "oxlint": "^1.72.0",
+    "tsdown": "^0.22.3",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.16"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "packageManager": "yarn@4.17.0",
+  "inlinedDependencies": {
+    "@clack/core": "0.5.0",
+    "@clack/prompts": "0.11.0",
+    "picocolors": "1.1.1",
+    "sisteransi": "1.0.5"
+  }
+}

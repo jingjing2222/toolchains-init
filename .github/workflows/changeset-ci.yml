@@ -1,0 +1,30 @@
+name: Changeset
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  verify:
+    name: Check Changeset
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Install dependencies
+        run: yarn install
+
+      - name: Check Changeset
+        if: ${{ !startsWith(github.head_ref, 'changeset-release/') }}
+        run: yarn changeset status --since=origin/${{ github.base_ref }}

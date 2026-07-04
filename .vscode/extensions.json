@@ -1,0 +1,4 @@
+{
+  "recommendations": ["arcanis.vscode-zipfs", "oxc.oxc-vscode"],
+  "unwantedRecommendations": ["biomejs.biome", "dbaeumer.vscode-eslint", "esbenp.prettier-vscode"]
+}
