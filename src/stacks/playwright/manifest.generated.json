@@ -9,7 +9,8 @@
       "packageManagers": {
         "npm": ["npm", "init", "playwright@{version}", "--"],
         "pnpm": ["pnpm", "create", "playwright@{version}"],
-        "yarn": ["yarn", "create", "playwright@{version}"]
+        "yarn": ["yarn", "create", "playwright@{version}"],
+        "bun": ["bun", "create", "playwright@{version}"]
       },
       "flags": {
         "browser": {

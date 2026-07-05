@@ -7,6 +7,9 @@ describe("package manager detection", () => {
       "pnpm",
     );
     expect(detectPackageManager({ npm_config_user_agent: "npm/11.6.4 node/v24.11.1" })).toBe("npm");
+    expect(detectPackageManager({ npm_config_user_agent: "bun/1.3.4 npm/? node/v24.11.1" })).toBe(
+      "bun",
+    );
     expect(detectPackageManager({ npm_config_user_agent: "yarn/4.17.0 npm/? node/v24.11.1" })).toBe(
       "yarn",
     );
@@ -17,6 +20,7 @@ describe("package manager detection", () => {
     expect(detectPackageManager({ npm_execpath: "/Users/me/.yarn/releases/yarn-4.17.0.cjs" })).toBe(
       "yarn",
     );
+    expect(detectPackageManager({ npm_execpath: "/Users/me/.bun/bin/bun" })).toBe("bun");
     expect(
       detectPackageManager({ npm_execpath: "/usr/local/lib/node_modules/npm/bin/npm-cli.js" }),
     ).toBe("npm");

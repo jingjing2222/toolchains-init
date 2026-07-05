@@ -9,7 +9,8 @@
       "packageManagers": {
         "npm": ["npx", "@biomejs/biome@{version}", "init"],
         "pnpm": ["pnpm", "dlx", "@biomejs/biome@{version}", "init"],
-        "yarn": ["yarn", "dlx", "@biomejs/biome@{version}", "init"]
+        "yarn": ["yarn", "dlx", "@biomejs/biome@{version}", "init"],
+        "bun": ["bunx", "@biomejs/biome@{version}", "init"]
       },
       "flags": {
         "jsonc": {

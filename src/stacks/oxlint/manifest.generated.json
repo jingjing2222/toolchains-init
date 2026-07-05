@@ -9,7 +9,8 @@
       "packageManagers": {
         "npm": ["npx", "oxlint@{version}"],
         "pnpm": ["pnpm", "dlx", "oxlint@{version}"],
-        "yarn": ["yarn", "dlx", "oxlint@{version}"]
+        "yarn": ["yarn", "dlx", "oxlint@{version}"],
+        "bun": ["bunx", "oxlint@{version}"]
       },
       "flags": {
         "config": {

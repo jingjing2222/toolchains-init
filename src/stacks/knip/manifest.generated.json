@@ -9,7 +9,8 @@
       "packageManagers": {
         "npm": ["npx", "knip@{version}"],
         "pnpm": ["pnpm", "dlx", "knip@{version}"],
-        "yarn": ["yarn", "dlx", "knip@{version}"]
+        "yarn": ["yarn", "dlx", "knip@{version}"],
+        "bun": ["bunx", "knip@{version}"]
       },
       "flags": {
         "help": {

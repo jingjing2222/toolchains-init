@@ -238,5 +238,11 @@ async function confirmOverwrite(files: string[]) {
 }
 
 function buildCheckCommand(packageManager: string) {
-  return packageManager === "npm" ? "npm run build" : `${packageManager} build`;
+  if (packageManager === "npm") {
+    return "npm run build";
+  }
+  if (packageManager === "bun") {
+    return "bun run build";
+  }
+  return `${packageManager} build`;
 }

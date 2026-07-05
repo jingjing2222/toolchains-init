@@ -24,7 +24,7 @@ Then choose what you want to add from the interactive prompt.
 - **Pick only what you need**: router, E2E, formatter, linter, dead-code checks, release tooling, or editor SDKs.
 - **Fresh app friendly**: designed for newly scaffolded Vite React projects.
 - **Monorepo support**: initialize an app package from the workspace root with `--target`.
-- **Package-manager aware**: works with npm, yarn, and pnpm.
+- **Package-manager aware**: works with npm, yarn, pnpm, and Bun.
 - **Overwrite warnings**: shows files that may be replaced before continuing.
 
 ## What It Can Add

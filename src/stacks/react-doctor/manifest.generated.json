@@ -9,7 +9,8 @@
       "packageManagers": {
         "npm": ["npx", "react-doctor@{version}"],
         "pnpm": ["pnpm", "dlx", "react-doctor@{version}"],
-        "yarn": ["yarn", "dlx", "react-doctor@{version}"]
+        "yarn": ["yarn", "dlx", "react-doctor@{version}"],
+        "bun": ["bunx", "react-doctor@{version}"]
       },
       "flags": {
         "version": {

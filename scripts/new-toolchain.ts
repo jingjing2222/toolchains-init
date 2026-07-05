@@ -257,7 +257,7 @@ function assertStackDir(value: string) {
 }
 
 function assertPackageManagers(value: string[] | undefined) {
-  const allowed = new Set(["npm", "pnpm", "yarn"]);
+  const allowed = new Set(["npm", "pnpm", "yarn", "bun"]);
   const invalid = value?.find((manager) => !allowed.has(manager));
   if (invalid != null) {
     throw new Error(`Invalid package manager: ${invalid}`);
@@ -360,7 +360,7 @@ Options:
   --command-id <id>            Manifest command id override.
   --subcommand <cmd|none>      Runtime subcommand override.
   --dist-tag <tag>             npm dist-tag. Defaults to latest.
-  --package-managers <list>    Comma list: npm,pnpm,yarn.
+  --package-managers <list>    Comma list: npm,pnpm,yarn,bun.
   --runner <auto|create|dlx>   Package manager command inference mode.
   --no-help                    Skip CLI help probing.
 `);
