@@ -1,22 +1,30 @@
 import { execFile } from "node:child_process";
-import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
 import type { CliCommandManifest } from "../src/core/cli-command-manifest";
 import { defineCliCommandManifest } from "../src/core/cli-command-manifest";
+import type { PackageManager } from "../src/core/package-manager";
+import type {
+  PackageManagerCommandTemplates,
+  ToolchainAdapter,
+} from "../src/core/toolchain-adapter";
+import { toolchains } from "../src/stacks/index";
 
 type CliHelpSource = Extract<CliCommandManifest["sources"][number], { kind: "cli-help" }>;
 
 const execFileAsync = promisify(execFile);
 const shouldCheck = process.argv.includes("--check");
-const manifestPaths = await findManifestPaths();
+const manifestInputs = toolchains.flatMap((toolchain) =>
+  toolchain.cli == null ? [] : [createManifestInput(toolchain)],
+);
 
 const generatedFiles: GeneratedFile[] = [];
 
-for (const manifestPath of manifestPaths) {
-  const manifest = await refreshManifest(manifestPath);
-  generatedFiles.push(renderManifestFile(manifestPath, manifest));
+for (const input of manifestInputs) {
+  const manifest = await createManifest(input);
+  generatedFiles.push(...renderManifestFiles(input, manifest));
 }
 
 if (shouldCheck) {
@@ -31,60 +39,83 @@ type GeneratedFile = {
   content: string;
 };
 
-async function findManifestPaths() {
-  const stacksDir = path.resolve("src", "stacks");
-  const entries = await readdir(stacksDir, { withFileTypes: true });
-  const paths = entries
-    .filter((entry) => entry.isDirectory())
-    .map((entry) => path.join(stacksDir, entry.name, "manifest.generated.json"))
-    .sort();
+type ManifestInput = {
+  commandId: string;
+  docs: readonly { url: string; confidence: "low" | "medium" | "high" }[];
+  distTag: string;
+  exportName: string;
+  help: false | undefined;
+  packageManagers: readonly PackageManager[];
+  packageName: string;
+  runner: NonNullable<NonNullable<ToolchainAdapter["cli"]>["runner"]>;
+  stackDir: string;
+  subcommand: string | null;
+  tool: string;
+};
 
-  if (paths.length === 0) {
-    throw new Error("No CLI manifest JSON files found.");
+function createManifestInput(toolchain: ToolchainAdapter): ManifestInput {
+  const cli = toolchain.cli;
+  if (cli == null) {
+    throw new Error(`Missing CLI definition for ${toolchain.feature}`);
   }
 
-  return paths;
+  const tool = cli.tool ?? kebabCase(toolchain.feature);
+  return {
+    commandId: cli.commandId ?? cli.command,
+    distTag: cli.distTag ?? "latest",
+    docs: cli.docs ?? [],
+    exportName: cli.exportName ?? `${toolchain.feature}CliManifest`,
+    help: cli.help,
+    packageManagers: cli.packageManagers ?? ["npm", "pnpm", "yarn"],
+    packageName: cli.package,
+    runner: cli.runner ?? "auto",
+    stackDir: cli.stackDir ?? tool,
+    subcommand: cli.subcommand === undefined ? cli.command : cli.subcommand,
+    tool,
+  };
 }
 
-async function refreshManifest(manifestPath: string): Promise<CliCommandManifest> {
-  const current = defineCliCommandManifest(JSON.parse(await readFile(manifestPath, "utf8")));
-  const npmSource = current.sources.find((source) => source.kind === "npm");
-  if (npmSource == null) {
-    return current;
-  }
-
-  const { publishedAt, version } = await resolvePackageVersion(
-    npmSource.package,
-    npmSource.distTag ?? "latest",
-  );
-  const next = defineCliCommandManifest({
-    ...current,
-    package: npmSource.package,
+async function createManifest(input: ManifestInput): Promise<CliCommandManifest> {
+  const { publishedAt, version } = await resolvePackageVersion(input.packageName, input.distTag);
+  const manifest = defineCliCommandManifest({
+    schemaVersion: "toolchains-init/cli-command-manifest/v1",
+    tool: input.tool,
+    package: input.packageName,
     version,
-    sources: current.sources.map((source) => {
-      if (source.kind === "npm") {
-        return {
-          ...source,
-          version,
-          resolvedAt: publishedAt,
-        };
-      }
-      if (source.kind === "cli-help") {
-        return {
-          ...source,
-          command: source.command.map((token) => replaceVersion(token, current.version, version)),
-        };
-      }
-      return source;
-    }),
+    commands: [
+      {
+        id: input.commandId,
+        packageManagers: resolvePackageManagerCommands(input, version),
+        interactive: true,
+      },
+    ],
+    sources: [
+      {
+        kind: "npm",
+        package: input.packageName,
+        version,
+        distTag: input.distTag,
+        resolvedAt: publishedAt,
+      },
+      ...(input.help === false
+        ? []
+        : [
+            {
+              kind: "cli-help" as const,
+              command: createHelpCommand(input, version),
+              commandId: input.commandId,
+            },
+          ]),
+      ...(input.docs?.map((doc) => ({ kind: "docs" as const, ...doc })) ?? []),
+    ],
   });
 
   return defineCliCommandManifest({
-    ...next,
+    ...manifest,
     commands: await Promise.all(
-      next.commands.map(async (command) => ({
+      manifest.commands.map(async (command) => ({
         ...command,
-        flags: await deriveFlagsForCommand(next, command.id),
+        flags: await deriveFlagsForCommand(manifest, command.id),
       })),
     ),
   });
@@ -134,11 +165,18 @@ async function runHelpCommand(command: readonly string[]) {
   return `${stdout}\n${stderr}`;
 }
 
-function renderManifestFile(manifestPath: string, manifest: CliCommandManifest) {
-  return {
-    path: manifestPath,
-    content: `${JSON.stringify(manifest, null, 2)}\n`,
-  };
+function renderManifestFiles(input: ManifestInput, manifest: CliCommandManifest) {
+  const stackDir = path.resolve("src", "stacks", input.stackDir);
+  return [
+    {
+      path: path.join(stackDir, "manifest.generated.json"),
+      content: `${JSON.stringify(manifest, null, 2)}\n`,
+    },
+    {
+      path: path.join(stackDir, "manifest.ts"),
+      content: renderManifestWrapper(input.exportName),
+    },
+  ];
 }
 
 async function checkGeneratedFiles(files: readonly GeneratedFile[]) {
@@ -204,10 +242,6 @@ async function formatInTempDir(files: readonly GeneratedFile[]) {
   } finally {
     await rm(tempDir, { force: true, recursive: true });
   }
-}
-
-function replaceVersion(token: string, previousVersion: string, nextVersion: string) {
-  return token.replaceAll(previousVersion, nextVersion);
 }
 
 async function deriveFlagsForCommand(manifest: CliCommandManifest, commandId: string) {
@@ -316,4 +350,77 @@ function isCliHelpForCommand(
     source.kind === "cli-help" &&
     (source.commandId === commandId || (source.commandId == null && commandCount === 1))
   );
+}
+
+function resolvePackageManagerCommands(
+  input: ManifestInput,
+  version: string,
+): PackageManagerCommandTemplates {
+  const runner = input.runner === "auto" ? inferRunner(input.packageName) : input.runner;
+  if (typeof runner === "object") {
+    return Object.fromEntries(
+      input.packageManagers.flatMap((packageManager) => {
+        const template = runner[packageManager];
+        return template == null
+          ? []
+          : [[packageManager, template.map((token) => token.replaceAll(version, "{version}"))]];
+      }),
+    );
+  }
+
+  if (runner === "create") {
+    const initializer = getCreateInitializerName(input.packageName);
+    return pickPackageManagers(input.packageManagers, {
+      npm: ["npm", "init", `${initializer}@{version}`, "--"],
+      pnpm: ["pnpm", "create", `${initializer}@{version}`],
+      yarn: ["yarn", "create", `${initializer}@{version}`],
+    });
+  }
+
+  const subcommand = input.subcommand == null ? [] : [input.subcommand];
+  return pickPackageManagers(input.packageManagers, {
+    npm: ["npx", `${input.packageName}@{version}`, ...subcommand],
+    pnpm: ["pnpm", "dlx", `${input.packageName}@{version}`, ...subcommand],
+    yarn: ["yarn", "dlx", `${input.packageName}@{version}`, ...subcommand],
+  });
+}
+
+function createHelpCommand(input: ManifestInput, version: string) {
+  const subcommand = input.subcommand == null ? [] : [input.subcommand];
+  return ["npx", "--yes", `${input.packageName}@${version}`, ...subcommand, "--help"];
+}
+
+function inferRunner(packageName: string) {
+  return getPackageNameWithoutScope(packageName).startsWith("create-") ? "create" : "dlx";
+}
+
+function getCreateInitializerName(packageName: string) {
+  return getPackageNameWithoutScope(packageName).replace(/^create-/, "");
+}
+
+function getPackageNameWithoutScope(packageName: string) {
+  return packageName.split("/").at(-1) ?? packageName;
+}
+
+function pickPackageManagers(
+  packageManagers: readonly PackageManager[],
+  templates: Required<PackageManagerCommandTemplates>,
+) {
+  return Object.fromEntries(
+    packageManagers.map((packageManager) => [packageManager, templates[packageManager]]),
+  );
+}
+
+function renderManifestWrapper(exportName: string) {
+  return `// Generated by scripts/update-cli-manifests.ts. Do not edit directly.
+import { defineCliCommandManifest } from "../../core/cli-command-manifest";
+import ${exportName}Data from "./manifest.generated.json";
+
+export { ${exportName}Data };
+export const ${exportName} = defineCliCommandManifest(${exportName}Data);
+`;
+}
+
+function kebabCase(value: string) {
+  return value.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`);
 }

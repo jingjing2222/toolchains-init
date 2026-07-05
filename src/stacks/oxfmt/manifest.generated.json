@@ -7,9 +7,9 @@
     {
       "id": "init",
       "packageManagers": {
-        "npm": ["npx", "oxfmt@{version}"],
-        "pnpm": ["pnpm", "dlx", "oxfmt@{version}"],
-        "yarn": ["yarn", "dlx", "oxfmt@{version}"]
+        "npm": ["npx", "oxfmt@{version}", "init"],
+        "pnpm": ["pnpm", "dlx", "oxfmt@{version}", "init"],
+        "yarn": ["yarn", "dlx", "oxfmt@{version}", "init"]
       },
       "flags": {
         "init": {
@@ -88,7 +88,7 @@
           "supported": true
         }
       },
-      "interactive": false
+      "interactive": true
     }
   ],
   "sources": [
@@ -101,7 +101,8 @@
     },
     {
       "kind": "cli-help",
-      "command": ["npx", "--yes", "oxfmt@0.57.0", "--help"]
+      "command": ["npx", "--yes", "oxfmt@0.57.0", "init", "--help"],
+      "commandId": "init"
     }
   ]
 }

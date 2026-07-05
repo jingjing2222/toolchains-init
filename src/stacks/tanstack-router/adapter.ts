@@ -2,15 +2,21 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { resolveCliCommand } from "../../core/cli-command-manifest";
 import { runCommand } from "../../core/run-command";
-import type { ToolchainAdapter } from "../../core/toolchain-adapter";
+import { defineToolchain } from "../../core/toolchain-adapter";
 import { tanStackRouterCliManifest } from "./manifest";
 
 type JsonObject = Record<string, unknown>;
 
-export const tanStackRouter: ToolchainAdapter = {
+export const tanStackRouter = defineToolchain({
   feature: "router",
   label: "TanStack Router",
   hint: "File-Based Routing or Code-Based Routing",
+  package: "@tanstack/cli",
+  command: "create-router",
+  subcommand: "create",
+  tool: "tanstack-router",
+  stackDir: "tanstack-router",
+  exportName: "tanStackRouterCliManifest",
   async run({ cwd, packageManager, options, yes }) {
     const command = resolveCliCommand(
       tanStackRouterCliManifest,
@@ -52,7 +58,7 @@ export const tanStackRouter: ToolchainAdapter = {
       await restorePackageJsonWithDependencyChanges(cwd, packageJsonBefore);
     }
   },
-};
+});
 
 export async function restorePackageJsonWithDependencyChanges(
   cwd: string,

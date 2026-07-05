@@ -6,7 +6,7 @@ export type PackageJson = {
   devDependencies?: Record<string, string>;
 };
 
-export type Feature =
+export type BuiltInFeature =
   | "router"
   | "playwright"
   | "oxfmt"
@@ -16,6 +16,7 @@ export type Feature =
   | "reactDoctor"
   | "changesets"
   | "yarnSdks";
+export type Feature = BuiltInFeature | (string & {});
 export type RouterMode = "code" | "file";
 
 export type ToolchainOptions = {

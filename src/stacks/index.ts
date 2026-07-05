@@ -1,18 +1,22 @@
 import type { CliCommandManifest } from "../core/cli-command-manifest";
-import { biome, biomeCliManifest, biomeCliManifestData } from "./biome";
-import { changesets, changesetsCliManifest, changesetsCliManifestData } from "./changesets";
-import { knip, knipCliManifest } from "./knip";
-import { knipCliManifestData } from "./knip";
-import { oxfmt, oxfmtCliManifest, oxfmtCliManifestData } from "./oxfmt";
-import { oxlint, oxlintCliManifest, oxlintCliManifestData } from "./oxlint";
-import { playwright, playwrightCliManifest, playwrightCliManifestData } from "./playwright";
-import { reactDoctor, reactDoctorCliManifest, reactDoctorCliManifestData } from "./react-doctor";
+import { biome, biomeCliManifest, biomeCliManifestData } from "./biome/index";
+import { changesets, changesetsCliManifest, changesetsCliManifestData } from "./changesets/index";
+import { knip, knipCliManifest } from "./knip/index";
+import { knipCliManifestData } from "./knip/index";
+import { oxfmt, oxfmtCliManifest, oxfmtCliManifestData } from "./oxfmt/index";
+import { oxlint, oxlintCliManifest, oxlintCliManifestData } from "./oxlint/index";
+import { playwright, playwrightCliManifest, playwrightCliManifestData } from "./playwright/index";
+import {
+  reactDoctor,
+  reactDoctorCliManifest,
+  reactDoctorCliManifestData,
+} from "./react-doctor/index";
 import {
   tanStackRouter,
   tanStackRouterCliManifest,
   tanStackRouterCliManifestData,
-} from "./tanstack-router";
-import { yarnSdks, yarnSdksCliManifest, yarnSdksCliManifestData } from "./yarn-sdks";
+} from "./tanstack-router/index";
+import { yarnSdks, yarnSdksCliManifest, yarnSdksCliManifestData } from "./yarn-sdks/index";
 
 export const toolchains = [
   tanStackRouter,

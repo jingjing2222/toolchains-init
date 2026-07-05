@@ -171,7 +171,8 @@
     },
     {
       "kind": "cli-help",
-      "command": ["npx", "--yes", "react-doctor@0.7.1", "--help"]
+      "command": ["npx", "--yes", "react-doctor@0.7.1", "--help"],
+      "commandId": "check"
     }
   ]
 }

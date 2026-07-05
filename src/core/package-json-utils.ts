@@ -1,3 +1,4 @@
+import type { CliCommandManifest } from "./cli-command-manifest";
 import type { PackageJson } from "./types";
 
 export function ensureTypecheckScript(packageJson: PackageJson) {
@@ -19,4 +20,8 @@ export function setScript(
 export function setDevDependency(packageJson: PackageJson, name: string, version: string) {
   packageJson.devDependencies ??= {};
   packageJson.devDependencies[name] ??= version;
+}
+
+export function setManifestDevDependency(packageJson: PackageJson, manifest: CliCommandManifest) {
+  setDevDependency(packageJson, manifest.package, manifest.version);
 }

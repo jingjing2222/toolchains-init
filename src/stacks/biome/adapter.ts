@@ -4,20 +4,23 @@ import {
   addZedSettings,
 } from "../../core/editor-settings";
 import { resolveCliCommand } from "../../core/cli-command-manifest";
-import { setDevDependency } from "../../core/package-json-utils";
+import { setManifestDevDependency } from "../../core/package-json-utils";
 import type { PackageManager } from "../../core/package-manager";
 import { runCommand } from "../../core/run-command";
-import type { ToolchainAdapter } from "../../core/toolchain-adapter";
+import { defineToolchain } from "../../core/toolchain-adapter";
 import { biomeCliManifest } from "./manifest";
 
 const biomeVsCodeLanguages = ["javascript", "javascriptreact", "typescript", "typescriptreact"];
 
-export const biome: ToolchainAdapter = {
+export const biome = defineToolchain({
   feature: "biome",
   label: "Biome",
   hint: "Formatter and linter setup through Biome CLI",
+  package: "@biomejs/biome",
+  command: "init",
+  docs: [{ url: "https://biomejs.dev/reference/configuration/", confidence: "high" }],
   updatePackageJson({ packageJson }) {
-    setDevDependency(packageJson, "@biomejs/biome", "2.5.2");
+    setManifestDevDependency(packageJson, biomeCliManifest);
   },
   async afterWrite({ cwd, options }) {
     await addVsCodeExtensionRecommendations(cwd, ["biomejs.biome"]);
@@ -46,7 +49,7 @@ export const biome: ToolchainAdapter = {
     }
     return notes;
   },
-};
+});
 
 function getBiomeVsCodeSettings(hasOxfmt: boolean) {
   if (hasOxfmt) {

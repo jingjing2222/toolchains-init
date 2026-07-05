@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { resolveCliCommand } from "../src/core/cli-command-manifest";
+import { defineToolchain } from "../src/core/toolchain-adapter";
 import { cliCommandManifestData, cliCommandManifests, getCliCommandManifest } from "../src/stacks";
+import packageJson from "../package.json" with { type: "json" };
 
 const playwrightCliManifest = getCliCommandManifest("playwright");
 if (playwrightCliManifest == null) {
@@ -72,6 +74,48 @@ describe("CLI command manifests", () => {
     expect(resolveCliCommand(playwrightCliManifest, "init", "yarn")).toEqual({
       bin: "yarn",
       args: ["create", "playwright@1.17.139"],
+    });
+  });
+
+  it("infers package-manager commands from the CLI package shape", () => {
+    const biomeCliManifest = getCliCommandManifest("biome");
+    const knipCliManifest = getCliCommandManifest("knip");
+    const yarnSdksCliManifest = getCliCommandManifest("yarn-sdks");
+
+    expect(biomeCliManifest?.commands[0]?.packageManagers).toMatchObject({
+      npm: ["npx", "@biomejs/biome@{version}", "init"],
+      pnpm: ["pnpm", "dlx", "@biomejs/biome@{version}", "init"],
+      yarn: ["yarn", "dlx", "@biomejs/biome@{version}", "init"],
+    });
+    expect(knipCliManifest?.commands[0]?.packageManagers).toMatchObject({
+      npm: ["npx", "knip@{version}"],
+      pnpm: ["pnpm", "dlx", "knip@{version}"],
+      yarn: ["yarn", "dlx", "knip@{version}"],
+    });
+    expect(yarnSdksCliManifest?.commands[0]?.packageManagers).toEqual({
+      yarn: ["yarn", "dlx", "@yarnpkg/sdks@{version}", "vscode"],
+    });
+    expect(yarnSdksCliManifest?.sources.map((source) => source.kind)).toEqual(["npm"]);
+  });
+
+  it("keeps CLI identity declarations minimal in stack adapters", () => {
+    const hotUpdater = defineToolchain({
+      feature: "hotUpdater",
+      label: "Hot Updater",
+      package: "hot-updater",
+      command: "init",
+    });
+
+    expect(hotUpdater.hint).toBe("");
+    expect(hotUpdater.cli).toMatchObject({
+      package: "hot-updater",
+      command: "init",
+    });
+  });
+
+  it("exports raw generated JSON manifests as package subpaths", () => {
+    expect(packageJson.exports).toMatchObject({
+      "./stacks/*/manifest.generated.json": "./dist/stacks/*/manifest.generated.json",
     });
   });
 

@@ -11,7 +11,7 @@
         "pnpm": ["pnpm", "dlx", "@changesets/cli@{version}", "init"],
         "yarn": ["yarn", "dlx", "@changesets/cli@{version}", "init"]
       },
-      "interactive": false
+      "interactive": true
     }
   ],
   "sources": [
@@ -24,7 +24,8 @@
     },
     {
       "kind": "cli-help",
-      "command": ["npx", "--yes", "@changesets/cli@2.31.0", "--help"]
+      "command": ["npx", "--yes", "@changesets/cli@2.31.0", "init", "--help"],
+      "commandId": "init"
     }
   ]
 }

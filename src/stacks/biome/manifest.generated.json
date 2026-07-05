@@ -12,18 +12,18 @@
         "yarn": ["yarn", "dlx", "@biomejs/biome@{version}", "init"]
       },
       "flags": {
+        "jsonc": {
+          "type": "boolean",
+          "cliName": "--jsonc",
+          "supported": true
+        },
         "help": {
           "type": "boolean",
           "cliName": "--help",
           "supported": true
-        },
-        "version": {
-          "type": "boolean",
-          "cliName": "--version",
-          "supported": true
         }
       },
-      "interactive": false
+      "interactive": true
     }
   ],
   "sources": [
@@ -36,7 +36,8 @@
     },
     {
       "kind": "cli-help",
-      "command": ["npx", "--yes", "@biomejs/biome@2.5.2", "--help"]
+      "command": ["npx", "--yes", "@biomejs/biome@2.5.2", "init", "--help"],
+      "commandId": "init"
     },
     {
       "kind": "docs",

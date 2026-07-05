@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { updatePackageJson } from "../src/core/package-json";
 import type { PackageJson } from "../src/core/types";
+import { biomeCliManifest } from "../src/stacks/biome";
+import { changesetsCliManifest } from "../src/stacks/changesets";
+import { oxfmtCliManifest } from "../src/stacks/oxfmt";
+import { oxlintCliManifest } from "../src/stacks/oxlint";
 
 describe("package.json updates", () => {
   it("adds only the selected quality tools", () => {
@@ -12,8 +16,8 @@ describe("package.json updates", () => {
     expect(updated.scripts?.knip).toBe("npx knip@6.24.0");
     expect(updated.scripts?.["react-doctor"]).toBeUndefined();
     expect(updated.scripts?.verify).toBeUndefined();
-    expect(updated.devDependencies?.oxfmt).toBe("^0.57.0");
-    expect(updated.devDependencies?.oxlint).toBe("^1.72.0");
+    expect(updated.devDependencies?.oxfmt).toBe(oxfmtCliManifest.version);
+    expect(updated.devDependencies?.oxlint).toBe(oxlintCliManifest.version);
     expect(updated.devDependencies?.knip).toBeUndefined();
     expect(updated.devDependencies?.["react-doctor"]).toBeUndefined();
   });
@@ -92,13 +96,13 @@ describe("package.json updates", () => {
     expect(updated.scripts?.changeset).toBeUndefined();
     expect(updated.scripts?.["version-packages"]).toBeUndefined();
     expect(updated.scripts?.release).toBeUndefined();
-    expect(updated.devDependencies?.["@changesets/cli"]).toBe("^2.31.0");
+    expect(updated.devDependencies?.["@changesets/cli"]).toBe(changesetsCliManifest.version);
   });
 
   it("sets up Biome as an exact dev dependency", () => {
     const updated = updatePackageJson(basePackageJson(), ["biome"]);
 
-    expect(updated.devDependencies?.["@biomejs/biome"]).toBe("2.5.2");
+    expect(updated.devDependencies?.["@biomejs/biome"]).toBe(biomeCliManifest.version);
     expect(updated.scripts?.format).toBeUndefined();
     expect(updated.scripts?.lint).toBeUndefined();
   });

@@ -243,7 +243,7 @@
           "supported": true
         }
       },
-      "interactive": false
+      "interactive": true
     }
   ],
   "sources": [
@@ -256,7 +256,8 @@
     },
     {
       "kind": "cli-help",
-      "command": ["npx", "--yes", "knip@6.24.0", "--help"]
+      "command": ["npx", "--yes", "knip@6.24.0", "--help"],
+      "commandId": "check"
     }
   ]
 }

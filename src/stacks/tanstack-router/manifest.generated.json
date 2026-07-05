@@ -185,7 +185,8 @@
     },
     {
       "kind": "cli-help",
-      "command": ["npx", "--yes", "@tanstack/cli@0.69.5", "create", "--help"]
+      "command": ["npx", "--yes", "@tanstack/cli@0.69.5", "create", "--help"],
+      "commandId": "create-router"
     }
   ]
 }

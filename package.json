@@ -31,7 +31,8 @@
   "exports": {
     ".": "./dist/index.mjs",
     "./cli": "./dist/cli.mjs",
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./stacks/*/manifest.generated.json": "./dist/stacks/*/manifest.generated.json"
   },
   "publishConfig": {
     "access": "public",
@@ -69,7 +70,7 @@
     "vitest": "^4.0.16"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=24"
   },
   "packageManager": "yarn@4.17.0",
   "inlinedDependencies": {

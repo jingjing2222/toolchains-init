@@ -3,6 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { describe, expect, it } from "vitest";
+import { changesetsCliManifest } from "../src/stacks/changesets";
 
 const cliPath = path.resolve("dist/cli.mjs");
 
@@ -48,7 +49,7 @@ describe("toolchains-init CLI", () => {
     expect(packageJson.dependencies["@tanstack/react-router"]).toBeUndefined();
     expect(packageJson.devDependencies["@tanstack/router-plugin"]).toBeUndefined();
     expect(packageJson.devDependencies["@playwright/test"]).toBeUndefined();
-    expect(packageJson.devDependencies["@changesets/cli"]).toBe("^2.31.0");
+    expect(packageJson.devDependencies["@changesets/cli"]).toBe(changesetsCliManifest.version);
     expect(packageJson.devDependencies["@biomejs/biome"]).toBe("^1.9.4");
     expect(packageJson.devDependencies.esbuild).toBeUndefined();
     expect(packageJson.devDependencies.eslint).toBe("^9.0.0");

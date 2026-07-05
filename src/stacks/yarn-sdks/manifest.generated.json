@@ -9,7 +9,7 @@
       "packageManagers": {
         "yarn": ["yarn", "dlx", "@yarnpkg/sdks@{version}", "vscode"]
       },
-      "interactive": false
+      "interactive": true
     }
   ],
   "sources": [

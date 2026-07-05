@@ -82,7 +82,8 @@
     },
     {
       "kind": "cli-help",
-      "command": ["npx", "--yes", "create-playwright@1.17.139", "--help"]
+      "command": ["npx", "--yes", "create-playwright@1.17.139", "init", "--help"],
+      "commandId": "init"
     },
     {
       "kind": "docs",

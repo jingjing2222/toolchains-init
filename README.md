@@ -49,13 +49,28 @@ The formatter and linter adapters do not replace your existing `format`, `lint`,
 
 External initializer commands are described with versioned CLI command manifests before they are executed. Each manifest is validated with Valibot and records the upstream package version, source metadata, package-manager command templates, and supported flags. This keeps toolchain commands tied to known upstream contracts instead of relying on unqualified `latest` command paths at runtime.
 
-`manifest.generated.json` is the source of truth for each stack. The co-located `manifest.ts` wrapper only imports that JSON and validates it with Valibot. Edit the JSON manifest for a stack, then run:
+Each CLI-backed stack declares only its low-level CLI identity in its co-located adapter:
+
+```ts
+export const hotUpdater = defineToolchain({
+  feature: "hotUpdater",
+  label: "Hot Updater",
+  package: "hot-updater",
+  command: "init",
+});
+```
+
+Then run:
 
 ```bash
 yarn manifests:update
 ```
 
-The generator reads each JSON manifest, resolves the configured npm dist-tag, executes recorded CLI help commands, derives flag contracts from the help output, and rewrites the stack's `manifest.generated.json`. Use `yarn manifests:check` to fail when generated manifests are stale.
+The generator reads those adapter declarations, resolves the configured npm dist-tag, executes CLI help when supported, derives flag contracts from the help output, infers package-manager commands, and rewrites each stack's `manifest.generated.json` plus `manifest.ts`.
+
+Package-manager commands are inferred from the upstream CLI shape. Packages named like `create-*` use the package manager's native create/init form, such as `npm init playwright@{version} --`, `pnpm create playwright@{version}`, and `yarn create playwright@{version}`. Other CLIs use `npx`, `pnpm dlx`, and `yarn dlx`. A stack can still pin `packageManagers`, disable broken help parsing with `help: false`, or provide a custom runner when the upstream CLI needs a special invocation.
+
+`manifest.generated.json` is the runtime source of truth for each stack. The co-located `manifest.ts` wrapper only imports that JSON and validates it with Valibot. Use `yarn manifests:check` to fail when generated manifests are stale. Published packages also export the raw generated JSON at `toolchains-init/stacks/<stack>/manifest.generated.json`.
 
 ## Usage
 

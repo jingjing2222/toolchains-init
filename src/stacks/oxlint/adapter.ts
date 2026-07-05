@@ -6,26 +6,28 @@ import {
 import fs from "node:fs/promises";
 import path from "node:path";
 import { resolveCliCommand } from "../../core/cli-command-manifest";
-import { setDevDependency } from "../../core/package-json-utils";
+import { setManifestDevDependency } from "../../core/package-json-utils";
 import type { PackageManager } from "../../core/package-manager";
 import { runCommand } from "../../core/run-command";
-import type { ToolchainAdapter } from "../../core/toolchain-adapter";
+import { defineToolchain } from "../../core/toolchain-adapter";
 import { usesYarnPnp } from "../../core/yarn";
 import { oxlintCliManifest } from "./manifest";
 
 const nodeModulesSchemaPath = "./node_modules/oxlint/configuration_schema.json";
 
-export const oxlint: ToolchainAdapter = {
+export const oxlint = defineToolchain({
   feature: "oxlint",
   label: "oxlint",
   hint: "Oxc linter",
+  package: "oxlint",
+  command: "init",
   async run({ cwd, packageManager }) {
     const command = resolveCliCommand(oxlintCliManifest, "init", packageManager, { init: true });
     await runCommand(cwd, command.bin, command.args);
     await normalizeOxlintConfigForPackageManager(cwd, packageManager);
   },
   updatePackageJson({ packageJson }) {
-    setDevDependency(packageJson, "oxlint", "^1.72.0");
+    setManifestDevDependency(packageJson, oxlintCliManifest);
   },
   async afterWrite({ cwd }) {
     await addVsCodeExtensionRecommendations(cwd, ["oxc.oxc-vscode"]);
@@ -55,7 +57,7 @@ export const oxlint: ToolchainAdapter = {
       "Install the Oxc editor extension: VS Code/Cursor `oxc.oxc-vscode`; Zed: search `Oxc`.",
     ];
   },
-};
+});
 
 export async function normalizeOxlintConfigForPackageManager(
   cwd: string,
