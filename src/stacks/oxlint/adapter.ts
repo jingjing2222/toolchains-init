@@ -22,6 +22,24 @@ export const oxlint = defineToolchain({
   order: 40,
   package: "oxlint",
   command: "init",
+  docs: [
+    {
+      url: "https://oxc.rs/docs/guide/usage/linter",
+      confidence: "high",
+      review: {
+        reason:
+          "Adapter runs `oxlint --init`, normalizes Yarn PnP schema paths, and writes editor LSP settings.",
+        files: ["src/stacks/oxlint/adapter.ts", "src/stacks/oxlint/init.test.ts"],
+        sections: ["Oxlint", "Configuration", "Editor setup"],
+        mustContain: ["oxlint", "linter", "Editor setup"],
+        checks: [
+          "Confirm `oxlint --init` remains the right config initializer.",
+          "Confirm editor setup still uses the Oxc extension and compatible LSP settings.",
+          "Confirm Yarn PnP still needs schema path normalization.",
+        ],
+      },
+    },
+  ],
   subcommand: null,
   async run({ cwd, packageManager }) {
     const { oxlintCliManifest } = await import("./manifest");

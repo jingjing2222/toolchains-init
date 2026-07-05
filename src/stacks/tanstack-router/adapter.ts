@@ -18,6 +18,24 @@ export const tanStackRouter = defineToolchain({
   tool: "tanstack-router",
   stackDir: "tanstack-router",
   exportName: "tanStackRouterCliManifest",
+  docs: [
+    {
+      url: "https://raw.githubusercontent.com/TanStack/cli/main/README.md",
+      confidence: "medium",
+      review: {
+        reason:
+          "Adapter uses TanStack CLI router-only creation flags and restores unrelated package.json changes.",
+        files: ["src/stacks/tanstack-router/adapter.ts", "src/stacks/tanstack-router/init.test.ts"],
+        sections: ["Quick Start"],
+        mustContain: ["@tanstack/cli", "--router-only"],
+        checks: [
+          "Confirm router-only creation remains supported by `@tanstack/cli create`.",
+          "Confirm package manager, install, git, examples, and toolchain flags still preserve this adapter flow.",
+          "Confirm restoring package.json while keeping dependency additions is still necessary.",
+        ],
+      },
+    },
+  ],
   async run({ cwd, packageManager, options, yes }) {
     const { tanStackRouterCliManifest } = await import("./manifest");
     const command = resolveCliCommand(

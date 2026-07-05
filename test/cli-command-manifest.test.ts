@@ -68,8 +68,13 @@ describe("CLI command manifests", () => {
   });
 
   it("keeps docs-backed adapter review metadata in generated manifests", () => {
-    const mswCliManifest = getCliCommandManifest("msw");
+    for (const manifest of cliCommandManifests) {
+      expect(
+        manifest.sources.some((source) => source.kind === "docs" && source.review != null),
+      ).toBe(true);
+    }
 
+    const mswCliManifest = getCliCommandManifest("msw");
     expect(mswCliManifest?.sources).toContainEqual(
       expect.objectContaining({
         kind: "docs",
@@ -160,7 +165,7 @@ describe("CLI command manifests", () => {
     expect(yarnSdksCliManifest?.commands[0]?.packageManagers).toEqual({
       yarn: ["yarn", "dlx", "@yarnpkg/sdks@{version}", "vscode"],
     });
-    expect(yarnSdksCliManifest?.sources.map((source) => source.kind)).toEqual(["npm"]);
+    expect(yarnSdksCliManifest?.sources.map((source) => source.kind)).toEqual(["npm", "docs"]);
     expect(storybookCliManifest?.commands[0]?.packageManagers).toEqual({
       npm: ["npm", "init", "storybook@{version}", "--"],
       pnpm: ["pnpm", "create", "storybook@{version}"],

@@ -28,6 +28,31 @@
       "kind": "cli-help",
       "command": ["npx", "--yes", "@changesets/cli@2.31.0", "init", "--help"],
       "commandId": "init"
+    },
+    {
+      "kind": "docs",
+      "url": "https://raw.githubusercontent.com/changesets/changesets/main/packages/cli/README.md",
+      "confidence": "medium",
+      "checks": [
+        {
+          "found": true,
+          "text": "@changesets/cli"
+        },
+        {
+          "found": true,
+          "text": "changeset init"
+        }
+      ],
+      "review": {
+        "reason": "Adapter installs Changesets and runs the documented init command after install.",
+        "files": ["src/stacks/changesets/adapter.ts", "src/stacks/changesets/init.test.ts"],
+        "sections": ["Getting Started"],
+        "mustContain": ["@changesets/cli", "changeset init"],
+        "checks": [
+          "Confirm `@changesets/cli` remains the package that provides Changesets initialization.",
+          "Confirm `changeset init` remains the documented setup command."
+        ]
+      }
     }
   ]
 }

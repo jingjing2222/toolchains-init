@@ -10,6 +10,23 @@ export const knip = defineToolchain({
   order: 60,
   package: "knip",
   command: "check",
+  docs: [
+    {
+      url: "https://knip.dev/reference/cli",
+      confidence: "high",
+      review: {
+        reason:
+          "Adapter writes a package script that runs Knip through the manifest-backed npm command.",
+        files: ["src/stacks/knip/adapter.ts", "src/stacks/knip/init.test.ts"],
+        sections: ["CLI Arguments"],
+        mustContain: ["knip", "--production"],
+        checks: [
+          "Confirm the default Knip CLI invocation remains suitable for project checks.",
+          "Confirm script-based usage still does not require installing Knip as a project dependency.",
+        ],
+      },
+    },
+  ],
   subcommand: null,
   updatePackageJson({ cliManifest, packageJson }) {
     if (cliManifest == null) {

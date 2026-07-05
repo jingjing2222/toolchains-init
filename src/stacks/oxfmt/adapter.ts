@@ -19,6 +19,23 @@ export const oxfmt = defineToolchain({
   order: 30,
   package: "oxfmt",
   command: "init",
+  docs: [
+    {
+      url: "https://oxc.rs/docs/guide/usage/formatter",
+      confidence: "high",
+      review: {
+        reason: "Adapter runs `oxfmt --init` and writes editor formatter settings.",
+        files: ["src/stacks/oxfmt/adapter.ts", "src/stacks/oxfmt/init.test.ts"],
+        sections: ["Oxfmt", "Configuration", "Editor setup"],
+        mustContain: ["oxfmt", "formatter", "Editor setup"],
+        checks: [
+          "Confirm `oxfmt --init` remains the right config initializer.",
+          "Confirm `.oxfmtrc.json` remains the right formatter config path.",
+          "Confirm editor setup still uses compatible Oxc formatter settings.",
+        ],
+      },
+    },
+  ],
   subcommand: null,
   async run({ cwd, packageManager }) {
     const { oxfmtCliManifest } = await import("./manifest");
