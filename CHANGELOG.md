@@ -1,5 +1,12 @@
 # toolchains-init
 
+## 0.0.6
+
+### Patch Changes
+
+- 777684c: Add docs-backed review metadata to every built-in CLI adapter so automated manifest update PRs can point maintainers to the relevant adapter policy source.
+- 154198b: Add docs-backed adapter review metadata and exact docs text checks to generated CLI manifests, then surface adapter review guidance only when those checks change or fail.
+
 ## 0.0.5
 
 ### Patch Changes
