@@ -6,6 +6,9 @@ export type PackageJson = {
   scripts?: Record<string, string>;
   dependencies?: Record<string, string>;
   devDependencies?: Record<string, string>;
+  msw?: {
+    workerDirectory?: string | string[];
+  };
 };
 
 export type Feature = BuiltInFeature | (string & {});

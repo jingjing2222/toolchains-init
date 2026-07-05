@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { resolveCliCommand } from "../src/core/cli-command-manifest";
-import { defineToolchain } from "../src/core/toolchain-adapter";
-import { cliCommandManifestData, cliCommandManifests, getCliCommandManifest } from "../src/stacks";
+import { defineToolchain, getToolchainCliTool } from "../src/core/toolchain-adapter";
+import {
+  cliCommandManifestData,
+  cliCommandManifests,
+  getCliCommandManifest,
+  toolchains,
+} from "../src/stacks";
 import { resolvePackageManagerCommands, runHelpCommand } from "../scripts/update-cli-manifests";
 import packageJson from "../package.json" with { type: "json" };
 
@@ -12,21 +17,9 @@ if (playwrightCliManifest == null) {
 
 describe("CLI command manifests", () => {
   it("registers every CLI-backed toolchain command", () => {
-    const expectedTools = [
-      "tanstack-router",
-      "hot-updater",
-      "playwright",
-      "storybook",
-      "oxfmt",
-      "prettier",
-      "oxlint",
-      "eslint",
-      "biome",
-      "knip",
-      "react-doctor",
-      "changesets",
-      "yarn-sdks",
-    ];
+    const expectedTools = toolchains
+      .filter((toolchain) => toolchain.cli != null)
+      .map((toolchain) => getToolchainCliTool(toolchain));
 
     expect(cliCommandManifestData.map((manifest) => manifest.tool)).toEqual(expectedTools);
     expect(cliCommandManifests.map((manifest) => manifest.tool)).toEqual(expectedTools);

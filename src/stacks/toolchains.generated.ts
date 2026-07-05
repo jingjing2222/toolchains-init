@@ -4,6 +4,7 @@ import { tanStackRouter } from "./tanstack-router/adapter";
 import { hotUpdater } from "./hot-updater/adapter";
 import { playwright } from "./playwright/adapter";
 import { storybook } from "./storybook/adapter";
+import { msw } from "./msw/adapter";
 import { oxfmt } from "./oxfmt/adapter";
 import { prettier } from "./prettier/adapter";
 import { oxlint } from "./oxlint/adapter";
@@ -19,6 +20,7 @@ export const toolchains = [
   hotUpdater,
   playwright,
   storybook,
+  msw,
   oxfmt,
   prettier,
   oxlint,
@@ -35,6 +37,7 @@ export type BuiltInFeature =
   | "hotUpdater"
   | "playwright"
   | "storybook"
+  | "msw"
   | "oxfmt"
   | "prettier"
   | "oxlint"

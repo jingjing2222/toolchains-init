@@ -7,6 +7,7 @@ import {
 import { hotUpdaterCliManifest, hotUpdaterCliManifestData } from "./hot-updater/manifest";
 import { playwrightCliManifest, playwrightCliManifestData } from "./playwright/manifest";
 import { storybookCliManifest, storybookCliManifestData } from "./storybook/manifest";
+import { mswCliManifest, mswCliManifestData } from "./msw/manifest";
 import { oxfmtCliManifest, oxfmtCliManifestData } from "./oxfmt/manifest";
 import { prettierCliManifest, prettierCliManifestData } from "./prettier/manifest";
 import { oxlintCliManifest, oxlintCliManifestData } from "./oxlint/manifest";
@@ -22,6 +23,7 @@ export const cliCommandManifests = [
   hotUpdaterCliManifest,
   playwrightCliManifest,
   storybookCliManifest,
+  mswCliManifest,
   oxfmtCliManifest,
   prettierCliManifest,
   oxlintCliManifest,
@@ -38,6 +40,7 @@ export const cliCommandManifestData = [
   hotUpdaterCliManifestData,
   playwrightCliManifestData,
   storybookCliManifestData,
+  mswCliManifestData,
   oxfmtCliManifestData,
   prettierCliManifestData,
   oxlintCliManifestData,
