@@ -21,6 +21,7 @@ export const oxlint = defineToolchain({
   order: 40,
   package: "oxlint",
   command: "init",
+  subcommand: null,
   async run({ cwd, packageManager }) {
     const { oxlintCliManifest } = await import("./manifest");
     const command = resolveCliCommand(oxlintCliManifest, "init", packageManager, { init: true });

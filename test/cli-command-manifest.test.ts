@@ -81,6 +81,8 @@ describe("CLI command manifests", () => {
   it("infers package-manager commands from the CLI package shape", () => {
     const biomeCliManifest = getCliCommandManifest("biome");
     const knipCliManifest = getCliCommandManifest("knip");
+    const oxfmtCliManifest = getCliCommandManifest("oxfmt");
+    const oxlintCliManifest = getCliCommandManifest("oxlint");
     const yarnSdksCliManifest = getCliCommandManifest("yarn-sdks");
 
     expect(biomeCliManifest?.commands[0]?.packageManagers).toMatchObject({
@@ -93,10 +95,37 @@ describe("CLI command manifests", () => {
       pnpm: ["pnpm", "dlx", "knip@{version}"],
       yarn: ["yarn", "dlx", "knip@{version}"],
     });
+    expect(oxfmtCliManifest?.commands[0]?.packageManagers).toMatchObject({
+      npm: ["npx", "oxfmt@{version}"],
+      pnpm: ["pnpm", "dlx", "oxfmt@{version}"],
+      yarn: ["yarn", "dlx", "oxfmt@{version}"],
+    });
+    expect(oxlintCliManifest?.commands[0]?.packageManagers).toMatchObject({
+      npm: ["npx", "oxlint@{version}"],
+      pnpm: ["pnpm", "dlx", "oxlint@{version}"],
+      yarn: ["yarn", "dlx", "oxlint@{version}"],
+    });
     expect(yarnSdksCliManifest?.commands[0]?.packageManagers).toEqual({
       yarn: ["yarn", "dlx", "@yarnpkg/sdks@{version}", "vscode"],
     });
     expect(yarnSdksCliManifest?.sources.map((source) => source.kind)).toEqual(["npm"]);
+  });
+
+  it("keeps flag-only initializers free of positional init subcommands", () => {
+    const oxfmtCliManifest = getCliCommandManifest("oxfmt");
+    const oxlintCliManifest = getCliCommandManifest("oxlint");
+    if (oxfmtCliManifest == null || oxlintCliManifest == null) {
+      throw new Error("Missing Oxc CLI manifests");
+    }
+
+    expect(resolveCliCommand(oxfmtCliManifest, "init", "npm", { init: true })).toEqual({
+      bin: "npx",
+      args: [`oxfmt@${oxfmtCliManifest.version}`, "--init"],
+    });
+    expect(resolveCliCommand(oxlintCliManifest, "init", "npm", { init: true })).toEqual({
+      bin: "npx",
+      args: [`oxlint@${oxlintCliManifest.version}`, "--init"],
+    });
   });
 
   it("preserves package scopes when inferring create commands", () => {

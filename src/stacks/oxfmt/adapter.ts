@@ -18,6 +18,7 @@ export const oxfmt = defineToolchain({
   order: 30,
   package: "oxfmt",
   command: "init",
+  subcommand: null,
   async run({ cwd, packageManager }) {
     const { oxfmtCliManifest } = await import("./manifest");
     const command = resolveCliCommand(oxfmtCliManifest, "init", packageManager, { init: true });
