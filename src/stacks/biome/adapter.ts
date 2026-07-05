@@ -2,11 +2,13 @@ import {
   addVsCodeExtensionRecommendations,
   addVsCodeSettings,
   addZedSettings,
-} from "../core/editor-settings";
-import { setDevDependency } from "../core/package-json-utils";
-import type { PackageManager } from "../core/package-manager";
-import { runCommand } from "../core/run-command";
-import type { ToolchainAdapter } from "../core/toolchain-adapter";
+} from "../../core/editor-settings";
+import { resolveCliCommand } from "../../core/cli-command-manifest";
+import { setDevDependency } from "../../core/package-json-utils";
+import type { PackageManager } from "../../core/package-manager";
+import { runCommand } from "../../core/run-command";
+import type { ToolchainAdapter } from "../../core/toolchain-adapter";
+import { biomeCliManifest } from "./manifest";
 
 const biomeVsCodeLanguages = ["javascript", "javascriptreact", "typescript", "typescriptreact"];
 
@@ -66,13 +68,6 @@ function getBiomeVsCodeSettings(hasOxfmt: boolean) {
 }
 
 function runBiomeInit(cwd: string, packageManager: PackageManager) {
-  if (packageManager === "npm") {
-    return runCommand(cwd, "npx", ["@biomejs/biome", "init"]);
-  }
-
-  if (packageManager === "pnpm") {
-    return runCommand(cwd, "pnpm", ["exec", "biome", "init"]);
-  }
-
-  return runCommand(cwd, "yarn", ["exec", "biome", "--", "init"]);
+  const command = resolveCliCommand(biomeCliManifest, "init", packageManager);
+  return runCommand(cwd, command.bin, command.args);
 }

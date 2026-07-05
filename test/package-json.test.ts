@@ -9,7 +9,7 @@ describe("package.json updates", () => {
     expect(updated.scripts?.format).toBeUndefined();
     expect(updated.scripts?.["format:check"]).toBeUndefined();
     expect(updated.scripts?.lint).toBeUndefined();
-    expect(updated.scripts?.knip).toBe("npx knip");
+    expect(updated.scripts?.knip).toBe("npx knip@6.24.0");
     expect(updated.scripts?.["react-doctor"]).toBeUndefined();
     expect(updated.scripts?.verify).toBeUndefined();
     expect(updated.devDependencies?.oxfmt).toBe("^0.57.0");
@@ -74,7 +74,7 @@ describe("package.json updates", () => {
   it("runs React Doctor through npx without installing it", () => {
     const updated = updatePackageJson(basePackageJson(), ["reactDoctor"]);
 
-    expect(updated.scripts?.["react-doctor"]).toBe("npx react-doctor@latest");
+    expect(updated.scripts?.["react-doctor"]).toBe("npx react-doctor@0.7.1");
     expect(updated.scripts?.verify).toBeUndefined();
     expect(updated.devDependencies?.["react-doctor"]).toBeUndefined();
   });
@@ -82,7 +82,7 @@ describe("package.json updates", () => {
   it("runs Knip through npx without installing it", () => {
     const updated = updatePackageJson(basePackageJson(), ["knip"]);
 
-    expect(updated.scripts?.knip).toBe("npx knip");
+    expect(updated.scripts?.knip).toBe("npx knip@6.24.0");
     expect(updated.devDependencies?.knip).toBeUndefined();
   });
 

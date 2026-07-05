@@ -57,7 +57,7 @@ describe("toolchains-init CLI", () => {
     expect(packageJson.scripts.format).toBeUndefined();
     expect(packageJson.scripts["format:check"]).toBe("prettier --check .");
     expect(packageJson.scripts.changeset).toBeUndefined();
-    expect(packageJson.scripts.knip).toBe("npx knip");
+    expect(packageJson.scripts.knip).toBe("npx knip@6.24.0");
     expect(packageJson.scripts.lint).toBe("eslint .");
     expect(packageJson.scripts["version-packages"]).toBeUndefined();
     expect(packageJson.scripts["test:e2e"]).toBeUndefined();
@@ -128,7 +128,7 @@ describe("toolchains-init CLI", () => {
     const packageJson = JSON.parse(await readFile(path.join(appDir, "package.json"), "utf8")) as {
       scripts: Record<string, string>;
     };
-    expect(packageJson.scripts.knip).toBe("npx knip");
+    expect(packageJson.scripts.knip).toBe("npx knip@6.24.0");
   });
 
   it("rejects the removed init subcommand", async () => {

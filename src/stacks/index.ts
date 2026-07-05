@@ -1,12 +1,13 @@
-import { biome } from "./biome";
-import { changesets } from "./changesets";
-import { knip } from "./knip";
-import { oxfmt } from "./oxfmt";
-import { oxlint } from "./oxlint";
-import { playwright } from "./playwright";
-import { reactDoctor } from "./react-doctor";
-import { tanStackRouter } from "./tanstack-router";
-import { yarnSdks } from "./yarn-sdks";
+import type { CliCommandManifest } from "../core/cli-command-manifest";
+import { biome, biomeCliManifest } from "./biome";
+import { changesets, changesetsCliManifest } from "./changesets";
+import { knip, knipCliManifest } from "./knip";
+import { oxfmt, oxfmtCliManifest } from "./oxfmt";
+import { oxlint, oxlintCliManifest } from "./oxlint";
+import { playwright, playwrightCliManifest } from "./playwright";
+import { reactDoctor, reactDoctorCliManifest } from "./react-doctor";
+import { tanStackRouter, tanStackRouterCliManifest } from "./tanstack-router";
+import { yarnSdks, yarnSdksCliManifest } from "./yarn-sdks";
 
 export const toolchains = [
   tanStackRouter,
@@ -21,6 +22,22 @@ export const toolchains = [
 ];
 
 export const ALL_FEATURES = toolchains.map((toolchain) => toolchain.feature);
+
+export const cliCommandManifests = [
+  tanStackRouterCliManifest,
+  playwrightCliManifest,
+  oxfmtCliManifest,
+  oxlintCliManifest,
+  biomeCliManifest,
+  knipCliManifest,
+  reactDoctorCliManifest,
+  changesetsCliManifest,
+  yarnSdksCliManifest,
+] satisfies readonly CliCommandManifest[];
+
+export function getCliCommandManifest(tool: string) {
+  return cliCommandManifests.find((manifest) => manifest.tool === tool) ?? null;
+}
 
 export function getSelectedToolchains(features: readonly string[]) {
   return toolchains.filter((toolchain) => features.includes(toolchain.feature));

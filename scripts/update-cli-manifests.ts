@@ -1,0 +1,162 @@
+import { execFile } from "node:child_process";
+import { mkdir, writeFile } from "node:fs/promises";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { promisify } from "node:util";
+import type { CliCommandManifest } from "../src/core/cli-command-manifest";
+import { defineCliCommandManifest } from "../src/core/cli-command-manifest";
+import type { CliCommandProbe } from "../src/core/cli-command-probe";
+import { biomeCliProbe } from "../src/stacks/biome/probe";
+import { changesetsCliProbe } from "../src/stacks/changesets/probe";
+import { knipCliProbe } from "../src/stacks/knip/probe";
+import { oxfmtCliProbe } from "../src/stacks/oxfmt/probe";
+import { oxlintCliProbe } from "../src/stacks/oxlint/probe";
+import { playwrightCliProbe } from "../src/stacks/playwright/probe";
+import { reactDoctorCliProbe } from "../src/stacks/react-doctor/probe";
+import { tanStackRouterCliProbe } from "../src/stacks/tanstack-router/probe";
+import { yarnSdksCliProbe } from "../src/stacks/yarn-sdks/probe";
+
+const execFileAsync = promisify(execFile);
+const probes = [
+  tanStackRouterCliProbe,
+  playwrightCliProbe,
+  oxfmtCliProbe,
+  oxlintCliProbe,
+  biomeCliProbe,
+  knipCliProbe,
+  reactDoctorCliProbe,
+  changesetsCliProbe,
+  yarnSdksCliProbe,
+] satisfies readonly CliCommandProbe[];
+
+const updatedManifestPaths: string[] = [];
+
+for (const probe of probes) {
+  const manifest = await createManifest(probe);
+  const outputPath = await writeManifest(probe, manifest);
+  updatedManifestPaths.push(outputPath);
+  console.log(`updated ${path.relative(process.cwd(), outputPath)}`);
+}
+
+await execFileAsync("yarn", ["oxfmt", "--write", ...updatedManifestPaths], {
+  encoding: "utf8",
+  maxBuffer: 10 * 1024 * 1024,
+});
+
+async function createManifest(probe: CliCommandProbe): Promise<CliCommandManifest> {
+  const { publishedAt, version } = await resolvePackageVersion(probe.package, probe.distTag);
+  const sources: CliCommandManifest["sources"] = [
+    {
+      kind: "npm",
+      package: probe.package,
+      version,
+      distTag: probe.distTag,
+      resolvedAt: publishedAt,
+    },
+  ];
+
+  let helpOutput = "";
+  if (probe.helpCommand != null) {
+    const helpCommand = hydrateTokens(probe.helpCommand, probe.package, version);
+    helpOutput = await runHelpCommand(helpCommand);
+    sources.push({ kind: "cli-help", command: helpCommand });
+  }
+
+  if (probe.docs != null) {
+    sources.push(...probe.docs);
+  }
+
+  validateProbeHelp(probe, helpOutput);
+
+  return defineCliCommandManifest({
+    schemaVersion: "toolchains-init/cli-command-manifest/v1",
+    tool: probe.tool,
+    package: probe.package,
+    version,
+    commands: probe.commands.map((command) => ({ ...command })),
+    sources,
+  });
+}
+
+async function resolvePackageVersion(packageName: string, distTag: string) {
+  const { stdout } = await execFileAsync(
+    "npm",
+    ["view", packageName, `dist-tags.${distTag}`, "--json"],
+    {
+      encoding: "utf8",
+      maxBuffer: 1024 * 1024,
+    },
+  );
+  const parsed = JSON.parse(stdout) as unknown;
+  if (typeof parsed !== "string" || parsed.length === 0) {
+    throw new Error(`Could not resolve ${packageName}@${distTag}`);
+  }
+
+  const { stdout: timeStdout } = await execFileAsync(
+    "npm",
+    ["view", `${packageName}@${parsed}`, "time", "--json"],
+    {
+      encoding: "utf8",
+      maxBuffer: 1024 * 1024,
+    },
+  );
+  const time = JSON.parse(timeStdout) as Record<string, unknown>;
+  const publishedAt = time[parsed];
+  if (typeof publishedAt !== "string" || publishedAt.length === 0) {
+    throw new Error(`Could not resolve publish time for ${packageName}@${parsed}`);
+  }
+
+  return { publishedAt, version: parsed };
+}
+
+async function runHelpCommand(command: readonly string[]) {
+  const [bin, ...args] = command;
+  if (bin == null) {
+    throw new Error("Help command has no binary");
+  }
+
+  const { stdout, stderr } = await execFileAsync(bin, args, {
+    encoding: "utf8",
+    maxBuffer: 10 * 1024 * 1024,
+  });
+  return `${stdout}\n${stderr}`;
+}
+
+function validateProbeHelp(probe: CliCommandProbe, helpOutput: string) {
+  if (probe.helpCommand == null) {
+    return;
+  }
+
+  for (const command of probe.commands) {
+    for (const flag of Object.values(command.flags ?? {})) {
+      if (!flag.supported || helpOutput.includes(flag.cliName)) {
+        continue;
+      }
+
+      throw new Error(
+        `${probe.tool}/${command.id} expected ${flag.cliName} in ${probe.helpCommand.join(" ")}`,
+      );
+    }
+  }
+}
+
+async function writeManifest(probe: CliCommandProbe, manifest: CliCommandManifest) {
+  const outputPath = fileURLToPath(probe.manifestPath);
+  await mkdir(path.dirname(outputPath), { recursive: true });
+  await writeFile(outputPath, renderManifest(probe.exportName, manifest));
+  return outputPath;
+}
+
+function renderManifest(exportName: string, manifest: CliCommandManifest) {
+  return `// Generated by scripts/update-cli-manifests.ts. Do not edit directly.
+import { defineCliCommandManifest } from "../../core/cli-command-manifest";
+
+export const ${exportName} = defineCliCommandManifest(${JSON.stringify(manifest, null, 2)});
+`;
+}
+
+function hydrateTokens(tokens: readonly string[], packageName: string, version: string) {
+  return tokens.map((token) =>
+    token.replaceAll("{package}", packageName).replaceAll("{version}", version),
+  );
+}

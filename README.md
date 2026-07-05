@@ -38,12 +38,24 @@ All files, installs, and official initializers run in the target directory. The 
 - oxlint through `oxlint --init`
 - Biome through `biome init`
 - VS Code, Cursor, and Zed workspace settings for the selected formatter and linter tools
-- `knip` script through `npx knip`
-- `react-doctor` script through `npx react-doctor@latest`
+- `knip` script through a pinned `knip` CLI manifest
+- `react-doctor` script through a pinned `react-doctor` CLI manifest
 - Changesets through `changeset init`
 - Yarn PnP editor SDKs through `yarn dlx @yarnpkg/sdks vscode`
 
 The formatter and linter adapters do not replace your existing `format`, `lint`, or `verify` scripts. They set up the tools and editor integration; you decide how to wire scripts for each app.
+
+## CLI Contracts
+
+External initializer commands are described with versioned CLI command manifests before they are executed. Each manifest is validated with Valibot and records the upstream package version, source metadata, package-manager command templates, and supported flags. This keeps toolchain commands tied to known upstream contracts instead of relying on unqualified `latest` command paths at runtime.
+
+Manifests are generated artifacts. Edit the co-located `probe.ts` for a stack, then run:
+
+```bash
+yarn manifests:update
+```
+
+The generator resolves the configured npm dist-tag, executes the configured CLI help command, validates required flags from the help output, and rewrites the stack's `manifest.ts`.
 
 ## Usage
 

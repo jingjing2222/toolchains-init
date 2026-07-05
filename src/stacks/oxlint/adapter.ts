@@ -2,14 +2,16 @@ import {
   addVsCodeExtensionRecommendations,
   addVsCodeSettings,
   addZedSettings,
-} from "../core/editor-settings";
+} from "../../core/editor-settings";
 import fs from "node:fs/promises";
 import path from "node:path";
-import { setDevDependency } from "../core/package-json-utils";
-import type { PackageManager } from "../core/package-manager";
-import { runCommand } from "../core/run-command";
-import type { ToolchainAdapter } from "../core/toolchain-adapter";
-import { usesYarnPnp } from "../core/yarn";
+import { resolveCliCommand } from "../../core/cli-command-manifest";
+import { setDevDependency } from "../../core/package-json-utils";
+import type { PackageManager } from "../../core/package-manager";
+import { runCommand } from "../../core/run-command";
+import type { ToolchainAdapter } from "../../core/toolchain-adapter";
+import { usesYarnPnp } from "../../core/yarn";
+import { oxlintCliManifest } from "./manifest";
 
 const nodeModulesSchemaPath = "./node_modules/oxlint/configuration_schema.json";
 
@@ -18,7 +20,8 @@ export const oxlint: ToolchainAdapter = {
   label: "oxlint",
   hint: "Oxc linter",
   async run({ cwd, packageManager }) {
-    await runCommand(cwd, "npx", ["oxlint@latest", "--init"]);
+    const command = resolveCliCommand(oxlintCliManifest, "init", packageManager, { init: true });
+    await runCommand(cwd, command.bin, command.args);
     await normalizeOxlintConfigForPackageManager(cwd, packageManager);
   },
   updatePackageJson({ packageJson }) {
