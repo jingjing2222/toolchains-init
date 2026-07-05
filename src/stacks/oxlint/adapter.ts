@@ -11,7 +11,6 @@ import type { PackageManager } from "../../core/package-manager";
 import { runCommand } from "../../core/run-command";
 import { defineToolchain } from "../../core/toolchain-adapter";
 import { usesYarnPnp } from "../../core/yarn";
-import { oxlintCliManifest } from "./manifest";
 
 const nodeModulesSchemaPath = "./node_modules/oxlint/configuration_schema.json";
 
@@ -19,15 +18,17 @@ export const oxlint = defineToolchain({
   feature: "oxlint",
   label: "oxlint",
   hint: "Oxc linter",
+  order: 40,
   package: "oxlint",
   command: "init",
   async run({ cwd, packageManager }) {
+    const { oxlintCliManifest } = await import("./manifest");
     const command = resolveCliCommand(oxlintCliManifest, "init", packageManager, { init: true });
     await runCommand(cwd, command.bin, command.args);
     await normalizeOxlintConfigForPackageManager(cwd, packageManager);
   },
-  updatePackageJson({ packageJson }) {
-    setManifestDevDependency(packageJson, oxlintCliManifest);
+  updatePackageJson({ cliManifest, packageJson }) {
+    setManifestDevDependency(packageJson, cliManifest);
   },
   async afterWrite({ cwd }) {
     await addVsCodeExtensionRecommendations(cwd, ["oxc.oxc-vscode"]);

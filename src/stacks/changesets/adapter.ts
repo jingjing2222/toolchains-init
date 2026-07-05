@@ -3,16 +3,16 @@ import { setManifestDevDependency } from "../../core/package-json-utils";
 import type { PackageManager } from "../../core/package-manager";
 import { runCommand } from "../../core/run-command";
 import { defineToolchain } from "../../core/toolchain-adapter";
-import { changesetsCliManifest } from "./manifest";
 
 export const changesets = defineToolchain({
   feature: "changesets",
   label: "Changesets",
   hint: "Versioning and changelog workflow",
+  order: 80,
   package: "@changesets/cli",
   command: "init",
-  updatePackageJson({ packageJson }) {
-    setManifestDevDependency(packageJson, changesetsCliManifest);
+  updatePackageJson({ cliManifest, packageJson }) {
+    setManifestDevDependency(packageJson, cliManifest);
   },
   async afterInstall({ cwd, packageManager }) {
     await runChangesetsInit(cwd, packageManager);
@@ -20,6 +20,8 @@ export const changesets = defineToolchain({
 });
 
 function runChangesetsInit(cwd: string, packageManager: PackageManager) {
-  const command = resolveCliCommand(changesetsCliManifest, "init", packageManager);
-  return runCommand(cwd, command.bin, command.args);
+  return import("./manifest").then(({ changesetsCliManifest }) => {
+    const command = resolveCliCommand(changesetsCliManifest, "init", packageManager);
+    return runCommand(cwd, command.bin, command.args);
+  });
 }

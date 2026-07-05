@@ -1,16 +1,17 @@
 import { runCommand } from "../../core/run-command";
 import { resolveCliCommand } from "../../core/cli-command-manifest";
 import { defineToolchain } from "../../core/toolchain-adapter";
-import { playwrightCliManifest } from "./manifest";
 
 export const playwright = defineToolchain({
   feature: "playwright",
   label: "Playwright",
   hint: "Runs the official Playwright initializer",
+  order: 20,
   package: "create-playwright",
   command: "init",
   docs: [{ url: "https://playwright.dev/docs/intro", confidence: "medium" }],
   async run({ cwd, packageManager, yes }) {
+    const { playwrightCliManifest } = await import("./manifest");
     const command = resolveCliCommand(
       playwrightCliManifest,
       "init",

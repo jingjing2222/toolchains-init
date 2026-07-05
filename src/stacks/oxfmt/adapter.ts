@@ -7,7 +7,6 @@ import { resolveCliCommand } from "../../core/cli-command-manifest";
 import { setManifestDevDependency } from "../../core/package-json-utils";
 import { runCommand } from "../../core/run-command";
 import { defineToolchain } from "../../core/toolchain-adapter";
-import { oxfmtCliManifest } from "./manifest";
 
 const oxfmtVsCodeLanguages = ["javascript", "javascriptreact", "typescript", "typescriptreact"];
 const oxfmtZedLanguages = ["JavaScript", "TypeScript", "TSX", "JSON", "JSONC"];
@@ -16,14 +15,16 @@ export const oxfmt = defineToolchain({
   feature: "oxfmt",
   label: "oxfmt",
   hint: "Oxc formatter",
+  order: 30,
   package: "oxfmt",
   command: "init",
   async run({ cwd, packageManager }) {
+    const { oxfmtCliManifest } = await import("./manifest");
     const command = resolveCliCommand(oxfmtCliManifest, "init", packageManager, { init: true });
     await runCommand(cwd, command.bin, command.args);
   },
-  updatePackageJson({ packageJson }) {
-    setManifestDevDependency(packageJson, oxfmtCliManifest);
+  updatePackageJson({ cliManifest, packageJson }) {
+    setManifestDevDependency(packageJson, cliManifest);
   },
   async afterWrite({ cwd, options }) {
     await addVsCodeExtensionRecommendations(cwd, ["oxc.oxc-vscode"]);

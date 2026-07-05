@@ -1,7 +1,8 @@
 import { execFile } from "node:child_process";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { access, mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 import { promisify } from "node:util";
 import type { CliCommandManifest } from "../src/core/cli-command-manifest";
 import { defineCliCommandManifest } from "../src/core/cli-command-manifest";
@@ -10,33 +11,53 @@ import type {
   PackageManagerCommandTemplates,
   ToolchainAdapter,
 } from "../src/core/toolchain-adapter";
-import { toolchains } from "../src/stacks/index";
 
 type CliHelpSource = Extract<CliCommandManifest["sources"][number], { kind: "cli-help" }>;
+type NpmSource = Extract<CliCommandManifest["sources"][number], { kind: "npm" }>;
 
 const execFileAsync = promisify(execFile);
 const shouldCheck = process.argv.includes("--check");
-const manifestInputs = toolchains.flatMap((toolchain) =>
-  toolchain.cli == null ? [] : [createManifestInput(toolchain)],
-);
 
-const generatedFiles: GeneratedFile[] = [];
-
-for (const input of manifestInputs) {
-  const manifest = await createManifest(input);
-  generatedFiles.push(...renderManifestFiles(input, manifest));
+if (isMainModule()) {
+  try {
+    await main();
+  } catch (error) {
+    console.error(formatError(error));
+    process.exitCode = 1;
+  }
 }
 
-if (shouldCheck) {
-  await checkGeneratedFiles(generatedFiles);
-} else {
-  await writeGeneratedFiles(generatedFiles);
-  await formatGeneratedFiles(generatedFiles.map((file) => file.path));
+export async function main() {
+  const toolchains = await discoverToolchains();
+  const manifestInputs = toolchains.flatMap((toolchain) =>
+    toolchain.adapter.cli == null ? [] : [createManifestInput(toolchain.adapter)],
+  );
+
+  const generatedFiles: GeneratedFile[] = [renderToolchainsRegistry(toolchains)];
+
+  for (const input of manifestInputs) {
+    const manifest = await createManifest(input);
+    generatedFiles.push(...renderManifestFiles(input, manifest));
+  }
+  generatedFiles.push(renderManifestRegistry(manifestInputs));
+
+  if (shouldCheck) {
+    await checkGeneratedFiles(generatedFiles);
+  } else {
+    await writeGeneratedFiles(generatedFiles);
+    await formatGeneratedFiles(generatedFiles.map((file) => file.path));
+  }
 }
 
 type GeneratedFile = {
   path: string;
   content: string;
+};
+
+type DiscoveredToolchain = {
+  adapter: ToolchainAdapter;
+  exportName: string;
+  stackDir: string;
 };
 
 type ManifestInput = {
@@ -75,8 +96,61 @@ function createManifestInput(toolchain: ToolchainAdapter): ManifestInput {
   };
 }
 
+async function discoverToolchains(): Promise<DiscoveredToolchain[]> {
+  const stacksDir = path.resolve("src", "stacks");
+  const stackDirs = await readdir(stacksDir, { withFileTypes: true });
+  const discovered = (
+    await Promise.all(
+      stackDirs.flatMap(async (entry) => {
+        if (!entry.isDirectory()) {
+          return [];
+        }
+
+        const adapterPath = path.join(stacksDir, entry.name, "adapter.ts");
+        try {
+          await access(adapterPath);
+        } catch {
+          return [];
+        }
+
+        const module = (await import(pathToFileURL(adapterPath).href)) as Record<string, unknown>;
+        return Object.entries(module).flatMap(([exportName, exported]) =>
+          isToolchainAdapter(exported)
+            ? [{ adapter: exported, exportName, stackDir: entry.name }]
+            : [],
+        );
+      }),
+    )
+  ).flat();
+
+  return discovered.sort(compareDiscoveredToolchains);
+}
+
+function isToolchainAdapter(value: unknown): value is ToolchainAdapter {
+  return (
+    value != null &&
+    typeof value === "object" &&
+    "feature" in value &&
+    typeof value.feature === "string" &&
+    "label" in value &&
+    typeof value.label === "string" &&
+    "hint" in value &&
+    typeof value.hint === "string"
+  );
+}
+
+function compareDiscoveredToolchains(left: DiscoveredToolchain, right: DiscoveredToolchain) {
+  return (
+    (left.adapter.order ?? 1000) - (right.adapter.order ?? 1000) ||
+    left.stackDir.localeCompare(right.stackDir) ||
+    left.exportName.localeCompare(right.exportName)
+  );
+}
+
 async function createManifest(input: ManifestInput): Promise<CliCommandManifest> {
-  const { publishedAt, version } = await resolvePackageVersion(input.packageName, input.distTag);
+  const { publishedAt, version } = shouldCheck
+    ? await readPinnedPackageVersion(input)
+    : await resolvePackageVersion(input.packageName, input.distTag);
   const manifest = defineCliCommandManifest({
     schemaVersion: "toolchains-init/cli-command-manifest/v1",
     tool: input.tool,
@@ -152,31 +226,87 @@ async function resolvePackageVersion(packageName: string, distTag: string) {
   return { publishedAt, version: parsed };
 }
 
-async function runHelpCommand(command: readonly string[]) {
+async function readPinnedPackageVersion(input: ManifestInput) {
+  const manifest = defineCliCommandManifest(
+    JSON.parse(await readFile(getGeneratedManifestPath(input), "utf8")),
+  );
+  const npmSource = manifest.sources.find(
+    (source): source is NpmSource => source.kind === "npm" && source.package === input.packageName,
+  );
+  if (npmSource == null) {
+    throw new Error(
+      `Generated CLI manifest for ${input.tool} has no npm source. Run yarn manifests:update.`,
+    );
+  }
+  if (manifest.package !== input.packageName) {
+    throw new Error(
+      `Generated CLI manifest for ${input.tool} uses ${manifest.package}, expected ${input.packageName}. Run yarn manifests:update.`,
+    );
+  }
+
+  return { publishedAt: npmSource.resolvedAt, version: manifest.version };
+}
+
+export async function runHelpCommand(command: readonly string[]) {
   const [bin, ...args] = command;
   if (bin == null) {
     throw new Error("Help command has no binary");
   }
 
-  const { stdout, stderr } = await execFileAsync(bin, args, {
-    encoding: "utf8",
-    maxBuffer: 10 * 1024 * 1024,
-  });
-  return `${stdout}\n${stderr}`;
+  try {
+    const { stdout, stderr } = await execFileAsync(bin, args, {
+      encoding: "utf8",
+      maxBuffer: 10 * 1024 * 1024,
+    });
+    return `${stdout}\n${stderr}`;
+  } catch (error) {
+    const output = getProcessOutput(error);
+    if (output.trim().length > 0) {
+      return output;
+    }
+    throw error;
+  }
+}
+
+function getProcessOutput(error: unknown) {
+  if (error == null || typeof error !== "object") {
+    return "";
+  }
+
+  return `${stringifyProcessOutput("stdout" in error ? error.stdout : undefined)}\n${stringifyProcessOutput(
+    "stderr" in error ? error.stderr : undefined,
+  )}`;
+}
+
+function stringifyProcessOutput(output: unknown) {
+  if (typeof output === "string") {
+    return output;
+  }
+  if (output instanceof Uint8Array) {
+    return Buffer.from(output).toString("utf8");
+  }
+  return "";
 }
 
 function renderManifestFiles(input: ManifestInput, manifest: CliCommandManifest) {
-  const stackDir = path.resolve("src", "stacks", input.stackDir);
   return [
     {
-      path: path.join(stackDir, "manifest.generated.json"),
+      path: getGeneratedManifestPath(input),
       content: `${JSON.stringify(manifest, null, 2)}\n`,
     },
     {
-      path: path.join(stackDir, "manifest.ts"),
+      path: path.join(getStackDir(input), "manifest.ts"),
       content: renderManifestWrapper(input.exportName),
     },
   ];
+}
+
+function getGeneratedManifestPath(input: ManifestInput) {
+  return path.join(getStackDir(input), "manifest.generated.json");
+}
+
+function getStackDir(input: ManifestInput) {
+  return path.resolve("src", "stacks", input.stackDir);
 }
 
 async function checkGeneratedFiles(files: readonly GeneratedFile[]) {
@@ -352,7 +482,7 @@ function isCliHelpForCommand(
   );
 }
 
-function resolvePackageManagerCommands(
+export function resolvePackageManagerCommands(
   input: ManifestInput,
   version: string,
 ): PackageManagerCommandTemplates {
@@ -395,7 +525,13 @@ function inferRunner(packageName: string) {
 }
 
 function getCreateInitializerName(packageName: string) {
-  return getPackageNameWithoutScope(packageName).replace(/^create-/, "");
+  const scopedPackageMatch = /^(@[^/]+)\/(.+)$/.exec(packageName);
+  if (scopedPackageMatch != null) {
+    const [, scope, packageNameWithoutScope] = scopedPackageMatch;
+    return `${scope}/${packageNameWithoutScope?.replace(/^create-/, "")}`;
+  }
+
+  return packageName.replace(/^create-/, "");
 }
 
 function getPackageNameWithoutScope(packageName: string) {
@@ -421,6 +557,122 @@ export const ${exportName} = defineCliCommandManifest(${exportName}Data);
 `;
 }
 
+function renderManifestRegistry(inputs: readonly ManifestInput[]): GeneratedFile {
+  const imports = inputs
+    .map(
+      (input) =>
+        `import { ${input.exportName}, ${input.exportName}Data } from "./${input.stackDir}/manifest";`,
+    )
+    .join("\n");
+  const manifests = inputs.map((input) => `  ${input.exportName},`).join("\n");
+  const manifestData = inputs.map((input) => `  ${input.exportName}Data,`).join("\n");
+
+  return {
+    path: path.resolve("src", "stacks", "manifest-registry.generated.ts"),
+    content: `// Generated by scripts/update-cli-manifests.ts. Do not edit directly.
+import type { CliCommandManifest } from "../core/cli-command-manifest";
+${imports}
+
+export const cliCommandManifests = [
+${manifests}
+] satisfies readonly CliCommandManifest[];
+
+export const cliCommandManifestData = [
+${manifestData}
+];
+
+export function getCliCommandManifest(tool: string) {
+  return cliCommandManifests.find((manifest) => manifest.tool === tool) ?? null;
+}
+`,
+  };
+}
+
+function renderToolchainsRegistry(toolchains: readonly DiscoveredToolchain[]): GeneratedFile {
+  const imports = toolchains
+    .map(
+      (toolchain) => `import { ${toolchain.exportName} } from "./${toolchain.stackDir}/adapter";`,
+    )
+    .join("\n");
+  const registry = toolchains.map((toolchain) => `  ${toolchain.exportName},`).join("\n");
+
+  return {
+    path: path.resolve("src", "stacks", "toolchains.generated.ts"),
+    content: `// Generated by scripts/update-cli-manifests.ts. Do not edit directly.
+import type { ToolchainAdapter } from "../core/toolchain-adapter";
+${imports}
+
+export const toolchains = [
+${registry}
+] satisfies readonly ToolchainAdapter[];
+
+export const ALL_FEATURES = toolchains.map((toolchain) => toolchain.feature);
+
+export function getSelectedToolchains(features: readonly string[]) {
+  return toolchains.filter((toolchain) => features.includes(toolchain.feature));
+}
+
+export async function getAvailableToolchains(
+  context: Parameters<NonNullable<(typeof toolchains)[number]["isAvailable"]>>[0],
+) {
+  const available = await Promise.all(
+    toolchains.map(async (toolchain) => ({
+      toolchain,
+      isAvailable: (await toolchain.isAvailable?.(context)) ?? true,
+    })),
+  );
+
+  return available.filter(({ isAvailable }) => isAvailable).map(({ toolchain }) => toolchain);
+}
+`,
+  };
+}
+
 function kebabCase(value: string) {
   return value.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`);
+}
+
+function isMainModule() {
+  const entrypoint = process.argv[1];
+  return entrypoint != null && import.meta.url === pathToFileURL(entrypoint).href;
+}
+
+function formatError(error: unknown) {
+  if (error == null || typeof error !== "object") {
+    return String(error);
+  }
+
+  const message = error instanceof Error ? error.message.split("\n")[0] : String(error);
+  const stderr = "stderr" in error && typeof error.stderr === "string" ? error.stderr.trim() : "";
+  const stdout = "stdout" in error && typeof error.stdout === "string" ? error.stdout.trim() : "";
+  const output = [parseNpmViewError(stdout), stderr]
+    .filter((value): value is string => value != null && value.length > 0)
+    .join("\n");
+
+  return output.length > 0 ? `${message}\n${output}` : message;
+}
+
+function parseNpmViewError(stdout: string) {
+  if (stdout.length === 0) {
+    return undefined;
+  }
+
+  try {
+    const parsed = JSON.parse(stdout) as unknown;
+    if (
+      parsed != null &&
+      typeof parsed === "object" &&
+      "error" in parsed &&
+      parsed.error != null &&
+      typeof parsed.error === "object" &&
+      "summary" in parsed.error &&
+      typeof parsed.error.summary === "string"
+    ) {
+      return parsed.error.summary;
+    }
+  } catch {
+    return stdout;
+  }
+
+  return stdout;
 }

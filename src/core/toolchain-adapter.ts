@@ -1,3 +1,4 @@
+import type { CliCommandManifest } from "./cli-command-manifest";
 import type { PackageManager } from "./package-manager";
 import type { PackageJson, ToolchainOptions } from "./types";
 
@@ -9,6 +10,7 @@ export type RunToolchainContext = {
 };
 
 export type UpdatePackageJsonContext = {
+  cliManifest?: CliCommandManifest;
   packageJson: PackageJson;
   options: ToolchainOptions;
 };
@@ -50,6 +52,7 @@ export type ToolchainAdapter = {
   feature: ToolchainOptions["features"][number];
   label: string;
   hint: string;
+  order?: number;
   cli?: ToolchainCliDefinition;
   isAvailable?: (context: ToolchainAvailabilityContext) => boolean | Promise<boolean>;
   run?: (context: RunToolchainContext) => Promise<void>;
@@ -121,4 +124,12 @@ export function defineToolchain(options: DefineToolchainOptions): ToolchainAdapt
       tool,
     },
   };
+}
+
+export function getToolchainCliTool(toolchain: ToolchainAdapter) {
+  return toolchain.cli?.tool ?? kebabCase(toolchain.feature);
+}
+
+function kebabCase(value: string) {
+  return value.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`);
 }

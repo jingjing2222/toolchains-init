@@ -1,14 +1,14 @@
 # toolchains-init
 
-Initialize the React toolchain pieces you usually add after creating a fresh app.
+[![NPM](https://img.shields.io/npm/v/toolchains-init)](https://www.npmjs.com/package/toolchains-init)
 
-`toolchains-init` is not another app template. It runs official setup commands for the tools you choose, then adds a small amount of glue where the tools expect workspace files such as editor settings or package scripts.
+Set up the tools you usually add after creating a fresh Vite React app.
 
-Use it when you already have a new Vite React app and want to add router, E2E, formatting, linting, dead-code checks, release tooling, or editor setup without repeating the same manual steps every time.
+`toolchains-init` runs the official initializers for the tools you choose, then applies the small workspace setup those tools expect: editor settings, package scripts, router files, test config, and release tooling.
 
 ## Quick Start
 
-Run `toolchains-init` from the app directory:
+Run it from your app directory:
 
 ```bash
 npx toolchains-init
@@ -16,11 +16,61 @@ yarn dlx toolchains-init
 pnpm dlx toolchains-init
 ```
 
-You will get an interactive prompt for the toolchains to add.
+Then choose what you want to add from the interactive prompt.
 
-## Workspace Apps
+## Key Features
 
-In a monorepo, run from the workspace root and point at the app package:
+- **Official setup commands**: runs each tool's own initializer instead of copying a template.
+- **Pick only what you need**: router, E2E, formatter, linter, dead-code checks, release tooling, or editor SDKs.
+- **Fresh app friendly**: designed for newly scaffolded Vite React projects.
+- **Monorepo support**: initialize an app package from the workspace root with `--target`.
+- **Package-manager aware**: works with npm, yarn, and pnpm.
+- **Overwrite warnings**: shows files that may be replaced before continuing.
+
+## What It Can Add
+
+| Toolchain       | What You Get                                        |
+| --------------- | --------------------------------------------------- |
+| TanStack Router | File-Based Routing or Code-Based Routing setup      |
+| Playwright      | Browser E2E test setup                              |
+| oxfmt           | Oxc formatter setup and editor integration          |
+| oxlint          | Oxc linter setup and editor integration             |
+| Biome           | Biome formatter/linter setup and editor integration |
+| Knip            | `knip` package script                               |
+| React Doctor    | `react-doctor` package script                       |
+| Changesets      | Changeset release workflow                          |
+| Yarn SDKs       | Yarn PnP editor SDKs for VS Code                    |
+
+## Usage
+
+Run the interactive flow:
+
+```bash
+toolchains-init
+```
+
+Initialize every available toolchain:
+
+```bash
+toolchains-init --yes
+```
+
+Choose a router mode:
+
+```bash
+toolchains-init --router file
+toolchains-init --router code
+```
+
+Run without installing dependencies or official initializers:
+
+```bash
+toolchains-init --no-install
+```
+
+## Monorepos
+
+From a workspace root, point `toolchains-init` at the app package:
 
 ```bash
 npx toolchains-init --target apps/web
@@ -28,83 +78,10 @@ yarn dlx toolchains-init --target apps/web
 pnpm dlx toolchains-init --target apps/web
 ```
 
-All files, installs, and official initializers run in the target directory. The workspace root is left alone unless it is the target.
+All files, installs, and setup commands run inside the target directory.
 
-## What It Can Add
+## Notes
 
-- TanStack Router through `@tanstack/cli create --router-only`
-- Playwright through the official Playwright initializer
-- oxfmt through `oxfmt --init`
-- oxlint through `oxlint --init`
-- Biome through `biome init`
-- VS Code, Cursor, and Zed workspace settings for the selected formatter and linter tools
-- `knip` script through a pinned `knip` CLI manifest
-- `react-doctor` script through a pinned `react-doctor` CLI manifest
-- Changesets through `changeset init`
-- Yarn PnP editor SDKs through `yarn dlx @yarnpkg/sdks vscode`
+Run this in a freshly scaffolded app. Some selected toolchains can overwrite files such as router files, Playwright config, formatter config, linter config, or editor settings.
 
-The formatter and linter adapters do not replace your existing `format`, `lint`, or `verify` scripts. They set up the tools and editor integration; you decide how to wire scripts for each app.
-
-## CLI Contracts
-
-External initializer commands are described with versioned CLI command manifests before they are executed. Each manifest is validated with Valibot and records the upstream package version, source metadata, package-manager command templates, and supported flags. This keeps toolchain commands tied to known upstream contracts instead of relying on unqualified `latest` command paths at runtime.
-
-Each CLI-backed stack declares only its low-level CLI identity in its co-located adapter:
-
-```ts
-export const hotUpdater = defineToolchain({
-  feature: "hotUpdater",
-  label: "Hot Updater",
-  package: "hot-updater",
-  command: "init",
-});
-```
-
-Then run:
-
-```bash
-yarn manifests:update
-```
-
-The generator reads those adapter declarations, resolves the configured npm dist-tag, executes CLI help when supported, derives flag contracts from the help output, infers package-manager commands, and rewrites each stack's `manifest.generated.json` plus `manifest.ts`.
-
-Package-manager commands are inferred from the upstream CLI shape. Packages named like `create-*` use the package manager's native create/init form, such as `npm init playwright@{version} --`, `pnpm create playwright@{version}`, and `yarn create playwright@{version}`. Other CLIs use `npx`, `pnpm dlx`, and `yarn dlx`. A stack can still pin `packageManagers`, disable broken help parsing with `help: false`, or provide a custom runner when the upstream CLI needs a special invocation.
-
-`manifest.generated.json` is the runtime source of truth for each stack. The co-located `manifest.ts` wrapper only imports that JSON and validates it with Valibot. Use `yarn manifests:check` to fail when generated manifests are stale. Published packages also export the raw generated JSON at `toolchains-init/stacks/<stack>/manifest.generated.json`.
-
-## Usage
-
-```bash
-yarn dlx toolchains-init
-npx toolchains-init
-pnpm dlx toolchains-init
-```
-
-Useful flags:
-
-```bash
-toolchains-init --target apps/web
-toolchains-init --yes
-toolchains-init --yes --router file
-toolchains-init --no-install
-```
-
-`--yes` selects all available toolchains. File-Based Routing is the default router mode. Code-Based Routing still requires the interactive TanStack Router CLI, so run without `--yes` if you want that mode.
-
-`--no-install` updates local files and `package.json`, but skips official initializers, package install, and post-install setup. It is mainly useful for tests.
-
-## Warning
-
-Run this only in a freshly scaffolded app or package directory.
-
-The command can overwrite files at known toolchain paths, such as editor settings, router files, Playwright config, or tool config files. When running interactively, existing target files are listed before overwrite confirmation.
-
-## Release
-
-Versions are managed with Changesets.
-
-```bash
-yarn changeset
-```
-
-After the release PR is merged, GitHub Actions publishes to npm with `NPM_TOKEN`.
+`--yes` uses the default File-Based Routing mode. Code-Based Routing requires TanStack Router's interactive CLI, so run without `--yes` if you want that mode.

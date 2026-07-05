@@ -3,8 +3,10 @@ import { updatePackageJson } from "../src/core/package-json";
 import type { PackageJson } from "../src/core/types";
 import { biomeCliManifest } from "../src/stacks/biome";
 import { changesetsCliManifest } from "../src/stacks/changesets";
+import { knipCliManifest } from "../src/stacks/knip";
 import { oxfmtCliManifest } from "../src/stacks/oxfmt";
 import { oxlintCliManifest } from "../src/stacks/oxlint";
+import { reactDoctorCliManifest } from "../src/stacks/react-doctor";
 
 describe("package.json updates", () => {
   it("adds only the selected quality tools", () => {
@@ -13,7 +15,7 @@ describe("package.json updates", () => {
     expect(updated.scripts?.format).toBeUndefined();
     expect(updated.scripts?.["format:check"]).toBeUndefined();
     expect(updated.scripts?.lint).toBeUndefined();
-    expect(updated.scripts?.knip).toBe("npx knip@6.24.0");
+    expect(updated.scripts?.knip).toBe(`npx knip@${knipCliManifest.version}`);
     expect(updated.scripts?.["react-doctor"]).toBeUndefined();
     expect(updated.scripts?.verify).toBeUndefined();
     expect(updated.devDependencies?.oxfmt).toBe(oxfmtCliManifest.version);
@@ -78,7 +80,9 @@ describe("package.json updates", () => {
   it("runs React Doctor through npx without installing it", () => {
     const updated = updatePackageJson(basePackageJson(), ["reactDoctor"]);
 
-    expect(updated.scripts?.["react-doctor"]).toBe("npx react-doctor@0.7.1");
+    expect(updated.scripts?.["react-doctor"]).toBe(
+      `npx react-doctor@${reactDoctorCliManifest.version}`,
+    );
     expect(updated.scripts?.verify).toBeUndefined();
     expect(updated.devDependencies?.["react-doctor"]).toBeUndefined();
   });
@@ -86,7 +90,7 @@ describe("package.json updates", () => {
   it("runs Knip through npx without installing it", () => {
     const updated = updatePackageJson(basePackageJson(), ["knip"]);
 
-    expect(updated.scripts?.knip).toBe("npx knip@6.24.0");
+    expect(updated.scripts?.knip).toBe(`npx knip@${knipCliManifest.version}`);
     expect(updated.devDependencies?.knip).toBeUndefined();
   });
 
@@ -105,6 +109,20 @@ describe("package.json updates", () => {
     expect(updated.devDependencies?.["@biomejs/biome"]).toBe(biomeCliManifest.version);
     expect(updated.scripts?.format).toBeUndefined();
     expect(updated.scripts?.lint).toBeUndefined();
+  });
+
+  it("keeps manifest-backed dependencies aligned with manifest versions", () => {
+    const updated = updatePackageJson(
+      {
+        ...basePackageJson(),
+        devDependencies: {
+          "@biomejs/biome": "^1.9.4",
+        },
+      },
+      ["biome"],
+    );
+
+    expect(updated.devDependencies?.["@biomejs/biome"]).toBe(biomeCliManifest.version);
   });
 });
 

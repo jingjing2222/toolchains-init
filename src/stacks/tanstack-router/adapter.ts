@@ -3,7 +3,6 @@ import path from "node:path";
 import { resolveCliCommand } from "../../core/cli-command-manifest";
 import { runCommand } from "../../core/run-command";
 import { defineToolchain } from "../../core/toolchain-adapter";
-import { tanStackRouterCliManifest } from "./manifest";
 
 type JsonObject = Record<string, unknown>;
 
@@ -11,6 +10,7 @@ export const tanStackRouter = defineToolchain({
   feature: "router",
   label: "TanStack Router",
   hint: "File-Based Routing or Code-Based Routing",
+  order: 10,
   package: "@tanstack/cli",
   command: "create-router",
   subcommand: "create",
@@ -18,6 +18,7 @@ export const tanStackRouter = defineToolchain({
   stackDir: "tanstack-router",
   exportName: "tanStackRouterCliManifest",
   async run({ cwd, packageManager, options, yes }) {
+    const { tanStackRouterCliManifest } = await import("./manifest");
     const command = resolveCliCommand(
       tanStackRouterCliManifest,
       "create-router",

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { resolveCliCommand } from "../src/core/cli-command-manifest";
 import { defineToolchain } from "../src/core/toolchain-adapter";
 import { cliCommandManifestData, cliCommandManifests, getCliCommandManifest } from "../src/stacks";
+import { resolvePackageManagerCommands, runHelpCommand } from "../scripts/update-cli-manifests";
 import packageJson from "../package.json" with { type: "json" };
 
 const playwrightCliManifest = getCliCommandManifest("playwright");
@@ -65,15 +66,15 @@ describe("CLI command manifests", () => {
   it("resolves pinned Playwright init commands by package manager", () => {
     expect(resolveCliCommand(playwrightCliManifest, "init", "npm")).toEqual({
       bin: "npm",
-      args: ["init", "playwright@1.17.139", "--"],
+      args: ["init", `playwright@${playwrightCliManifest.version}`, "--"],
     });
     expect(resolveCliCommand(playwrightCliManifest, "init", "pnpm")).toEqual({
       bin: "pnpm",
-      args: ["create", "playwright@1.17.139"],
+      args: ["create", `playwright@${playwrightCliManifest.version}`],
     });
     expect(resolveCliCommand(playwrightCliManifest, "init", "yarn")).toEqual({
       bin: "yarn",
-      args: ["create", "playwright@1.17.139"],
+      args: ["create", `playwright@${playwrightCliManifest.version}`],
     });
   });
 
@@ -96,6 +97,41 @@ describe("CLI command manifests", () => {
       yarn: ["yarn", "dlx", "@yarnpkg/sdks@{version}", "vscode"],
     });
     expect(yarnSdksCliManifest?.sources.map((source) => source.kind)).toEqual(["npm"]);
+  });
+
+  it("preserves package scopes when inferring create commands", () => {
+    expect(
+      resolvePackageManagerCommands(
+        {
+          commandId: "init",
+          distTag: "latest",
+          docs: [],
+          exportName: "scopedCreateCliManifest",
+          help: undefined,
+          packageManagers: ["npm", "pnpm", "yarn"],
+          packageName: "@scope/create-widget",
+          runner: "auto",
+          stackDir: "scoped-create",
+          subcommand: "init",
+          tool: "scoped-create",
+        },
+        "1.2.3",
+      ),
+    ).toEqual({
+      npm: ["npm", "init", "@scope/widget@{version}", "--"],
+      pnpm: ["pnpm", "create", "@scope/widget@{version}"],
+      yarn: ["yarn", "create", "@scope/widget@{version}"],
+    });
+  });
+
+  it("keeps help output from CLIs that exit non-zero", async () => {
+    await expect(
+      runHelpCommand([
+        process.execPath,
+        "-e",
+        "console.log('--flag  useful help'); process.exit(2)",
+      ]),
+    ).resolves.toContain("--flag  useful help");
   });
 
   it("keeps CLI identity declarations minimal in stack adapters", () => {
@@ -130,7 +166,7 @@ describe("CLI command manifests", () => {
       bin: "npm",
       args: [
         "init",
-        "playwright@1.17.139",
+        `playwright@${playwrightCliManifest.version}`,
         "--",
         "--quiet",
         "--lang",

@@ -47,6 +47,7 @@
     "lint": "oxlint --deny-warnings",
     "manifests:check": "tsx scripts/update-cli-manifests.ts --check",
     "manifests:update": "tsx scripts/update-cli-manifests.ts",
+    "new": "tsx scripts/new-toolchain.ts",
     "pack:check": "npm pack --dry-run",
     "prepack": "yarn build",
     "release": "yarn build && changeset publish",

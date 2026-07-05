@@ -8,7 +8,6 @@ import { setManifestDevDependency } from "../../core/package-json-utils";
 import type { PackageManager } from "../../core/package-manager";
 import { runCommand } from "../../core/run-command";
 import { defineToolchain } from "../../core/toolchain-adapter";
-import { biomeCliManifest } from "./manifest";
 
 const biomeVsCodeLanguages = ["javascript", "javascriptreact", "typescript", "typescriptreact"];
 
@@ -16,11 +15,12 @@ export const biome = defineToolchain({
   feature: "biome",
   label: "Biome",
   hint: "Formatter and linter setup through Biome CLI",
+  order: 50,
   package: "@biomejs/biome",
   command: "init",
   docs: [{ url: "https://biomejs.dev/reference/configuration/", confidence: "high" }],
-  updatePackageJson({ packageJson }) {
-    setManifestDevDependency(packageJson, biomeCliManifest);
+  updatePackageJson({ cliManifest, packageJson }) {
+    setManifestDevDependency(packageJson, cliManifest);
   },
   async afterWrite({ cwd, options }) {
     await addVsCodeExtensionRecommendations(cwd, ["biomejs.biome"]);
@@ -71,6 +71,8 @@ function getBiomeVsCodeSettings(hasOxfmt: boolean) {
 }
 
 function runBiomeInit(cwd: string, packageManager: PackageManager) {
-  const command = resolveCliCommand(biomeCliManifest, "init", packageManager);
-  return runCommand(cwd, command.bin, command.args);
+  return import("./manifest").then(({ biomeCliManifest }) => {
+    const command = resolveCliCommand(biomeCliManifest, "init", packageManager);
+    return runCommand(cwd, command.bin, command.args);
+  });
 }
