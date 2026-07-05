@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { resolveCliCommand } from "../src/core/cli-command-manifest";
-import { cliCommandManifests, getCliCommandManifest } from "../src/stacks";
+import { cliCommandManifestData, cliCommandManifests, getCliCommandManifest } from "../src/stacks";
 
 const playwrightCliManifest = getCliCommandManifest("playwright");
 if (playwrightCliManifest == null) {
@@ -9,7 +9,7 @@ if (playwrightCliManifest == null) {
 
 describe("CLI command manifests", () => {
   it("registers every CLI-backed toolchain command", () => {
-    expect(cliCommandManifests.map((manifest) => manifest.tool)).toEqual([
+    const expectedTools = [
       "tanstack-router",
       "playwright",
       "oxfmt",
@@ -19,7 +19,10 @@ describe("CLI command manifests", () => {
       "react-doctor",
       "changesets",
       "yarn-sdks",
-    ]);
+    ];
+
+    expect(cliCommandManifestData.map((manifest) => manifest.tool)).toEqual(expectedTools);
+    expect(cliCommandManifests.map((manifest) => manifest.tool)).toEqual(expectedTools);
   });
 
   it("resolves every command for its declared package managers", () => {

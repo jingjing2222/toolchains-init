@@ -1,2 +1,2 @@
 export { biome } from "./adapter";
-export { biomeCliManifest } from "./manifest";
+export { biomeCliManifest, biomeCliManifestData } from "./manifest";

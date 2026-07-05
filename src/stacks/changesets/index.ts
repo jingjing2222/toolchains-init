@@ -1,2 +1,2 @@
 export { changesets } from "./adapter";
-export { changesetsCliManifest } from "./manifest";
+export { changesetsCliManifest, changesetsCliManifestData } from "./manifest";

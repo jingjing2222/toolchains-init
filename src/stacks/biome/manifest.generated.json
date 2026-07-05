@@ -1,0 +1,35 @@
+{
+  "schemaVersion": "toolchains-init/cli-command-manifest/v1",
+  "tool": "biome",
+  "package": "@biomejs/biome",
+  "version": "2.5.2",
+  "commands": [
+    {
+      "id": "init",
+      "packageManagers": {
+        "npm": ["npx", "@biomejs/biome@{version}", "init"],
+        "pnpm": ["pnpm", "dlx", "@biomejs/biome@{version}", "init"],
+        "yarn": ["yarn", "dlx", "@biomejs/biome@{version}", "init"]
+      },
+      "interactive": false
+    }
+  ],
+  "sources": [
+    {
+      "kind": "npm",
+      "package": "@biomejs/biome",
+      "version": "2.5.2",
+      "distTag": "latest",
+      "resolvedAt": "2026-07-01T10:30:58.351Z"
+    },
+    {
+      "kind": "cli-help",
+      "command": ["npx", "--yes", "@biomejs/biome@2.5.2", "--help"]
+    },
+    {
+      "kind": "docs",
+      "url": "https://biomejs.dev/reference/configuration/",
+      "confidence": "high"
+    }
+  ]
+}

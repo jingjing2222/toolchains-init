@@ -1,2 +1,2 @@
 export { yarnSdks } from "./adapter";
-export { yarnSdksCliManifest } from "./manifest";
+export { yarnSdksCliManifest, yarnSdksCliManifestData } from "./manifest";

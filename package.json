@@ -44,13 +44,14 @@
     "format": "oxfmt --write",
     "format:check": "oxfmt --check",
     "lint": "oxlint --deny-warnings",
+    "manifests:check": "tsx scripts/update-cli-manifests.ts --check",
     "manifests:update": "tsx scripts/update-cli-manifests.ts",
     "pack:check": "npm pack --dry-run",
     "prepack": "yarn build",
     "release": "yarn build && changeset publish",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "verify": "yarn format:check && yarn lint && yarn typecheck && yarn build && yarn test && yarn pack:check"
+    "verify": "yarn format:check && yarn lint && yarn typecheck && yarn manifests:check && yarn build && yarn test && yarn pack:check"
   },
   "dependencies": {
     "@clack/prompts": "^0.11.0",

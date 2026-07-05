@@ -1,2 +1,2 @@
 export { knip } from "./adapter";
-export { knipCliManifest } from "./manifest";
+export { knipCliManifest, knipCliManifestData } from "./manifest";

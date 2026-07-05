@@ -3,4 +3,4 @@ export {
   restorePackageJsonWithDependencyChanges,
   tanStackRouter,
 } from "./adapter";
-export { tanStackRouterCliManifest } from "./manifest";
+export { tanStackRouterCliManifest, tanStackRouterCliManifestData } from "./manifest";

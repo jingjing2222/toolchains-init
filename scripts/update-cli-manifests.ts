@@ -1,81 +1,84 @@
 import { execFile } from "node:child_process";
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 import type { CliCommandManifest } from "../src/core/cli-command-manifest";
 import { defineCliCommandManifest } from "../src/core/cli-command-manifest";
-import type { CliCommandProbe } from "../src/core/cli-command-probe";
-import { biomeCliProbe } from "../src/stacks/biome/probe";
-import { changesetsCliProbe } from "../src/stacks/changesets/probe";
-import { knipCliProbe } from "../src/stacks/knip/probe";
-import { oxfmtCliProbe } from "../src/stacks/oxfmt/probe";
-import { oxlintCliProbe } from "../src/stacks/oxlint/probe";
-import { playwrightCliProbe } from "../src/stacks/playwright/probe";
-import { reactDoctorCliProbe } from "../src/stacks/react-doctor/probe";
-import { tanStackRouterCliProbe } from "../src/stacks/tanstack-router/probe";
-import { yarnSdksCliProbe } from "../src/stacks/yarn-sdks/probe";
 
 const execFileAsync = promisify(execFile);
-const probes = [
-  tanStackRouterCliProbe,
-  playwrightCliProbe,
-  oxfmtCliProbe,
-  oxlintCliProbe,
-  biomeCliProbe,
-  knipCliProbe,
-  reactDoctorCliProbe,
-  changesetsCliProbe,
-  yarnSdksCliProbe,
-] satisfies readonly CliCommandProbe[];
+const shouldCheck = process.argv.includes("--check");
+const manifestPaths = await findManifestPaths();
 
-const updatedManifestPaths: string[] = [];
+const generatedFiles: GeneratedFile[] = [];
 
-for (const probe of probes) {
-  const manifest = await createManifest(probe);
-  const outputPath = await writeManifest(probe, manifest);
-  updatedManifestPaths.push(outputPath);
-  console.log(`updated ${path.relative(process.cwd(), outputPath)}`);
+for (const manifestPath of manifestPaths) {
+  const manifest = await refreshManifest(manifestPath);
+  generatedFiles.push(renderManifestFile(manifestPath, manifest));
 }
 
-await execFileAsync("yarn", ["oxfmt", "--write", ...updatedManifestPaths], {
-  encoding: "utf8",
-  maxBuffer: 10 * 1024 * 1024,
-});
+if (shouldCheck) {
+  await checkGeneratedFiles(generatedFiles);
+} else {
+  await writeGeneratedFiles(generatedFiles);
+  await formatGeneratedFiles(generatedFiles.map((file) => file.path));
+}
 
-async function createManifest(probe: CliCommandProbe): Promise<CliCommandManifest> {
-  const { publishedAt, version } = await resolvePackageVersion(probe.package, probe.distTag);
-  const sources: CliCommandManifest["sources"] = [
-    {
-      kind: "npm",
-      package: probe.package,
-      version,
-      distTag: probe.distTag,
-      resolvedAt: publishedAt,
-    },
-  ];
+type GeneratedFile = {
+  path: string;
+  content: string;
+};
 
-  let helpOutput = "";
-  if (probe.helpCommand != null) {
-    const helpCommand = hydrateTokens(probe.helpCommand, probe.package, version);
-    helpOutput = await runHelpCommand(helpCommand);
-    sources.push({ kind: "cli-help", command: helpCommand });
+async function findManifestPaths() {
+  const stacksDir = path.resolve("src", "stacks");
+  const entries = await readdir(stacksDir, { withFileTypes: true });
+  const paths = entries
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => path.join(stacksDir, entry.name, "manifest.generated.json"))
+    .sort();
+
+  if (paths.length === 0) {
+    throw new Error("No CLI manifest JSON files found.");
   }
 
-  if (probe.docs != null) {
-    sources.push(...probe.docs);
+  return paths;
+}
+
+async function refreshManifest(manifestPath: string): Promise<CliCommandManifest> {
+  const current = defineCliCommandManifest(JSON.parse(await readFile(manifestPath, "utf8")));
+  const npmSource = current.sources.find((source) => source.kind === "npm");
+  if (npmSource == null) {
+    return current;
   }
 
-  validateProbeHelp(probe, helpOutput);
-
-  return defineCliCommandManifest({
-    schemaVersion: "toolchains-init/cli-command-manifest/v1",
-    tool: probe.tool,
-    package: probe.package,
+  const { publishedAt, version } = await resolvePackageVersion(
+    npmSource.package,
+    npmSource.distTag ?? "latest",
+  );
+  const next = defineCliCommandManifest({
+    ...current,
+    package: npmSource.package,
     version,
-    commands: probe.commands.map((command) => ({ ...command })),
-    sources,
+    sources: current.sources.map((source) => {
+      if (source.kind === "npm") {
+        return {
+          ...source,
+          version,
+          resolvedAt: publishedAt,
+        };
+      }
+      if (source.kind === "cli-help") {
+        return {
+          ...source,
+          command: source.command.map((token) => replaceVersion(token, current.version, version)),
+        };
+      }
+      return source;
+    }),
   });
+
+  await validateManifestHelp(next);
+  return next;
 }
 
 async function resolvePackageVersion(packageName: string, distTag: string) {
@@ -122,41 +125,108 @@ async function runHelpCommand(command: readonly string[]) {
   return `${stdout}\n${stderr}`;
 }
 
-function validateProbeHelp(probe: CliCommandProbe, helpOutput: string) {
-  if (probe.helpCommand == null) {
+async function validateManifestHelp(manifest: CliCommandManifest) {
+  const helpOutputs = await Promise.all(
+    manifest.sources
+      .filter((source) => source.kind === "cli-help")
+      .map(async (source) => ({
+        command: source.command,
+        output: await runHelpCommand(source.command),
+      })),
+  );
+
+  if (helpOutputs.length === 0) {
     return;
   }
 
-  for (const command of probe.commands) {
+  const combinedHelpOutput = helpOutputs.map((help) => help.output).join("\n");
+  for (const command of manifest.commands) {
     for (const flag of Object.values(command.flags ?? {})) {
-      if (!flag.supported || helpOutput.includes(flag.cliName)) {
+      if (!flag.supported || combinedHelpOutput.includes(flag.cliName)) {
         continue;
       }
 
       throw new Error(
-        `${probe.tool}/${command.id} expected ${flag.cliName} in ${probe.helpCommand.join(" ")}`,
+        `${manifest.tool}/${command.id} expected ${flag.cliName} in ${helpOutputs
+          .map((help) => help.command.join(" "))
+          .join(", ")}`,
       );
     }
   }
 }
 
-async function writeManifest(probe: CliCommandProbe, manifest: CliCommandManifest) {
-  const outputPath = fileURLToPath(probe.manifestPath);
-  await mkdir(path.dirname(outputPath), { recursive: true });
-  await writeFile(outputPath, renderManifest(probe.exportName, manifest));
-  return outputPath;
+function renderManifestFile(manifestPath: string, manifest: CliCommandManifest) {
+  return {
+    path: manifestPath,
+    content: `${JSON.stringify(manifest, null, 2)}\n`,
+  };
 }
 
-function renderManifest(exportName: string, manifest: CliCommandManifest) {
-  return `// Generated by scripts/update-cli-manifests.ts. Do not edit directly.
-import { defineCliCommandManifest } from "../../core/cli-command-manifest";
+async function checkGeneratedFiles(files: readonly GeneratedFile[]) {
+  const formattedFiles = await formatInTempDir(files);
+  const staleFiles: string[] = [];
+  for (const file of formattedFiles) {
+    let current = "";
+    try {
+      current = await readFile(file.path, "utf8");
+    } catch {
+      staleFiles.push(file.path);
+      continue;
+    }
+    if (current !== file.content) {
+      staleFiles.push(file.path);
+    }
+  }
 
-export const ${exportName} = defineCliCommandManifest(${JSON.stringify(manifest, null, 2)});
-`;
+  if (staleFiles.length > 0) {
+    throw new Error(
+      `Stale CLI manifests. Run yarn manifests:update.\n${staleFiles
+        .map((file) => `- ${path.relative(process.cwd(), file)}`)
+        .join("\n")}`,
+    );
+  }
 }
 
-function hydrateTokens(tokens: readonly string[], packageName: string, version: string) {
-  return tokens.map((token) =>
-    token.replaceAll("{package}", packageName).replaceAll("{version}", version),
-  );
+async function writeGeneratedFiles(files: readonly GeneratedFile[]) {
+  for (const file of files) {
+    await mkdir(path.dirname(file.path), { recursive: true });
+    await writeFile(file.path, file.content);
+    console.log(`updated ${path.relative(process.cwd(), file.path)}`);
+  }
+}
+
+async function formatGeneratedFiles(filePaths: readonly string[]) {
+  await execFileAsync("yarn", ["oxfmt", "--write", ...filePaths], {
+    encoding: "utf8",
+    maxBuffer: 10 * 1024 * 1024,
+  });
+}
+
+async function formatInTempDir(files: readonly GeneratedFile[]) {
+  const tempDir = await mkdtemp(path.join(os.tmpdir(), "toolchains-init-manifests-"));
+  try {
+    const tempFiles = await Promise.all(
+      files.map(async (file) => {
+        const relativePath = path.relative(process.cwd(), file.path);
+        const tempPath = path.join(tempDir, relativePath);
+        await mkdir(path.dirname(tempPath), { recursive: true });
+        await writeFile(tempPath, file.content);
+        return { ...file, path: tempPath, originalPath: file.path };
+      }),
+    );
+    await formatGeneratedFiles(tempFiles.map((file) => file.path));
+    return Promise.all(
+      tempFiles.map(async (file) => ({
+        ...file,
+        content: await readFile(file.path, "utf8"),
+        path: file.originalPath,
+      })),
+    );
+  } finally {
+    await rm(tempDir, { force: true, recursive: true });
+  }
+}
+
+function replaceVersion(token: string, previousVersion: string, nextVersion: string) {
+  return token.replaceAll(previousVersion, nextVersion);
 }

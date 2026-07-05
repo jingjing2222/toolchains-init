@@ -49,13 +49,13 @@ The formatter and linter adapters do not replace your existing `format`, `lint`,
 
 External initializer commands are described with versioned CLI command manifests before they are executed. Each manifest is validated with Valibot and records the upstream package version, source metadata, package-manager command templates, and supported flags. This keeps toolchain commands tied to known upstream contracts instead of relying on unqualified `latest` command paths at runtime.
 
-Manifests are generated artifacts. Edit the co-located `probe.ts` for a stack, then run:
+`manifest.generated.json` is the source of truth for each stack. The co-located `manifest.ts` wrapper only imports that JSON and validates it with Valibot. Edit the JSON manifest for a stack, then run:
 
 ```bash
 yarn manifests:update
 ```
 
-The generator resolves the configured npm dist-tag, executes the configured CLI help command, validates required flags from the help output, and rewrites the stack's `manifest.ts`.
+The generator reads each JSON manifest, resolves the configured npm dist-tag, executes recorded CLI help commands, validates required flags from the help output, and rewrites the stack's `manifest.generated.json`. Use `yarn manifests:check` to fail when generated manifests are stale.
 
 ## Usage
 

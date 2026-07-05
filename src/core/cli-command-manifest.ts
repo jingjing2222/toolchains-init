@@ -67,7 +67,7 @@ export type CliFlagContract = InferOutput<typeof cliFlagContractSchema>;
 export type CliCommandContract = InferOutput<typeof cliCommandContractSchema>;
 export type CliCommandManifest = InferOutput<typeof cliCommandManifestSchema>;
 
-export function defineCliCommandManifest(manifest: CliCommandManifest) {
+export function defineCliCommandManifest(manifest: unknown) {
   return v.parse(cliCommandManifestSchema, manifest);
 }
 

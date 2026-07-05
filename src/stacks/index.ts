@@ -1,13 +1,18 @@
 import type { CliCommandManifest } from "../core/cli-command-manifest";
-import { biome, biomeCliManifest } from "./biome";
-import { changesets, changesetsCliManifest } from "./changesets";
+import { biome, biomeCliManifest, biomeCliManifestData } from "./biome";
+import { changesets, changesetsCliManifest, changesetsCliManifestData } from "./changesets";
 import { knip, knipCliManifest } from "./knip";
-import { oxfmt, oxfmtCliManifest } from "./oxfmt";
-import { oxlint, oxlintCliManifest } from "./oxlint";
-import { playwright, playwrightCliManifest } from "./playwright";
-import { reactDoctor, reactDoctorCliManifest } from "./react-doctor";
-import { tanStackRouter, tanStackRouterCliManifest } from "./tanstack-router";
-import { yarnSdks, yarnSdksCliManifest } from "./yarn-sdks";
+import { knipCliManifestData } from "./knip";
+import { oxfmt, oxfmtCliManifest, oxfmtCliManifestData } from "./oxfmt";
+import { oxlint, oxlintCliManifest, oxlintCliManifestData } from "./oxlint";
+import { playwright, playwrightCliManifest, playwrightCliManifestData } from "./playwright";
+import { reactDoctor, reactDoctorCliManifest, reactDoctorCliManifestData } from "./react-doctor";
+import {
+  tanStackRouter,
+  tanStackRouterCliManifest,
+  tanStackRouterCliManifestData,
+} from "./tanstack-router";
+import { yarnSdks, yarnSdksCliManifest, yarnSdksCliManifestData } from "./yarn-sdks";
 
 export const toolchains = [
   tanStackRouter,
@@ -34,6 +39,18 @@ export const cliCommandManifests = [
   changesetsCliManifest,
   yarnSdksCliManifest,
 ] satisfies readonly CliCommandManifest[];
+
+export const cliCommandManifestData = [
+  tanStackRouterCliManifestData,
+  playwrightCliManifestData,
+  oxfmtCliManifestData,
+  oxlintCliManifestData,
+  biomeCliManifestData,
+  knipCliManifestData,
+  reactDoctorCliManifestData,
+  changesetsCliManifestData,
+  yarnSdksCliManifestData,
+];
 
 export function getCliCommandManifest(tool: string) {
   return cliCommandManifests.find((manifest) => manifest.tool === tool) ?? null;

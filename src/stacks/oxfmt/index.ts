@@ -1,2 +1,2 @@
 export { oxfmt } from "./adapter";
-export { oxfmtCliManifest } from "./manifest";
+export { oxfmtCliManifest, oxfmtCliManifestData } from "./manifest";

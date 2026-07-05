@@ -1,2 +1,2 @@
 export { reactDoctor } from "./adapter";
-export { reactDoctorCliManifest } from "./manifest";
+export { reactDoctorCliManifest, reactDoctorCliManifestData } from "./manifest";
