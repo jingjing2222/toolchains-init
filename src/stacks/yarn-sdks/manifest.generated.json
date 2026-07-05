@@ -19,6 +19,31 @@
       "version": "3.3.0",
       "distTag": "latest",
       "resolvedAt": "2026-06-02T09:02:24.162Z"
+    },
+    {
+      "kind": "docs",
+      "url": "https://yarnpkg.com/cli/sdks",
+      "confidence": "high",
+      "checks": [
+        {
+          "found": true,
+          "text": "@yarnpkg/sdks"
+        },
+        {
+          "found": true,
+          "text": "yarn sdks"
+        }
+      ],
+      "review": {
+        "reason": "Adapter runs Yarn SDK generation only for Yarn PnP projects.",
+        "files": ["src/stacks/yarn-sdks/adapter.ts", "src/stacks/yarn-sdks/init.test.ts"],
+        "sections": ["@yarnpkg/sdks CLI Reference"],
+        "mustContain": ["@yarnpkg/sdks", "yarn sdks"],
+        "checks": [
+          "Confirm `yarn sdks vscode` remains the documented editor SDK command.",
+          "Confirm Yarn PnP remains the right availability gate for SDK generation."
+        ]
+      }
     }
   ]
 }

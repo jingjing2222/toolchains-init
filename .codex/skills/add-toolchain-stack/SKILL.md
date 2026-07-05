@@ -75,6 +75,58 @@ Use upstream project descriptions for prompt hints when available. Example for H
 hint: "Self-hostable OTA update solution for React Native",
 ```
 
+## Docs Metadata Pattern
+
+Every CLI-backed adapter must declare at least one `docs` entry. Treat `docs` as part of the
+adapter SSoT: it records which upstream source justifies the hand-written adapter policy.
+
+Prefer sources in this order:
+
+1. Official CLI/setup documentation for the exact command or initializer.
+2. Official package docs for the relevant setup/configuration behavior.
+3. The upstream package README, preferably a raw GitHub README URL, when no dedicated docs page
+   exists.
+
+Fill `docs` with review metadata:
+
+```ts
+docs: [
+  {
+    url: "https://example.com/docs/cli",
+    confidence: "high",
+    review: {
+      reason: "Adapter appends `./public --save` to the official init command.",
+      files: ["src/stacks/example/adapter.ts", "src/stacks/example/init.test.ts"],
+      sections: ["CLI init", "Configuration"],
+      mustContain: ["example init", "--save"],
+      checks: [
+        "Confirm `example init <directory> --save` remains supported.",
+        "Confirm generated files still match adapter target files.",
+      ],
+    },
+  },
+],
+```
+
+Field guidance:
+
+- `url`: stable official docs URL. Use raw README if docs are unavailable.
+- `confidence`: `high` for official docs that directly describe the behavior, `medium` for README
+  or broader docs, `low` only when no better upstream source exists.
+- `reason`: why this adapter policy depends on the source. Mention the exact adapter behavior.
+- `files`: adapter and focused tests a maintainer should inspect when the source changes.
+- `sections`: human-facing section names from the source. These guide review; they are not parsed.
+- `mustContain`: short exact strings that must remain present in the normalized docs text. Pick
+  stable strings that prove the policy source still exists, such as command names, package names,
+  option names, generated file names, or config keys. Avoid long prose, marketing copy, version
+  numbers, generated navigation text, and strings already covered solely by CLI help parsing unless
+  the adapter policy directly depends on them.
+- `checks`: concrete manual review questions for the PR body when docs checks change or fail.
+
+When adding a stack, run `yarn manifests:update`. The generator fetches each docs URL and fails if a
+`mustContain` string is missing. Fix the adapter policy or choose a better docs source instead of
+loosening checks until they become meaningless.
+
 ## Generated Manifest Is SSoT
 
 For CLI-backed stacks, command templates must come from `manifest.generated.json`.
