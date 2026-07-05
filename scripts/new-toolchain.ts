@@ -56,12 +56,15 @@ export async function main(argv: readonly string[]) {
   const stackDir = path.resolve("src", "stacks", options.stackDir);
   const adapterPath = path.join(stackDir, "adapter.ts");
   const indexPath = path.join(stackDir, "index.ts");
+  const testPath = path.join(stackDir, "init.test.ts");
 
   try {
     await assertMissing(adapterPath);
     await assertMissing(indexPath);
+    await assertMissing(testPath);
     await mkdir(stackDir, { recursive: true });
     await writeFile(adapterPath, renderAdapter(options));
+    await writeFile(testPath, renderInitTest(options));
   } catch (error) {
     cancel(error instanceof Error ? error.message : String(error));
     process.exitCode = 1;
@@ -73,11 +76,12 @@ export async function main(argv: readonly string[]) {
     s.start("Generating CLI manifest");
     await run("yarn", ["manifests:update"]);
     await writeFile(indexPath, renderIndex(options));
-    await run("yarn", ["oxfmt", "--write", adapterPath, indexPath]);
+    await run("yarn", ["oxfmt", "--write", adapterPath, indexPath, testPath]);
     s.stop("CLI manifest generated");
   } catch (error) {
     s.stop("CLI manifest generation failed");
     log.error(`Created adapter: ${path.relative(process.cwd(), adapterPath)}`);
+    log.error(`Created init test: ${path.relative(process.cwd(), testPath)}`);
     log.error("Fix the adapter and run: yarn manifests:update");
     log.error(`Or remove ${path.relative(process.cwd(), stackDir)} and retry yarn new.`);
     printProcessError(error);
@@ -89,6 +93,7 @@ export async function main(argv: readonly string[]) {
     [
       pc.green("Stack adapter created."),
       `Adapter: ${pc.cyan(path.relative(process.cwd(), adapterPath))}`,
+      `Init test: ${pc.cyan(path.relative(process.cwd(), testPath))}`,
       `Manifest: ${pc.cyan(`${path.relative(process.cwd(), stackDir)}/manifest.generated.json`)}`,
     ].join("\n"),
   );
@@ -351,6 +356,46 @@ function renderAdapter(options: NewToolchainOptions) {
 
 export const ${options.adapterExportName} = defineToolchain({
 ${properties.map(([key, value]) => `  ${key}: ${JSON.stringify(value)},`).join("\n")}
+});
+`;
+}
+
+export function renderInitTest(options: NewToolchainOptions) {
+  return `import { describe, expect, it } from "vitest";
+import {
+  runExternalToolchains,
+  runPostInstallToolchains,
+} from "../../core/external-toolchains";
+import { writeToolchain } from "../../core/files";
+import {
+  adapterInitTimeout,
+  createFreshViteProject,
+  options,
+  readPackageJson,
+} from "../init-test-utils";
+
+describe("${options.label} adapter init", () => {
+  it.skip(
+    "scaffolds ${options.label} in lifecycle order",
+    async () => {
+      const cwd = await createFreshViteProject();
+      const packageJson = await readPackageJson(cwd);
+      const toolchainOptions = options([${JSON.stringify(options.feature)}]);
+
+      await runExternalToolchains(cwd, "npm", toolchainOptions, true);
+      // TODO: replace with files, package entries, or config produced by the external CLI.
+      expect(await readPackageJson(cwd)).toBeDefined();
+
+      await writeToolchain(cwd, packageJson, toolchainOptions);
+      // TODO: replace with adapter-specific after-write expectations.
+      expect(await readPackageJson(cwd)).toBeDefined();
+
+      await runPostInstallToolchains(cwd, "npm", toolchainOptions, true);
+      // TODO: replace with adapter-specific post-install expectations.
+      expect(await readPackageJson(cwd)).toBeDefined();
+    },
+    adapterInitTimeout,
+  );
 });
 `;
 }
