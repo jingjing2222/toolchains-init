@@ -26,8 +26,34 @@ export const prettier = defineToolchain({
   package: "prettier",
   command: "check",
   docs: [
-    { url: "https://prettier.io/docs/install", confidence: "high" },
-    { url: "https://prettier.io/docs/configuration", confidence: "high" },
+    {
+      url: "https://prettier.io/docs/install",
+      confidence: "high",
+      review: {
+        reason: "Adapter installs Prettier as a dev dependency and writes package scripts.",
+        files: ["src/stacks/prettier/adapter.ts", "src/stacks/prettier/init.test.ts"],
+        sections: ["Install"],
+        mustContain: ["prettier --write .", "prettier --check ."],
+        checks: [
+          "Confirm `prettier --write .` and `prettier --check .` remain documented script commands.",
+          "Confirm installing `prettier` directly remains the recommended package setup.",
+        ],
+      },
+    },
+    {
+      url: "https://prettier.io/docs/configuration",
+      confidence: "high",
+      review: {
+        reason: "Adapter writes an empty `.prettierrc` and Prettier editor defaults.",
+        files: ["src/stacks/prettier/adapter.ts", "src/stacks/prettier/init.test.ts"],
+        sections: ["Configuration File"],
+        mustContain: [".prettierrc", "JSON"],
+        checks: [
+          "Confirm `.prettierrc` remains a valid configuration file.",
+          "Confirm empty object config remains valid.",
+        ],
+      },
+    },
   ],
   hint: "Opinionated code formatter",
   subcommand: null,

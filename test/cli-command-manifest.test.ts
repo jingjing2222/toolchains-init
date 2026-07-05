@@ -67,6 +67,21 @@ describe("CLI command manifests", () => {
     });
   });
 
+  it("keeps docs-backed adapter review metadata in generated manifests", () => {
+    const mswCliManifest = getCliCommandManifest("msw");
+
+    expect(mswCliManifest?.sources).toContainEqual(
+      expect.objectContaining({
+        kind: "docs",
+        url: "https://mswjs.io/docs/cli/init/",
+        review: expect.objectContaining({
+          files: ["src/stacks/msw/adapter.ts", "src/stacks/msw/init.test.ts"],
+          reason: expect.stringContaining("Adapter appends"),
+        }),
+      }),
+    );
+  });
+
   it("resolves pinned Playwright init commands by package manager", () => {
     expect(resolveCliCommand(playwrightCliManifest, "init", "npm")).toEqual({
       bin: "npm",

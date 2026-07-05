@@ -62,7 +62,7 @@ type DiscoveredToolchain = {
 
 type ManifestInput = {
   commandId: string;
-  docs: readonly { url: string; confidence: "low" | "medium" | "high" }[];
+  docs: NonNullable<NonNullable<ToolchainAdapter["cli"]>["docs"]>;
   distTag: string;
   exportName: string;
   help: false | undefined;
@@ -151,6 +151,7 @@ async function createManifest(input: ManifestInput): Promise<CliCommandManifest>
   const { publishedAt, version } = shouldCheck
     ? await readPinnedPackageVersion(input)
     : await resolvePackageVersion(input.packageName, input.distTag);
+  const docsSources = await createDocsSources(input.docs);
   const manifest = defineCliCommandManifest({
     schemaVersion: "toolchains-init/cli-command-manifest/v1",
     tool: input.tool,
@@ -180,7 +181,7 @@ async function createManifest(input: ManifestInput): Promise<CliCommandManifest>
               commandId: input.commandId,
             },
           ]),
-      ...(input.docs?.map((doc) => ({ kind: "docs" as const, ...doc })) ?? []),
+      ...docsSources,
     ],
   });
 
@@ -193,6 +194,68 @@ async function createManifest(input: ManifestInput): Promise<CliCommandManifest>
       })),
     ),
   });
+}
+
+async function createDocsSources(docs: ManifestInput["docs"]) {
+  return Promise.all(
+    docs.map(async (doc) => {
+      const checks = await checkDocsContent(doc);
+      return {
+        kind: "docs" as const,
+        ...doc,
+        ...(checks.length > 0 ? { checks } : {}),
+      };
+    }),
+  );
+}
+
+async function checkDocsContent(doc: ManifestInput["docs"][number]) {
+  const expectedTexts = doc.review?.mustContain ?? [];
+  if (expectedTexts.length === 0) {
+    return [];
+  }
+
+  const response = await fetch(doc.url, {
+    headers: {
+      "user-agent": "toolchains-init-manifest-bot",
+    },
+  });
+  if (!response.ok) {
+    throw new Error(`Could not fetch docs for manifest source: ${doc.url} (${response.status})`);
+  }
+
+  const content = normalizeDocsContent(await response.text());
+  const checks = expectedTexts.map((text) => ({
+    found: content.includes(normalizeDocsContent(text)),
+    text,
+  }));
+  const missing = checks.filter((check) => !check.found);
+  if (missing.length > 0) {
+    throw new Error(
+      `Docs source no longer contains expected text: ${doc.url}\n${missing
+        .map((check) => `- ${check.text}`)
+        .join("\n")}`,
+    );
+  }
+
+  return checks;
+}
+
+function normalizeDocsContent(content: string) {
+  return content
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, " ")
+    .replace(/<svg\b[^>]*>[\s\S]*?<\/svg>/gi, " ")
+    .replace(/<!--[\s\S]*?-->/g, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 async function resolvePackageVersion(packageName: string, distTag: string) {

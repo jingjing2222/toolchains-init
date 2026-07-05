@@ -143,12 +143,56 @@
     {
       "kind": "docs",
       "url": "https://storybook.js.org/docs/get-started/install",
-      "confidence": "high"
+      "confidence": "high",
+      "checks": [
+        {
+          "found": true,
+          "text": "storybook@latest init"
+        },
+        {
+          "found": true,
+          "text": "React"
+        }
+      ],
+      "review": {
+        "reason": "Adapter runs the Storybook initializer only for React + Vite projects.",
+        "files": ["src/stacks/storybook/adapter.ts", "src/stacks/storybook/init.test.ts"],
+        "sections": ["Install Storybook"],
+        "mustContain": ["storybook@latest init", "React"],
+        "checks": [
+          "Confirm `create-storybook init` remains the recommended initializer.",
+          "Confirm React + Vite availability remains the intended project scope."
+        ]
+      }
     },
     {
       "kind": "docs",
       "url": "https://storybook.js.org/docs/api/cli-options",
-      "confidence": "high"
+      "confidence": "high",
+      "checks": [
+        {
+          "found": true,
+          "text": "--builder"
+        },
+        {
+          "found": true,
+          "text": "--skip-install"
+        },
+        {
+          "found": true,
+          "text": "--package-manager"
+        }
+      ],
+      "review": {
+        "reason": "Adapter pins several non-interactive Storybook CLI options.",
+        "files": ["src/stacks/storybook/adapter.ts", "src/stacks/storybook/init.test.ts"],
+        "sections": ["CLI options"],
+        "mustContain": ["--builder", "--skip-install", "--package-manager"],
+        "checks": [
+          "Confirm `--builder vite`, `--skip-install`, `--no-dev`, and package-manager options still exist.",
+          "Confirm `yarn` still needs the `yarn2` package-manager value."
+        ]
+      }
     }
   ]
 }

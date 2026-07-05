@@ -27,7 +27,27 @@
     {
       "kind": "docs",
       "url": "https://eslint.org/docs/latest/use/getting-started",
-      "confidence": "high"
+      "confidence": "high",
+      "checks": [
+        {
+          "found": true,
+          "text": "npm init @eslint/config@latest"
+        },
+        {
+          "found": true,
+          "text": "eslint.config.js"
+        }
+      ],
+      "review": {
+        "reason": "Adapter runs the official initializer and assumes ESLint flat config output names.",
+        "files": ["src/stacks/eslint/adapter.ts", "src/stacks/eslint/init.test.ts"],
+        "sections": ["Getting Started", "Configuration"],
+        "mustContain": ["npm init @eslint/config@latest", "eslint.config.js"],
+        "checks": [
+          "Confirm `@eslint/create-config` remains the documented initializer.",
+          "Confirm generated config filenames still match adapter target files."
+        ]
+      }
     }
   ]
 }

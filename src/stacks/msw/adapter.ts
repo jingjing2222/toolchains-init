@@ -14,8 +14,34 @@ export const msw = defineToolchain({
   command: "init",
   hint: "Seamless REST/GraphQL API mocking library for browser and Node.js",
   docs: [
-    { url: "https://mswjs.io/docs/cli/init/", confidence: "high" },
-    { url: "https://mswjs.io/docs/best-practices/managing-the-worker/", confidence: "high" },
+    {
+      url: "https://mswjs.io/docs/cli/init/",
+      confidence: "high",
+      review: {
+        reason: "Adapter appends `./public --save` to `msw init`.",
+        files: ["src/stacks/msw/adapter.ts", "src/stacks/msw/init.test.ts"],
+        sections: ["init", "Usage"],
+        mustContain: ["npx msw init", "--save"],
+        checks: [
+          "Confirm `msw init <workerDirectory> --save` remains supported.",
+          "Confirm generated worker filename still matches `public/mockServiceWorker.js`.",
+        ],
+      },
+    },
+    {
+      url: "https://mswjs.io/docs/best-practices/managing-the-worker/",
+      confidence: "high",
+      review: {
+        reason: "Adapter writes `package.json` MSW workerDirectory metadata.",
+        files: ["src/stacks/msw/adapter.ts", "src/stacks/msw/init.test.ts"],
+        sections: ["Managing the worker"],
+        mustContain: ["workerDirectory", "mockServiceWorker.js"],
+        checks: [
+          "Confirm `package.json` `msw.workerDirectory` remains the documented way to persist worker paths.",
+          "Confirm merging existing worker directories is still correct.",
+        ],
+      },
+    },
   ],
   packageManagers: ["npm", "pnpm", "yarn", "bun"],
   isAvailable({ packageJson, packageManager }) {

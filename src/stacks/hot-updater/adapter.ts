@@ -12,7 +12,23 @@ export const hotUpdater = defineToolchain({
   command: "init",
   packageManagers: ["npm", "pnpm", "yarn", "bun"],
   hint: "Self-hostable OTA update solution for React Native",
-  docs: [{ url: "https://hot-updater.dev/docs/get-started/basic-usage", confidence: "high" }],
+  docs: [
+    {
+      url: "https://hot-updater.dev/docs/get-started/basic-usage",
+      confidence: "high",
+      review: {
+        reason:
+          "Adapter blocks `--yes` because Hot Updater init requires interactive provider setup.",
+        files: ["src/stacks/hot-updater/adapter.ts", "src/stacks/hot-updater/init.test.ts"],
+        sections: ["Basic Usage", "Initialize Hot Updater"],
+        mustContain: ["npx hot-updater init", "Provider Selection"],
+        checks: [
+          "Confirm `hot-updater init` still requires interactive provider configuration.",
+          "Confirm React Native availability remains the right gating condition.",
+        ],
+      },
+    },
+  ],
   isAvailable({ packageJson, packageManager }) {
     if (packageManager === "deno") {
       return false;
