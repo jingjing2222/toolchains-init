@@ -1,0 +1,255 @@
+{
+  "schemaVersion": "toolchains-init/cli-command-manifest/v1",
+  "tool": "oxlint",
+  "package": "oxlint",
+  "version": "1.72.0",
+  "commands": [
+    {
+      "id": "init",
+      "packageManagers": {
+        "npm": ["npx", "oxlint@{version}"],
+        "pnpm": ["pnpm", "dlx", "oxlint@{version}"],
+        "yarn": ["yarn", "dlx", "oxlint@{version}"],
+        "bun": ["bunx", "oxlint@{version}"],
+        "deno": ["deno", "x", "-A", "npm:oxlint@{version}"]
+      },
+      "flags": {
+        "config": {
+          "type": "string",
+          "cliName": "--config",
+          "supported": true
+        },
+        "tsconfig": {
+          "type": "string",
+          "cliName": "--tsconfig",
+          "supported": true
+        },
+        "init": {
+          "type": "boolean",
+          "cliName": "--init",
+          "supported": true
+        },
+        "allow": {
+          "type": "string",
+          "cliName": "--allow",
+          "supported": true
+        },
+        "warn": {
+          "type": "string",
+          "cliName": "--warn",
+          "supported": true
+        },
+        "deny": {
+          "type": "string",
+          "cliName": "--deny",
+          "supported": true
+        },
+        "disableUnicornPlugin": {
+          "type": "boolean",
+          "cliName": "--disable-unicorn-plugin",
+          "supported": true
+        },
+        "disableOxcPlugin": {
+          "type": "boolean",
+          "cliName": "--disable-oxc-plugin",
+          "supported": true
+        },
+        "disableTypescriptPlugin": {
+          "type": "boolean",
+          "cliName": "--disable-typescript-plugin",
+          "supported": true
+        },
+        "importPlugin": {
+          "type": "boolean",
+          "cliName": "--import-plugin",
+          "supported": true
+        },
+        "reactPlugin": {
+          "type": "boolean",
+          "cliName": "--react-plugin",
+          "supported": true
+        },
+        "jsdocPlugin": {
+          "type": "boolean",
+          "cliName": "--jsdoc-plugin",
+          "supported": true
+        },
+        "jestPlugin": {
+          "type": "boolean",
+          "cliName": "--jest-plugin",
+          "supported": true
+        },
+        "vitestPlugin": {
+          "type": "boolean",
+          "cliName": "--vitest-plugin",
+          "supported": true
+        },
+        "jsxA11yPlugin": {
+          "type": "boolean",
+          "cliName": "--jsx-a11y-plugin",
+          "supported": true
+        },
+        "nextjsPlugin": {
+          "type": "boolean",
+          "cliName": "--nextjs-plugin",
+          "supported": true
+        },
+        "reactPerfPlugin": {
+          "type": "boolean",
+          "cliName": "--react-perf-plugin",
+          "supported": true
+        },
+        "promisePlugin": {
+          "type": "boolean",
+          "cliName": "--promise-plugin",
+          "supported": true
+        },
+        "nodePlugin": {
+          "type": "boolean",
+          "cliName": "--node-plugin",
+          "supported": true
+        },
+        "vuePlugin": {
+          "type": "boolean",
+          "cliName": "--vue-plugin",
+          "supported": true
+        },
+        "fix": {
+          "type": "boolean",
+          "cliName": "--fix",
+          "supported": true
+        },
+        "fixSuggestions": {
+          "type": "boolean",
+          "cliName": "--fix-suggestions",
+          "supported": true
+        },
+        "fixDangerously": {
+          "type": "boolean",
+          "cliName": "--fix-dangerously",
+          "supported": true
+        },
+        "ignorePath": {
+          "type": "string",
+          "cliName": "--ignore-path",
+          "supported": true
+        },
+        "ignorePattern": {
+          "type": "string",
+          "cliName": "--ignore-pattern",
+          "supported": true
+        },
+        "noIgnore": {
+          "type": "boolean",
+          "cliName": "--no-ignore",
+          "supported": true
+        },
+        "quiet": {
+          "type": "boolean",
+          "cliName": "--quiet",
+          "supported": true
+        },
+        "denyWarnings": {
+          "type": "boolean",
+          "cliName": "--deny-warnings",
+          "supported": true
+        },
+        "maxWarnings": {
+          "type": "string",
+          "cliName": "--max-warnings",
+          "supported": true
+        },
+        "format": {
+          "type": "string",
+          "cliName": "--format",
+          "supported": true
+        },
+        "debug": {
+          "type": "string",
+          "cliName": "--debug",
+          "supported": true
+        },
+        "silent": {
+          "type": "boolean",
+          "cliName": "--silent",
+          "supported": true
+        },
+        "noErrorOnUnmatchedPattern": {
+          "type": "boolean",
+          "cliName": "--no-error-on-unmatched-pattern",
+          "supported": true
+        },
+        "threads": {
+          "type": "string",
+          "cliName": "--threads",
+          "supported": true
+        },
+        "printConfig": {
+          "type": "boolean",
+          "cliName": "--print-config",
+          "supported": true
+        },
+        "reportUnusedDisableDirectives": {
+          "type": "boolean",
+          "cliName": "--report-unused-disable-directives",
+          "supported": true
+        },
+        "reportUnusedDisableDirectivesSeverity": {
+          "type": "string",
+          "cliName": "--report-unused-disable-directives-severity",
+          "supported": true
+        },
+        "rules": {
+          "type": "boolean",
+          "cliName": "--rules",
+          "supported": true
+        },
+        "lsp": {
+          "type": "boolean",
+          "cliName": "--lsp",
+          "supported": true
+        },
+        "disableNestedConfig": {
+          "type": "boolean",
+          "cliName": "--disable-nested-config",
+          "supported": true
+        },
+        "typeAware": {
+          "type": "boolean",
+          "cliName": "--type-aware",
+          "supported": true
+        },
+        "typeCheck": {
+          "type": "boolean",
+          "cliName": "--type-check",
+          "supported": true
+        },
+        "help": {
+          "type": "boolean",
+          "cliName": "--help",
+          "supported": true
+        },
+        "version": {
+          "type": "boolean",
+          "cliName": "--version",
+          "supported": true
+        }
+      },
+      "interactive": true
+    }
+  ],
+  "sources": [
+    {
+      "kind": "npm",
+      "package": "oxlint",
+      "version": "1.72.0",
+      "distTag": "latest",
+      "resolvedAt": "2026-06-29T23:10:49.090Z"
+    },
+    {
+      "kind": "cli-help",
+      "command": ["npx", "--yes", "oxlint@1.72.0", "--help"],
+      "commandId": "init"
+    }
+  ]
+}

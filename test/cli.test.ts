@@ -3,6 +3,9 @@ import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { describe, expect, it } from "vitest";
+import { biomeCliManifest } from "../src/stacks/biome";
+import { changesetsCliManifest } from "../src/stacks/changesets";
+import { knipCliManifest } from "../src/stacks/knip";
 
 const cliPath = path.resolve("dist/cli.mjs");
 
@@ -48,8 +51,8 @@ describe("toolchains-init CLI", () => {
     expect(packageJson.dependencies["@tanstack/react-router"]).toBeUndefined();
     expect(packageJson.devDependencies["@tanstack/router-plugin"]).toBeUndefined();
     expect(packageJson.devDependencies["@playwright/test"]).toBeUndefined();
-    expect(packageJson.devDependencies["@changesets/cli"]).toBe("^2.31.0");
-    expect(packageJson.devDependencies["@biomejs/biome"]).toBe("^1.9.4");
+    expect(packageJson.devDependencies["@changesets/cli"]).toBe(changesetsCliManifest.version);
+    expect(packageJson.devDependencies["@biomejs/biome"]).toBe(biomeCliManifest.version);
     expect(packageJson.devDependencies.esbuild).toBeUndefined();
     expect(packageJson.devDependencies.eslint).toBe("^9.0.0");
     expect(packageJson.devDependencies.prettier).toBe("^3.0.0");
@@ -57,7 +60,7 @@ describe("toolchains-init CLI", () => {
     expect(packageJson.scripts.format).toBeUndefined();
     expect(packageJson.scripts["format:check"]).toBe("prettier --check .");
     expect(packageJson.scripts.changeset).toBeUndefined();
-    expect(packageJson.scripts.knip).toBe("npx knip");
+    expect(packageJson.scripts.knip).toBe(`npx knip@${knipCliManifest.version}`);
     expect(packageJson.scripts.lint).toBe("eslint .");
     expect(packageJson.scripts["version-packages"]).toBeUndefined();
     expect(packageJson.scripts["test:e2e"]).toBeUndefined();
@@ -128,7 +131,7 @@ describe("toolchains-init CLI", () => {
     const packageJson = JSON.parse(await readFile(path.join(appDir, "package.json"), "utf8")) as {
       scripts: Record<string, string>;
     };
-    expect(packageJson.scripts.knip).toBe("npx knip");
+    expect(packageJson.scripts.knip).toBe(`npx knip@${knipCliManifest.version}`);
   });
 
   it("rejects the removed init subcommand", async () => {

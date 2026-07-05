@@ -1,40 +1,56 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import { runCommand } from "../core/run-command";
-import type { ToolchainAdapter } from "../core/toolchain-adapter";
+import { resolveCliCommand } from "../../core/cli-command-manifest";
+import { runCommand } from "../../core/run-command";
+import { defineToolchain } from "../../core/toolchain-adapter";
 
 type JsonObject = Record<string, unknown>;
 
-export const tanStackRouter: ToolchainAdapter = {
+export const tanStackRouter = defineToolchain({
   feature: "router",
   label: "TanStack Router",
   hint: "File-Based Routing or Code-Based Routing",
+  catalog: "app",
+  order: 10,
+  package: "@tanstack/cli",
+  command: "create-router",
+  subcommand: "create",
+  tool: "tanstack-router",
+  stackDir: "tanstack-router",
+  exportName: "tanStackRouterCliManifest",
   async run({ cwd, packageManager, options, yes }) {
-    const baseArgs = [
-      "create",
-      "--router-only",
-      "--target-dir",
-      ".",
-      "--force",
-      "--no-install",
-      "--no-git",
-      "--no-toolchain",
-      "--no-examples",
-      "--no-intent",
-      "--package-manager",
+    const { tanStackRouterCliManifest } = await import("./manifest");
+    const command = resolveCliCommand(
+      tanStackRouterCliManifest,
+      "create-router",
       packageManager,
-    ];
-    const args =
       yes && options.routerMode === "file"
-        ? [...baseArgs, "--framework", "React", "--yes"]
-        : [...baseArgs, "--interactive"];
-
-    const command =
-      packageManager === "npm"
-        ? { bin: "npx", args: ["@tanstack/cli", ...args] }
-        : packageManager === "pnpm"
-          ? { bin: "pnpm", args: ["dlx", "@tanstack/cli", ...args] }
-          : { bin: "yarn", args: ["dlx", "@tanstack/cli", ...args] };
+        ? {
+            routerOnly: true,
+            targetDir: ".",
+            force: true,
+            noInstall: true,
+            noGit: true,
+            noToolchain: true,
+            noExamples: true,
+            noIntent: true,
+            packageManager,
+            framework: "React",
+            yes: true,
+          }
+        : {
+            routerOnly: true,
+            targetDir: ".",
+            force: true,
+            noInstall: true,
+            noGit: true,
+            noToolchain: true,
+            noExamples: true,
+            noIntent: true,
+            packageManager,
+            interactive: true,
+          },
+    );
 
     const packageJsonBefore = await readPackageJson(cwd);
 
@@ -44,7 +60,7 @@ export const tanStackRouter: ToolchainAdapter = {
       await restorePackageJsonWithDependencyChanges(cwd, packageJsonBefore);
     }
   },
-};
+});
 
 export async function restorePackageJsonWithDependencyChanges(
   cwd: string,

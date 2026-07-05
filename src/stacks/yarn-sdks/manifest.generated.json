@@ -1,0 +1,24 @@
+{
+  "schemaVersion": "toolchains-init/cli-command-manifest/v1",
+  "tool": "yarn-sdks",
+  "package": "@yarnpkg/sdks",
+  "version": "3.3.0",
+  "commands": [
+    {
+      "id": "vscode",
+      "packageManagers": {
+        "yarn": ["yarn", "dlx", "@yarnpkg/sdks@{version}", "vscode"]
+      },
+      "interactive": true
+    }
+  ],
+  "sources": [
+    {
+      "kind": "npm",
+      "package": "@yarnpkg/sdks",
+      "version": "3.3.0",
+      "distTag": "latest",
+      "resolvedAt": "2026-06-02T09:02:24.162Z"
+    }
+  ]
+}

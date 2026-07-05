@@ -31,7 +31,8 @@
   "exports": {
     ".": "./dist/index.mjs",
     "./cli": "./dist/cli.mjs",
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./stacks/*/manifest.generated.json": "./dist/stacks/*/manifest.generated.json"
   },
   "publishConfig": {
     "access": "public",
@@ -44,16 +45,20 @@
     "format": "oxfmt --write",
     "format:check": "oxfmt --check",
     "lint": "oxlint --deny-warnings",
+    "manifests:check": "tsx scripts/update-cli-manifests.ts --check",
+    "manifests:update": "tsx scripts/update-cli-manifests.ts",
+    "new": "tsx scripts/new-toolchain.ts",
     "pack:check": "npm pack --dry-run",
     "prepack": "yarn build",
     "release": "yarn build && changeset publish",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "verify": "yarn format:check && yarn lint && yarn typecheck && yarn build && yarn test && yarn pack:check"
+    "verify": "yarn format:check && yarn lint && yarn typecheck && yarn manifests:check && yarn build && yarn test && yarn pack:check"
   },
   "dependencies": {
     "@clack/prompts": "^0.11.0",
-    "picocolors": "^1.1.1"
+    "picocolors": "^1.1.1",
+    "valibot": "^1.4.2"
   },
   "devDependencies": {
     "@changesets/cli": "^2.31.0",
@@ -66,7 +71,7 @@
     "vitest": "^4.0.16"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=24"
   },
   "packageManager": "yarn@4.17.0",
   "inlinedDependencies": {

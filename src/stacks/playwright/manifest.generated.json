@@ -1,0 +1,96 @@
+{
+  "schemaVersion": "toolchains-init/cli-command-manifest/v1",
+  "tool": "playwright",
+  "package": "create-playwright",
+  "version": "1.17.139",
+  "commands": [
+    {
+      "id": "init",
+      "packageManagers": {
+        "npm": ["npm", "init", "playwright@{version}", "--"],
+        "pnpm": ["pnpm", "create", "playwright@{version}"],
+        "yarn": ["yarn", "create", "playwright@{version}"],
+        "bun": ["bun", "create", "playwright@{version}"],
+        "deno": ["deno", "x", "-A", "npm:create-playwright@{version}"]
+      },
+      "flags": {
+        "browser": {
+          "type": "string",
+          "cliName": "--browser",
+          "supported": true
+        },
+        "noBrowsers": {
+          "type": "boolean",
+          "cliName": "--no-browsers",
+          "supported": true
+        },
+        "noExamples": {
+          "type": "boolean",
+          "cliName": "--no-examples",
+          "supported": true
+        },
+        "installDeps": {
+          "type": "boolean",
+          "cliName": "--install-deps",
+          "supported": true
+        },
+        "next": {
+          "type": "boolean",
+          "cliName": "--next",
+          "supported": true
+        },
+        "beta": {
+          "type": "boolean",
+          "cliName": "--beta",
+          "supported": true
+        },
+        "ct": {
+          "type": "boolean",
+          "cliName": "--ct",
+          "supported": true
+        },
+        "quiet": {
+          "type": "boolean",
+          "cliName": "--quiet",
+          "supported": true
+        },
+        "gha": {
+          "type": "boolean",
+          "cliName": "--gha",
+          "supported": true
+        },
+        "lang": {
+          "type": "enum",
+          "cliName": "--lang",
+          "values": ["js", "TypeScript"],
+          "supported": true
+        },
+        "help": {
+          "type": "boolean",
+          "cliName": "--help",
+          "supported": true
+        }
+      },
+      "interactive": true
+    }
+  ],
+  "sources": [
+    {
+      "kind": "npm",
+      "package": "create-playwright",
+      "version": "1.17.139",
+      "distTag": "latest",
+      "resolvedAt": "2025-10-08T07:38:09.036Z"
+    },
+    {
+      "kind": "cli-help",
+      "command": ["npx", "--yes", "create-playwright@1.17.139", "init", "--help"],
+      "commandId": "init"
+    },
+    {
+      "kind": "docs",
+      "url": "https://playwright.dev/docs/intro",
+      "confidence": "medium"
+    }
+  ]
+}

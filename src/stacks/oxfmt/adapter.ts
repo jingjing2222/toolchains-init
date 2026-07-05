@@ -2,23 +2,31 @@ import {
   addVsCodeExtensionRecommendations,
   addVsCodeSettings,
   addZedSettings,
-} from "../core/editor-settings";
-import { setDevDependency } from "../core/package-json-utils";
-import { runCommand } from "../core/run-command";
-import type { ToolchainAdapter } from "../core/toolchain-adapter";
+} from "../../core/editor-settings";
+import { resolveCliCommand } from "../../core/cli-command-manifest";
+import { setManifestDevDependency } from "../../core/package-json-utils";
+import { runCommand } from "../../core/run-command";
+import { defineToolchain } from "../../core/toolchain-adapter";
 
 const oxfmtVsCodeLanguages = ["javascript", "javascriptreact", "typescript", "typescriptreact"];
 const oxfmtZedLanguages = ["JavaScript", "TypeScript", "TSX", "JSON", "JSONC"];
 
-export const oxfmt: ToolchainAdapter = {
+export const oxfmt = defineToolchain({
   feature: "oxfmt",
   label: "oxfmt",
   hint: "Oxc formatter",
-  async run({ cwd }) {
-    await runCommand(cwd, "npx", ["oxfmt@latest", "--init"]);
+  catalog: "quality",
+  order: 30,
+  package: "oxfmt",
+  command: "init",
+  subcommand: null,
+  async run({ cwd, packageManager }) {
+    const { oxfmtCliManifest } = await import("./manifest");
+    const command = resolveCliCommand(oxfmtCliManifest, "init", packageManager, { init: true });
+    await runCommand(cwd, command.bin, command.args);
   },
-  updatePackageJson({ packageJson }) {
-    setDevDependency(packageJson, "oxfmt", "^0.57.0");
+  updatePackageJson({ cliManifest, packageJson }) {
+    setManifestDevDependency(packageJson, cliManifest);
   },
   async afterWrite({ cwd, options }) {
     await addVsCodeExtensionRecommendations(cwd, ["oxc.oxc-vscode"]);
@@ -36,7 +44,7 @@ export const oxfmt: ToolchainAdapter = {
     }
     return notes;
   },
-};
+});
 
 function getOxfmtVsCodeSettings(hasBiome: boolean) {
   const settings: Record<string, unknown> = {

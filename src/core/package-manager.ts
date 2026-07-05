@@ -1,6 +1,6 @@
 import { runCommand } from "./run-command";
 
-export type PackageManager = "npm" | "pnpm" | "yarn";
+export type PackageManager = "npm" | "pnpm" | "yarn" | "bun" | "deno";
 
 export function detectPackageManager(env: NodeJS.ProcessEnv = process.env): PackageManager {
   return (
@@ -30,11 +30,17 @@ function getPackageManagerFromExecPath(execPath?: string): PackageManager | null
   if (normalized.includes("yarn")) {
     return "yarn";
   }
+  if (normalized.includes("bun")) {
+    return "bun";
+  }
+  if (normalized.includes("deno")) {
+    return "deno";
+  }
   return "npm";
 }
 
 function normalizePackageManager(name?: string): PackageManager | null {
-  if (name === "npm" || name === "pnpm" || name === "yarn") {
+  if (name === "npm" || name === "pnpm" || name === "yarn" || name === "bun" || name === "deno") {
     return name;
   }
   return null;

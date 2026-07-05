@@ -1,0 +1,180 @@
+{
+  "schemaVersion": "toolchains-init/cli-command-manifest/v1",
+  "tool": "react-doctor",
+  "package": "react-doctor",
+  "version": "0.7.1",
+  "commands": [
+    {
+      "id": "check",
+      "packageManagers": {
+        "npm": ["npx", "react-doctor@{version}"],
+        "pnpm": ["pnpm", "dlx", "react-doctor@{version}"],
+        "yarn": ["yarn", "dlx", "react-doctor@{version}"],
+        "bun": ["bunx", "react-doctor@{version}"],
+        "deno": ["deno", "x", "-A", "npm:react-doctor@{version}"]
+      },
+      "flags": {
+        "version": {
+          "type": "boolean",
+          "cliName": "--version",
+          "supported": true
+        },
+        "lint": {
+          "type": "boolean",
+          "cliName": "--lint",
+          "supported": true
+        },
+        "noLint": {
+          "type": "boolean",
+          "cliName": "--no-lint",
+          "supported": true
+        },
+        "deadCode": {
+          "type": "boolean",
+          "cliName": "--dead-code",
+          "supported": true
+        },
+        "noDeadCode": {
+          "type": "boolean",
+          "cliName": "--no-dead-code",
+          "supported": true
+        },
+        "verbose": {
+          "type": "boolean",
+          "cliName": "--verbose",
+          "supported": true
+        },
+        "debug": {
+          "type": "boolean",
+          "cliName": "--debug",
+          "supported": true
+        },
+        "outputDir": {
+          "type": "string",
+          "cliName": "--output-dir",
+          "supported": true
+        },
+        "score": {
+          "type": "boolean",
+          "cliName": "--score",
+          "supported": true
+        },
+        "json": {
+          "type": "boolean",
+          "cliName": "--json",
+          "supported": true
+        },
+        "jsonCompact": {
+          "type": "boolean",
+          "cliName": "--json-compact",
+          "supported": true
+        },
+        "jsonOut": {
+          "type": "string",
+          "cliName": "--json-out",
+          "supported": true
+        },
+        "yes": {
+          "type": "boolean",
+          "cliName": "--yes",
+          "supported": true
+        },
+        "noParallel": {
+          "type": "boolean",
+          "cliName": "--no-parallel",
+          "supported": true
+        },
+        "project": {
+          "type": "string",
+          "cliName": "--project",
+          "supported": true
+        },
+        "scope": {
+          "type": "string",
+          "cliName": "--scope",
+          "supported": true
+        },
+        "base": {
+          "type": "string",
+          "cliName": "--base",
+          "supported": true
+        },
+        "noScore": {
+          "type": "boolean",
+          "cliName": "--no-score",
+          "supported": true
+        },
+        "category": {
+          "type": "string",
+          "cliName": "--category",
+          "supported": true
+        },
+        "noTelemetry": {
+          "type": "boolean",
+          "cliName": "--no-telemetry",
+          "supported": true
+        },
+        "staged": {
+          "type": "boolean",
+          "cliName": "--staged",
+          "supported": true
+        },
+        "maxDuration": {
+          "type": "string",
+          "cliName": "--max-duration",
+          "supported": true
+        },
+        "blocking": {
+          "type": "string",
+          "cliName": "--blocking",
+          "supported": true
+        },
+        "noRespectInlineDisables": {
+          "type": "boolean",
+          "cliName": "--no-respect-inline-disables",
+          "supported": true
+        },
+        "warnings": {
+          "type": "boolean",
+          "cliName": "--warnings",
+          "supported": true
+        },
+        "noWarnings": {
+          "type": "boolean",
+          "cliName": "--no-warnings",
+          "supported": true
+        },
+        "color": {
+          "type": "boolean",
+          "cliName": "--color",
+          "supported": true
+        },
+        "noColor": {
+          "type": "boolean",
+          "cliName": "--no-color",
+          "supported": true
+        },
+        "help": {
+          "type": "boolean",
+          "cliName": "--help",
+          "supported": true
+        }
+      },
+      "interactive": true
+    }
+  ],
+  "sources": [
+    {
+      "kind": "npm",
+      "package": "react-doctor",
+      "version": "0.7.1",
+      "distTag": "latest",
+      "resolvedAt": "2026-07-04T09:08:37.294Z"
+    },
+    {
+      "kind": "cli-help",
+      "command": ["npx", "--yes", "react-doctor@0.7.1", "--help"],
+      "commandId": "check"
+    }
+  ]
+}

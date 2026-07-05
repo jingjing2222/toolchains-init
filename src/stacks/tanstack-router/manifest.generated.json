@@ -1,0 +1,194 @@
+{
+  "schemaVersion": "toolchains-init/cli-command-manifest/v1",
+  "tool": "tanstack-router",
+  "package": "@tanstack/cli",
+  "version": "0.69.5",
+  "commands": [
+    {
+      "id": "create-router",
+      "packageManagers": {
+        "npm": ["npx", "@tanstack/cli@{version}", "create"],
+        "pnpm": ["pnpm", "dlx", "@tanstack/cli@{version}", "create"],
+        "yarn": ["yarn", "dlx", "@tanstack/cli@{version}", "create"],
+        "bun": ["bunx", "@tanstack/cli@{version}", "create"],
+        "deno": ["deno", "x", "-A", "npm:@tanstack/cli@{version}", "create"]
+      },
+      "flags": {
+        "framework": {
+          "type": "enum",
+          "cliName": "--framework",
+          "values": ["React", "Solid"],
+          "supported": true
+        },
+        "starter": {
+          "type": "string",
+          "cliName": "--starter",
+          "supported": true
+        },
+        "templateId": {
+          "type": "string",
+          "cliName": "--template-id",
+          "supported": true
+        },
+        "template": {
+          "type": "string",
+          "cliName": "--template",
+          "supported": true
+        },
+        "noInstall": {
+          "type": "boolean",
+          "cliName": "--no-install",
+          "supported": true
+        },
+        "packageManager": {
+          "type": "enum",
+          "cliName": "--package-manager",
+          "values": ["npm", "yarn", "pnpm", "bun", "deno"],
+          "supported": true
+        },
+        "devWatch": {
+          "type": "string",
+          "cliName": "--dev-watch",
+          "supported": true
+        },
+        "runDev": {
+          "type": "boolean",
+          "cliName": "--run-dev",
+          "supported": true
+        },
+        "routerOnly": {
+          "type": "boolean",
+          "cliName": "--router-only",
+          "supported": true
+        },
+        "tailwind": {
+          "type": "boolean",
+          "cliName": "--tailwind",
+          "supported": true
+        },
+        "noTailwind": {
+          "type": "boolean",
+          "cliName": "--no-tailwind",
+          "supported": true
+        },
+        "examples": {
+          "type": "boolean",
+          "cliName": "--examples",
+          "supported": true
+        },
+        "noExamples": {
+          "type": "boolean",
+          "cliName": "--no-examples",
+          "supported": true
+        },
+        "deployment": {
+          "type": "enum",
+          "cliName": "--deployment",
+          "values": ["cloudflare", "netlify", "nitro", "railway"],
+          "supported": true
+        },
+        "toolchain": {
+          "type": "enum",
+          "cliName": "--toolchain",
+          "values": ["biome", "eslint"],
+          "supported": true
+        },
+        "noToolchain": {
+          "type": "boolean",
+          "cliName": "--no-toolchain",
+          "supported": true
+        },
+        "interactive": {
+          "type": "boolean",
+          "cliName": "--interactive",
+          "supported": true
+        },
+        "nonInteractive": {
+          "type": "boolean",
+          "cliName": "--non-interactive",
+          "supported": true
+        },
+        "yes": {
+          "type": "boolean",
+          "cliName": "--yes",
+          "supported": true
+        },
+        "addOns": {
+          "type": "string",
+          "cliName": "--add-ons",
+          "supported": true
+        },
+        "listAddOns": {
+          "type": "boolean",
+          "cliName": "--list-add-ons",
+          "supported": true
+        },
+        "addonDetails": {
+          "type": "string",
+          "cliName": "--addon-details",
+          "supported": true
+        },
+        "json": {
+          "type": "boolean",
+          "cliName": "--json",
+          "supported": true
+        },
+        "git": {
+          "type": "boolean",
+          "cliName": "--git",
+          "supported": true
+        },
+        "noGit": {
+          "type": "boolean",
+          "cliName": "--no-git",
+          "supported": true
+        },
+        "intent": {
+          "type": "boolean",
+          "cliName": "--intent",
+          "supported": true
+        },
+        "noIntent": {
+          "type": "boolean",
+          "cliName": "--no-intent",
+          "supported": true
+        },
+        "targetDir": {
+          "type": "string",
+          "cliName": "--target-dir",
+          "supported": true
+        },
+        "addOnConfig": {
+          "type": "string",
+          "cliName": "--add-on-config",
+          "supported": true
+        },
+        "force": {
+          "type": "boolean",
+          "cliName": "--force",
+          "supported": true
+        },
+        "help": {
+          "type": "boolean",
+          "cliName": "--help",
+          "supported": true
+        }
+      },
+      "interactive": true
+    }
+  ],
+  "sources": [
+    {
+      "kind": "npm",
+      "package": "@tanstack/cli",
+      "version": "0.69.5",
+      "distTag": "latest",
+      "resolvedAt": "2026-06-22T22:35:39.593Z"
+    },
+    {
+      "kind": "cli-help",
+      "command": ["npx", "--yes", "@tanstack/cli@0.69.5", "create", "--help"],
+      "commandId": "create-router"
+    }
+  ]
+}

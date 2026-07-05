@@ -1,0 +1,33 @@
+{
+  "schemaVersion": "toolchains-init/cli-command-manifest/v1",
+  "tool": "changesets",
+  "package": "@changesets/cli",
+  "version": "2.31.0",
+  "commands": [
+    {
+      "id": "init",
+      "packageManagers": {
+        "npm": ["npx", "@changesets/cli@{version}", "init"],
+        "pnpm": ["pnpm", "dlx", "@changesets/cli@{version}", "init"],
+        "yarn": ["yarn", "dlx", "@changesets/cli@{version}", "init"],
+        "bun": ["bunx", "@changesets/cli@{version}", "init"],
+        "deno": ["deno", "x", "-A", "npm:@changesets/cli@{version}", "init"]
+      },
+      "interactive": true
+    }
+  ],
+  "sources": [
+    {
+      "kind": "npm",
+      "package": "@changesets/cli",
+      "version": "2.31.0",
+      "distTag": "latest",
+      "resolvedAt": "2026-04-17T21:20:58.915Z"
+    },
+    {
+      "kind": "cli-help",
+      "command": ["npx", "--yes", "@changesets/cli@2.31.0", "init", "--help"],
+      "commandId": "init"
+    }
+  ]
+}

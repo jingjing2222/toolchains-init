@@ -1,0 +1,110 @@
+{
+  "schemaVersion": "toolchains-init/cli-command-manifest/v1",
+  "tool": "oxfmt",
+  "package": "oxfmt",
+  "version": "0.57.0",
+  "commands": [
+    {
+      "id": "init",
+      "packageManagers": {
+        "npm": ["npx", "oxfmt@{version}"],
+        "pnpm": ["pnpm", "dlx", "oxfmt@{version}"],
+        "yarn": ["yarn", "dlx", "oxfmt@{version}"],
+        "bun": ["bunx", "oxfmt@{version}"],
+        "deno": ["deno", "x", "-A", "npm:oxfmt@{version}"]
+      },
+      "flags": {
+        "init": {
+          "type": "boolean",
+          "cliName": "--init",
+          "supported": true
+        },
+        "migrate": {
+          "type": "string",
+          "cliName": "--migrate",
+          "supported": true
+        },
+        "lsp": {
+          "type": "boolean",
+          "cliName": "--lsp",
+          "supported": true
+        },
+        "stdinFilepath": {
+          "type": "string",
+          "cliName": "--stdin-filepath",
+          "supported": true
+        },
+        "write": {
+          "type": "boolean",
+          "cliName": "--write",
+          "supported": true
+        },
+        "check": {
+          "type": "boolean",
+          "cliName": "--check",
+          "supported": true
+        },
+        "listDifferent": {
+          "type": "boolean",
+          "cliName": "--list-different",
+          "supported": true
+        },
+        "config": {
+          "type": "string",
+          "cliName": "--config",
+          "supported": true
+        },
+        "disableNestedConfig": {
+          "type": "boolean",
+          "cliName": "--disable-nested-config",
+          "supported": true
+        },
+        "ignorePath": {
+          "type": "string",
+          "cliName": "--ignore-path",
+          "supported": true
+        },
+        "withNodeModules": {
+          "type": "boolean",
+          "cliName": "--with-node-modules",
+          "supported": true
+        },
+        "noErrorOnUnmatchedPattern": {
+          "type": "boolean",
+          "cliName": "--no-error-on-unmatched-pattern",
+          "supported": true
+        },
+        "threads": {
+          "type": "string",
+          "cliName": "--threads",
+          "supported": true
+        },
+        "help": {
+          "type": "boolean",
+          "cliName": "--help",
+          "supported": true
+        },
+        "version": {
+          "type": "boolean",
+          "cliName": "--version",
+          "supported": true
+        }
+      },
+      "interactive": true
+    }
+  ],
+  "sources": [
+    {
+      "kind": "npm",
+      "package": "oxfmt",
+      "version": "0.57.0",
+      "distTag": "latest",
+      "resolvedAt": "2026-06-29T23:08:50.068Z"
+    },
+    {
+      "kind": "cli-help",
+      "command": ["npx", "--yes", "oxfmt@0.57.0", "--help"],
+      "commandId": "init"
+    }
+  ]
+}

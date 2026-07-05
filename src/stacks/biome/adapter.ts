@@ -2,20 +2,26 @@ import {
   addVsCodeExtensionRecommendations,
   addVsCodeSettings,
   addZedSettings,
-} from "../core/editor-settings";
-import { setDevDependency } from "../core/package-json-utils";
-import type { PackageManager } from "../core/package-manager";
-import { runCommand } from "../core/run-command";
-import type { ToolchainAdapter } from "../core/toolchain-adapter";
+} from "../../core/editor-settings";
+import { resolveCliCommand } from "../../core/cli-command-manifest";
+import { setManifestDevDependency } from "../../core/package-json-utils";
+import type { PackageManager } from "../../core/package-manager";
+import { runCommand } from "../../core/run-command";
+import { defineToolchain } from "../../core/toolchain-adapter";
 
 const biomeVsCodeLanguages = ["javascript", "javascriptreact", "typescript", "typescriptreact"];
 
-export const biome: ToolchainAdapter = {
+export const biome = defineToolchain({
   feature: "biome",
   label: "Biome",
   hint: "Formatter and linter setup through Biome CLI",
-  updatePackageJson({ packageJson }) {
-    setDevDependency(packageJson, "@biomejs/biome", "2.5.2");
+  catalog: "quality",
+  order: 50,
+  package: "@biomejs/biome",
+  command: "init",
+  docs: [{ url: "https://biomejs.dev/reference/configuration/", confidence: "high" }],
+  updatePackageJson({ cliManifest, packageJson }) {
+    setManifestDevDependency(packageJson, cliManifest);
   },
   async afterWrite({ cwd, options }) {
     await addVsCodeExtensionRecommendations(cwd, ["biomejs.biome"]);
@@ -44,7 +50,7 @@ export const biome: ToolchainAdapter = {
     }
     return notes;
   },
-};
+});
 
 function getBiomeVsCodeSettings(hasOxfmt: boolean) {
   if (hasOxfmt) {
@@ -66,13 +72,8 @@ function getBiomeVsCodeSettings(hasOxfmt: boolean) {
 }
 
 function runBiomeInit(cwd: string, packageManager: PackageManager) {
-  if (packageManager === "npm") {
-    return runCommand(cwd, "npx", ["@biomejs/biome", "init"]);
-  }
-
-  if (packageManager === "pnpm") {
-    return runCommand(cwd, "pnpm", ["exec", "biome", "init"]);
-  }
-
-  return runCommand(cwd, "yarn", ["exec", "biome", "--", "init"]);
+  return import("./manifest").then(({ biomeCliManifest }) => {
+    const command = resolveCliCommand(biomeCliManifest, "init", packageManager);
+    return runCommand(cwd, command.bin, command.args);
+  });
 }

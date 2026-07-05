@@ -1,0 +1,93 @@
+name: Update CLI Manifests
+
+on:
+  schedule:
+    # 14:00 KST
+    - cron: "0 5 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: update-cli-manifests
+  cancel-in-progress: false
+
+jobs:
+  update:
+    name: Update CLI manifests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup
+        uses: ./.github/actions/setup
+
+      - name: Update manifests
+        run: yarn manifests:update
+
+      - name: Detect changes
+        id: diff
+        shell: bash
+        run: |
+          if [[ -n "$(git status --porcelain)" ]]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Add changeset
+        if: steps.diff.outputs.changed == 'true'
+        shell: bash
+        run: |
+          changeset=".changeset/cli-manifest-update-$(date -u +%Y%m%d%H%M%S).md"
+          printf '%s\n' \
+            '---' \
+            '"toolchains-init": patch' \
+            '---' \
+            '' \
+            'Update generated CLI command manifests from upstream package metadata.' \
+            > "$changeset"
+
+      - name: Validate generated manifests
+        if: steps.diff.outputs.changed == 'true'
+        run: yarn manifests:check
+
+      - name: Open pull request
+        if: steps.diff.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          branch="automation/update-cli-manifests"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -B "$branch"
+          yarn format
+          git add .changeset src/stacks
+          git commit -m "update cli command manifests"
+          git fetch origin "$branch:refs/remotes/origin/$branch" || true
+          git push --force-with-lease origin "$branch"
+          body_file="$(mktemp)"
+          printf '%s\n' \
+            "Automated daily update for generated CLI command manifests." \
+            "" \
+            "Validation:" \
+            "- yarn manifests:check" \
+            > "$body_file"
+
+          if gh pr view "$branch" --json number >/dev/null 2>&1; then
+            gh pr edit "$branch" \
+              --title "Update CLI command manifests" \
+              --body-file "$body_file"
+          else
+            gh pr create \
+              --base main \
+              --head "$branch" \
+              --title "Update CLI command manifests" \
+              --body-file "$body_file"
+          fi

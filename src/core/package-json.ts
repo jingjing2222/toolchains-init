@@ -1,4 +1,5 @@
-import { getSelectedToolchains } from "../stacks";
+import { getCliCommandManifest, getSelectedToolchains } from "../stacks";
+import { getToolchainCliTool } from "./toolchain-adapter";
 import type { Feature, PackageJson, ToolchainOptions } from "./types";
 import { DEFAULT_ROUTER_MODE } from "./types";
 
@@ -15,13 +16,23 @@ export function updatePackageJson(
   next.devDependencies = { ...next.devDependencies };
 
   for (const toolchain of getSelectedToolchains(options.features)) {
-    toolchain.updatePackageJson?.({ packageJson: next, options });
+    toolchain.updatePackageJson?.({
+      cliManifest: getCliManifestForToolchain(toolchain),
+      packageJson: next,
+      options,
+    });
   }
 
   sortObject(next.scripts);
   sortObject(next.dependencies);
   sortObject(next.devDependencies);
   return next;
+}
+
+function getCliManifestForToolchain(toolchain: ReturnType<typeof getSelectedToolchains>[number]) {
+  return toolchain.cli == null
+    ? undefined
+    : (getCliCommandManifest(getToolchainCliTool(toolchain)) ?? undefined);
 }
 
 function sortObject(object: Record<string, string> | undefined) {
