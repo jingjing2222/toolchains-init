@@ -13,8 +13,34 @@ export const storybook = defineToolchain({
   command: "init",
   hint: "Frontend workshop for building UI components and pages in isolation",
   docs: [
-    { url: "https://storybook.js.org/docs/get-started/install", confidence: "high" },
-    { url: "https://storybook.js.org/docs/api/cli-options", confidence: "high" },
+    {
+      url: "https://storybook.js.org/docs/get-started/install",
+      confidence: "high",
+      review: {
+        reason: "Adapter runs the Storybook initializer only for React + Vite projects.",
+        files: ["src/stacks/storybook/adapter.ts", "src/stacks/storybook/init.test.ts"],
+        sections: ["Install Storybook"],
+        mustContain: ["storybook@latest init", "React"],
+        checks: [
+          "Confirm `create-storybook init` remains the recommended initializer.",
+          "Confirm React + Vite availability remains the intended project scope.",
+        ],
+      },
+    },
+    {
+      url: "https://storybook.js.org/docs/api/cli-options",
+      confidence: "high",
+      review: {
+        reason: "Adapter pins several non-interactive Storybook CLI options.",
+        files: ["src/stacks/storybook/adapter.ts", "src/stacks/storybook/init.test.ts"],
+        sections: ["CLI options"],
+        mustContain: ["--builder", "--skip-install", "--package-manager"],
+        checks: [
+          "Confirm `--builder vite`, `--skip-install`, `--no-dev`, and package-manager options still exist.",
+          "Confirm `yarn` still needs the `yarn2` package-manager value.",
+        ],
+      },
+    },
   ],
   packageManagers: ["npm", "pnpm", "yarn", "bun"],
   runner: "create",

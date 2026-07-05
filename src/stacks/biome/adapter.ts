@@ -19,7 +19,23 @@ export const biome = defineToolchain({
   order: 50,
   package: "@biomejs/biome",
   command: "init",
-  docs: [{ url: "https://biomejs.dev/reference/configuration/", confidence: "high" }],
+  docs: [
+    {
+      url: "https://biomejs.dev/reference/configuration/",
+      confidence: "high",
+      review: {
+        reason:
+          "Adapter installs Biome and writes editor settings that assume Biome config-file behavior.",
+        files: ["src/stacks/biome/adapter.ts", "src/stacks/biome/init.test.ts"],
+        sections: ["Configuration"],
+        mustContain: ["biome.json", "configuration file"],
+        checks: [
+          "Confirm `biome init` still creates a config file for project-local setup.",
+          "Confirm `biome.requireConfiguration` and Zed `require_config_file` remain valid editor settings.",
+        ],
+      },
+    },
+  ],
   updatePackageJson({ cliManifest, packageJson }) {
     setManifestDevDependency(packageJson, cliManifest);
   },

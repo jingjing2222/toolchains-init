@@ -10,7 +10,23 @@ export const eslint = defineToolchain({
   order: 41,
   package: "@eslint/create-config",
   command: "init",
-  docs: [{ url: "https://eslint.org/docs/latest/use/getting-started", confidence: "high" }],
+  docs: [
+    {
+      url: "https://eslint.org/docs/latest/use/getting-started",
+      confidence: "high",
+      review: {
+        reason:
+          "Adapter runs the official initializer and assumes ESLint flat config output names.",
+        files: ["src/stacks/eslint/adapter.ts", "src/stacks/eslint/init.test.ts"],
+        sections: ["Getting Started", "Configuration"],
+        mustContain: ["npm init @eslint/config@latest", "eslint.config.js"],
+        checks: [
+          "Confirm `@eslint/create-config` remains the documented initializer.",
+          "Confirm generated config filenames still match adapter target files.",
+        ],
+      },
+    },
+  ],
   help: false,
   hint: "Find and fix problems in JavaScript code",
   runner: "dlx",

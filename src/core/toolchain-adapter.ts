@@ -36,12 +36,17 @@ export type PackageManagerCommandTemplates = Partial<Record<PackageManager, read
 
 export type ToolchainCliRunner = "auto" | "create" | "dlx" | PackageManagerCommandTemplates;
 
+export type ToolchainCliDocs = Omit<
+  Extract<CliCommandManifest["sources"][number], { kind: "docs" }>,
+  "checks" | "kind"
+>;
+
 export type ToolchainCliDefinition = {
   package: string;
   command: string;
   commandId?: string;
   distTag?: string;
-  docs?: readonly { url: string; confidence: "low" | "medium" | "high" }[];
+  docs?: readonly ToolchainCliDocs[];
   exportName?: string;
   help?: false;
   packageManagers?: readonly PackageManager[];

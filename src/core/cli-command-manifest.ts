@@ -19,6 +19,23 @@ const cliManifestSourceSchema = v.union([
     kind: v.literal("docs"),
     url: v.string(),
     confidence: v.picklist(["low", "medium", "high"]),
+    checks: v.optional(
+      v.array(
+        v.object({
+          found: v.boolean(),
+          text: v.string(),
+        }),
+      ),
+    ),
+    review: v.optional(
+      v.object({
+        reason: v.string(),
+        files: v.array(v.string()),
+        sections: v.optional(v.array(v.string())),
+        mustContain: v.optional(v.array(v.string())),
+        checks: v.optional(v.array(v.string())),
+      }),
+    ),
   }),
 ]);
 

@@ -2,8 +2,8 @@ name: Update CLI Manifests
 
 on:
   schedule:
-    # 14:00 KST
-    - cron: "0 5 * * *"
+    # 13:00 KST
+    - cron: "0 4 * * *"
   workflow_dispatch:
 
 permissions:
@@ -28,9 +28,65 @@ jobs:
         uses: ./.github/actions/setup
 
       - name: Update manifests
-        run: yarn manifests:update
+        id: update
+        shell: bash
+        run: |
+          set +e
+          yarn manifests:update > "$RUNNER_TEMP/manifest-update.log" 2>&1
+          status=$?
+          cat "$RUNNER_TEMP/manifest-update.log"
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Open failure pull request
+        if: steps.update.outputs.status != '0'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          branch="automation/update-cli-manifests"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -B "$branch"
+          git commit --allow-empty -m "report cli manifest update failure"
+          git fetch origin "$branch:refs/remotes/origin/$branch" || true
+          git push --force-with-lease origin "$branch"
+
+          body_file="$(mktemp)"
+          {
+            printf '%s\n' \
+              "Automated CLI manifest update failed before generated manifests could be refreshed." \
+              "" \
+              "Fix the adapter policy or manifest generation logic on this branch, then run:" \
+              "" \
+              '```sh' \
+              "yarn manifests:update" \
+              "yarn manifests:check" \
+              '```' \
+              "" \
+              "Failure output:" \
+              "" \
+              '```text'
+            tail -n 160 "$RUNNER_TEMP/manifest-update.log"
+            printf '%s\n' '```'
+          } > "$body_file"
+
+          if gh pr view "$branch" --json number >/dev/null 2>&1; then
+            gh pr edit "$branch" \
+              --title "Fix CLI manifest update failure" \
+              --body-file "$body_file"
+          else
+            gh pr create \
+              --base main \
+              --head "$branch" \
+              --title "Fix CLI manifest update failure" \
+              --body-file "$body_file"
+          fi
+
+          exit 1
 
       - name: Detect changes
+        if: steps.update.outputs.status == '0'
         id: diff
         shell: bash
         run: |
@@ -41,7 +97,7 @@ jobs:
           fi
 
       - name: Add changeset
-        if: steps.diff.outputs.changed == 'true'
+        if: steps.update.outputs.status == '0' && steps.diff.outputs.changed == 'true'
         shell: bash
         run: |
           changeset=".changeset/cli-manifest-update-$(date -u +%Y%m%d%H%M%S).md"
@@ -54,11 +110,11 @@ jobs:
             > "$changeset"
 
       - name: Validate generated manifests
-        if: steps.diff.outputs.changed == 'true'
+        if: steps.update.outputs.status == '0' && steps.diff.outputs.changed == 'true'
         run: yarn manifests:check
 
       - name: Open pull request
-        if: steps.diff.outputs.changed == 'true'
+        if: steps.update.outputs.status == '0' && steps.diff.outputs.changed == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: bash
@@ -68,17 +124,12 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git checkout -B "$branch"
           yarn format
+          body_file="$(mktemp)"
+          yarn tsx scripts/render-cli-manifest-pr-body.ts > "$body_file"
           git add .changeset src/stacks
           git commit -m "update cli command manifests"
           git fetch origin "$branch:refs/remotes/origin/$branch" || true
           git push --force-with-lease origin "$branch"
-          body_file="$(mktemp)"
-          printf '%s\n' \
-            "Automated daily update for generated CLI command manifests." \
-            "" \
-            "Validation:" \
-            "- yarn manifests:check" \
-            > "$body_file"
 
           if gh pr view "$branch" --json number >/dev/null 2>&1; then
             gh pr edit "$branch" \
