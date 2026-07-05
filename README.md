@@ -33,6 +33,7 @@ Then choose what you want to add from the interactive prompt.
 | Toolchain       | What You Get                                        |
 | --------------- | --------------------------------------------------- |
 | TanStack Router | File-Based Routing or Code-Based Routing setup      |
+| Hot Updater     | React Native OTA update initializer                 |
 | Playwright      | Browser E2E test setup                              |
 | oxfmt           | Oxc formatter setup and editor integration          |
 | oxlint          | Oxc linter setup and editor integration             |

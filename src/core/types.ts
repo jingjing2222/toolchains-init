@@ -8,6 +8,7 @@ export type PackageJson = {
 
 export type BuiltInFeature =
   | "router"
+  | "hotUpdater"
   | "playwright"
   | "oxfmt"
   | "oxlint"

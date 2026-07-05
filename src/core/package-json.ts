@@ -7,6 +7,21 @@ export function updatePackageJson(
   packageJson: PackageJson,
   optionsOrFeatures: ToolchainOptions | Feature[],
 ): PackageJson {
+  return updatePackageJsonForLifecycle(packageJson, optionsOrFeatures, "updatePackageJson");
+}
+
+export function updatePackageJsonBeforeRun(
+  packageJson: PackageJson,
+  optionsOrFeatures: ToolchainOptions | Feature[],
+): PackageJson {
+  return updatePackageJsonForLifecycle(packageJson, optionsOrFeatures, "beforeRun");
+}
+
+function updatePackageJsonForLifecycle(
+  packageJson: PackageJson,
+  optionsOrFeatures: ToolchainOptions | Feature[],
+  lifecycle: "beforeRun" | "updatePackageJson",
+): PackageJson {
   const options = Array.isArray(optionsOrFeatures)
     ? { features: optionsOrFeatures, routerMode: DEFAULT_ROUTER_MODE }
     : optionsOrFeatures;
@@ -16,7 +31,7 @@ export function updatePackageJson(
   next.devDependencies = { ...next.devDependencies };
 
   for (const toolchain of getSelectedToolchains(options.features)) {
-    toolchain.updatePackageJson?.({
+    toolchain[lifecycle]?.({
       cliManifest: getCliManifestForToolchain(toolchain),
       packageJson: next,
       options,

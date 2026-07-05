@@ -17,7 +17,11 @@ describe("toolchain availability", () => {
   it("includes Yarn SDKs for Yarn PnP projects", async () => {
     const cwd = process.cwd();
 
-    const toolchains = await getAvailableToolchains({ cwd, packageManager: "yarn" });
+    const toolchains = await getAvailableToolchains({
+      cwd,
+      packageJson: {},
+      packageManager: "yarn",
+    });
 
     expect(toolchains.map((toolchain) => toolchain.feature)).toContain("yarnSdks");
   });
@@ -25,7 +29,11 @@ describe("toolchain availability", () => {
   it("includes Yarn SDKs when Yarn has no nodeLinker override", async () => {
     const cwd = await createProject();
 
-    const toolchains = await getAvailableToolchains({ cwd, packageManager: "yarn" });
+    const toolchains = await getAvailableToolchains({
+      cwd,
+      packageJson: {},
+      packageManager: "yarn",
+    });
 
     expect(toolchains.map((toolchain) => toolchain.feature)).toContain("yarnSdks");
   });
@@ -34,7 +42,11 @@ describe("toolchain availability", () => {
     const cwd = await createProject();
     await writeFile(path.join(cwd, ".yarnrc.yml"), "nodeLinker: pnp\n");
 
-    const toolchains = await getAvailableToolchains({ cwd, packageManager: "yarn" });
+    const toolchains = await getAvailableToolchains({
+      cwd,
+      packageJson: {},
+      packageManager: "yarn",
+    });
 
     expect(toolchains.map((toolchain) => toolchain.feature)).toContain("yarnSdks");
   });
@@ -46,7 +58,11 @@ describe("toolchain availability", () => {
     await mkdir(cwd, { recursive: true });
     await writeFile(path.join(cwd, "package.json"), '{"private":true}\n');
 
-    const toolchains = await getAvailableToolchains({ cwd, packageManager: "yarn" });
+    const toolchains = await getAvailableToolchains({
+      cwd,
+      packageJson: {},
+      packageManager: "yarn",
+    });
 
     expect(toolchains.map((toolchain) => toolchain.feature)).toContain("yarnSdks");
   });
@@ -55,7 +71,11 @@ describe("toolchain availability", () => {
     const cwd = await createProject();
     await writeFile(path.join(cwd, ".yarnrc.yml"), "nodeLinker: node-modules\n");
 
-    const toolchains = await getAvailableToolchains({ cwd, packageManager: "yarn" });
+    const toolchains = await getAvailableToolchains({
+      cwd,
+      packageJson: {},
+      packageManager: "yarn",
+    });
 
     expect(toolchains.map((toolchain) => toolchain.feature)).not.toContain("yarnSdks");
   });

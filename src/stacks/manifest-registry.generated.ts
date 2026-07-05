@@ -4,6 +4,7 @@ import {
   tanStackRouterCliManifest,
   tanStackRouterCliManifestData,
 } from "./tanstack-router/manifest";
+import { hotUpdaterCliManifest, hotUpdaterCliManifestData } from "./hot-updater/manifest";
 import { playwrightCliManifest, playwrightCliManifestData } from "./playwright/manifest";
 import { oxfmtCliManifest, oxfmtCliManifestData } from "./oxfmt/manifest";
 import { oxlintCliManifest, oxlintCliManifestData } from "./oxlint/manifest";
@@ -15,6 +16,7 @@ import { yarnSdksCliManifest, yarnSdksCliManifestData } from "./yarn-sdks/manife
 
 export const cliCommandManifests = [
   tanStackRouterCliManifest,
+  hotUpdaterCliManifest,
   playwrightCliManifest,
   oxfmtCliManifest,
   oxlintCliManifest,
@@ -27,6 +29,7 @@ export const cliCommandManifests = [
 
 export const cliCommandManifestData = [
   tanStackRouterCliManifestData,
+  hotUpdaterCliManifestData,
   playwrightCliManifestData,
   oxfmtCliManifestData,
   oxlintCliManifestData,

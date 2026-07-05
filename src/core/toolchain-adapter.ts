@@ -26,6 +26,7 @@ export type ToolchainNoteContext = {
 
 export type ToolchainAvailabilityContext = {
   cwd: string;
+  packageJson: PackageJson;
   packageManager: PackageManager;
 };
 
@@ -58,6 +59,7 @@ export type ToolchainAdapter = {
   order?: number;
   cli?: ToolchainCliDefinition;
   isAvailable?: (context: ToolchainAvailabilityContext) => boolean | Promise<boolean>;
+  beforeRun?: (context: UpdatePackageJsonContext) => void;
   run?: (context: RunToolchainContext) => Promise<void>;
   updatePackageJson?: (context: UpdatePackageJsonContext) => void;
   targetFiles?: (options: ToolchainOptions) => readonly string[];

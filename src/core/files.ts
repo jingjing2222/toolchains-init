@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import type { PackageJson, ToolchainOptions } from "./types";
 import { getSelectedToolchains } from "../stacks";
-import { updatePackageJson } from "./package-json";
+import { updatePackageJson, updatePackageJsonBeforeRun } from "./package-json";
 
 export async function readPackageJson(cwd: string): Promise<PackageJson | null> {
   try {
@@ -44,6 +44,20 @@ export async function writeToolchain(
   for (const toolchain of getSelectedToolchains(options.features)) {
     await toolchain.afterWrite?.({ cwd, options });
   }
+}
+
+export async function writeBeforeRunToolchain(
+  cwd: string,
+  packageJson: PackageJson,
+  options: ToolchainOptions,
+) {
+  if (!getSelectedToolchains(options.features).some((toolchain) => toolchain.beforeRun != null)) {
+    return false;
+  }
+
+  const nextPackageJson = updatePackageJsonBeforeRun(packageJson, options);
+  await writeJson(path.join(cwd, "package.json"), nextPackageJson);
+  return true;
 }
 
 async function writeJson(file: string, value: unknown) {

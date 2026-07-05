@@ -14,6 +14,7 @@ describe("CLI command manifests", () => {
   it("registers every CLI-backed toolchain command", () => {
     const expectedTools = [
       "tanstack-router",
+      "hot-updater",
       "playwright",
       "oxfmt",
       "oxlint",
