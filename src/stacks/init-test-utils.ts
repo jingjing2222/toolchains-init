@@ -46,7 +46,7 @@ export async function createFreshYarnPnpProject() {
     )}\n`,
   );
   await writeFile(path.join(cwd, ".yarnrc.yml"), "nodeLinker: pnp\n");
-  await execFileAsync("corepack", ["yarn", "install"], {
+  await execFileAsync("corepack", ["yarn", "install", "--no-immutable"], {
     cwd,
     env: createCommandEnvironment(cwd),
   });
