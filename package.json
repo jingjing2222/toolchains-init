@@ -19,7 +19,9 @@
     "type": "git",
     "url": "git+https://github.com/jingjing2222/toolchains-init.git"
   },
-  "bin": "./dist/cli.mjs",
+  "bin": {
+    "toolchains-init": "./dist/cli.mjs"
+  },
   "files": [
     "dist",
     "README.md",

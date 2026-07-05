@@ -15,15 +15,8 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-
-      - name: Enable Corepack
-        run: corepack enable
-
-      - name: Install dependencies
-        run: yarn install
+      - name: Setup
+        uses: ./.github/actions/setup
 
       - name: Check Changeset
         if: ${{ !startsWith(github.head_ref, 'changeset-release/') }}
