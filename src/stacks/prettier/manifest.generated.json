@@ -1,0 +1,334 @@
+{
+  "schemaVersion": "toolchains-init/cli-command-manifest/v1",
+  "tool": "prettier",
+  "package": "prettier",
+  "version": "3.9.4",
+  "commands": [
+    {
+      "id": "check",
+      "packageManagers": {
+        "npm": ["npx", "prettier@{version}"],
+        "pnpm": ["pnpm", "dlx", "prettier@{version}"],
+        "yarn": ["yarn", "dlx", "prettier@{version}"],
+        "bun": ["bunx", "prettier@{version}"],
+        "deno": ["deno", "x", "-A", "npm:prettier@{version}"]
+      },
+      "flags": {
+        "check": {
+          "type": "boolean",
+          "cliName": "--check",
+          "supported": true
+        },
+        "listDifferent": {
+          "type": "boolean",
+          "cliName": "--list-different",
+          "supported": true
+        },
+        "write": {
+          "type": "boolean",
+          "cliName": "--write",
+          "supported": true
+        },
+        "arrowParens": {
+          "type": "enum",
+          "cliName": "--arrow-parens",
+          "values": ["always", "avoid"],
+          "supported": true
+        },
+        "bracketSameLine": {
+          "type": "boolean",
+          "cliName": "--bracket-same-line",
+          "supported": true
+        },
+        "noBracketSpacing": {
+          "type": "boolean",
+          "cliName": "--no-bracket-spacing",
+          "supported": true
+        },
+        "embeddedLanguageFormatting": {
+          "type": "enum",
+          "cliName": "--embedded-language-formatting",
+          "values": ["auto", "off"],
+          "supported": true
+        },
+        "endOfLine": {
+          "type": "enum",
+          "cliName": "--end-of-line",
+          "values": ["lf", "crlf", "cr", "auto"],
+          "supported": true
+        },
+        "experimentalOperatorPosition": {
+          "type": "enum",
+          "cliName": "--experimental-operator-position",
+          "values": ["start", "end"],
+          "supported": true
+        },
+        "noExperimentalTernaries": {
+          "type": "boolean",
+          "cliName": "--no-experimental-ternaries",
+          "supported": true
+        },
+        "htmlWhitespaceSensitivity": {
+          "type": "enum",
+          "cliName": "--html-whitespace-sensitivity",
+          "values": ["css", "strict", "ignore"],
+          "supported": true
+        },
+        "jsxSingleQuote": {
+          "type": "boolean",
+          "cliName": "--jsx-single-quote",
+          "supported": true
+        },
+        "objectWrap": {
+          "type": "enum",
+          "cliName": "--object-wrap",
+          "values": ["preserve", "collapse"],
+          "supported": true
+        },
+        "parser": {
+          "type": "enum",
+          "cliName": "--parser",
+          "values": [
+            "flow",
+            "babel",
+            "babel-flow",
+            "babel-ts",
+            "typescript",
+            "acorn",
+            "espree",
+            "meriyah",
+            "css",
+            "less",
+            "scss",
+            "json",
+            "json5",
+            "jsonc",
+            "json-stringify",
+            "graphql",
+            "markdown",
+            "mdx",
+            "vue",
+            "yaml",
+            "glimmer",
+            "html",
+            "angular",
+            "lwc",
+            "mjml"
+          ],
+          "supported": true
+        },
+        "printWidth": {
+          "type": "string",
+          "cliName": "--print-width",
+          "supported": true
+        },
+        "proseWrap": {
+          "type": "enum",
+          "cliName": "--prose-wrap",
+          "values": ["always", "never", "preserve"],
+          "supported": true
+        },
+        "quoteProps": {
+          "type": "enum",
+          "cliName": "--quote-props",
+          "values": ["as-needed", "consistent", "preserve"],
+          "supported": true
+        },
+        "noSemi": {
+          "type": "boolean",
+          "cliName": "--no-semi",
+          "supported": true
+        },
+        "singleAttributePerLine": {
+          "type": "boolean",
+          "cliName": "--single-attribute-per-line",
+          "supported": true
+        },
+        "singleQuote": {
+          "type": "boolean",
+          "cliName": "--single-quote",
+          "supported": true
+        },
+        "tabWidth": {
+          "type": "string",
+          "cliName": "--tab-width",
+          "supported": true
+        },
+        "trailingComma": {
+          "type": "enum",
+          "cliName": "--trailing-comma",
+          "values": ["all", "es5", "none"],
+          "supported": true
+        },
+        "useTabs": {
+          "type": "boolean",
+          "cliName": "--use-tabs",
+          "supported": true
+        },
+        "vueIndentScriptAndStyle": {
+          "type": "boolean",
+          "cliName": "--vue-indent-script-and-style",
+          "supported": true
+        },
+        "config": {
+          "type": "string",
+          "cliName": "--config",
+          "supported": true
+        },
+        "noConfig": {
+          "type": "boolean",
+          "cliName": "--no-config",
+          "supported": true
+        },
+        "configPrecedence": {
+          "type": "enum",
+          "cliName": "--config-precedence",
+          "values": ["cli-override", "file-override", "prefer-file"],
+          "supported": true
+        },
+        "noEditorconfig": {
+          "type": "boolean",
+          "cliName": "--no-editorconfig",
+          "supported": true
+        },
+        "findConfigPath": {
+          "type": "string",
+          "cliName": "--find-config-path",
+          "supported": true
+        },
+        "ignorePath": {
+          "type": "string",
+          "cliName": "--ignore-path",
+          "supported": true
+        },
+        "plugin": {
+          "type": "string",
+          "cliName": "--plugin",
+          "supported": true
+        },
+        "withNodeModules": {
+          "type": "boolean",
+          "cliName": "--with-node-modules",
+          "supported": true
+        },
+        "cursorOffset": {
+          "type": "string",
+          "cliName": "--cursor-offset",
+          "supported": true
+        },
+        "rangeEnd": {
+          "type": "string",
+          "cliName": "--range-end",
+          "supported": true
+        },
+        "rangeStart": {
+          "type": "string",
+          "cliName": "--range-start",
+          "supported": true
+        },
+        "cache": {
+          "type": "boolean",
+          "cliName": "--cache",
+          "supported": true
+        },
+        "cacheLocation": {
+          "type": "string",
+          "cliName": "--cache-location",
+          "supported": true
+        },
+        "cacheStrategy": {
+          "type": "enum",
+          "cliName": "--cache-strategy",
+          "values": ["metadata", "content"],
+          "supported": true
+        },
+        "checkIgnorePragma": {
+          "type": "boolean",
+          "cliName": "--check-ignore-pragma",
+          "supported": true
+        },
+        "noColor": {
+          "type": "boolean",
+          "cliName": "--no-color",
+          "supported": true
+        },
+        "noErrorOnUnmatchedPattern": {
+          "type": "boolean",
+          "cliName": "--no-error-on-unmatched-pattern",
+          "supported": true
+        },
+        "fileInfo": {
+          "type": "string",
+          "cliName": "--file-info",
+          "supported": true
+        },
+        "help": {
+          "type": "string",
+          "cliName": "--help",
+          "supported": true
+        },
+        "ignoreUnknown": {
+          "type": "boolean",
+          "cliName": "--ignore-unknown",
+          "supported": true
+        },
+        "insertPragma": {
+          "type": "boolean",
+          "cliName": "--insert-pragma",
+          "supported": true
+        },
+        "logLevel": {
+          "type": "enum",
+          "cliName": "--log-level",
+          "values": ["silent", "error", "warn", "log", "debug"],
+          "supported": true
+        },
+        "requirePragma": {
+          "type": "boolean",
+          "cliName": "--require-pragma",
+          "supported": true
+        },
+        "stdinFilepath": {
+          "type": "string",
+          "cliName": "--stdin-filepath",
+          "supported": true
+        },
+        "supportInfo": {
+          "type": "boolean",
+          "cliName": "--support-info",
+          "supported": true
+        },
+        "version": {
+          "type": "boolean",
+          "cliName": "--version",
+          "supported": true
+        }
+      },
+      "interactive": true
+    }
+  ],
+  "sources": [
+    {
+      "kind": "npm",
+      "package": "prettier",
+      "version": "3.9.4",
+      "distTag": "latest",
+      "resolvedAt": "2026-06-30T01:11:17.630Z"
+    },
+    {
+      "kind": "cli-help",
+      "command": ["npx", "--yes", "prettier@3.9.4", "--help"],
+      "commandId": "check"
+    },
+    {
+      "kind": "docs",
+      "url": "https://prettier.io/docs/install",
+      "confidence": "high"
+    },
+    {
+      "kind": "docs",
+      "url": "https://prettier.io/docs/configuration",
+      "confidence": "high"
+    }
+  ]
+}

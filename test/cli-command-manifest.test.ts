@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { resolveCliCommand } from "../src/core/cli-command-manifest";
-import { defineToolchain } from "../src/core/toolchain-adapter";
-import { cliCommandManifestData, cliCommandManifests, getCliCommandManifest } from "../src/stacks";
+import { defineToolchain, getToolchainCliTool } from "../src/core/toolchain-adapter";
+import {
+  cliCommandManifestData,
+  cliCommandManifests,
+  getCliCommandManifest,
+  toolchains,
+} from "../src/stacks";
 import { resolvePackageManagerCommands, runHelpCommand } from "../scripts/update-cli-manifests";
 import packageJson from "../package.json" with { type: "json" };
 
@@ -12,17 +17,9 @@ if (playwrightCliManifest == null) {
 
 describe("CLI command manifests", () => {
   it("registers every CLI-backed toolchain command", () => {
-    const expectedTools = [
-      "tanstack-router",
-      "playwright",
-      "oxfmt",
-      "oxlint",
-      "biome",
-      "knip",
-      "react-doctor",
-      "changesets",
-      "yarn-sdks",
-    ];
+    const expectedTools = toolchains
+      .filter((toolchain) => toolchain.cli != null)
+      .map((toolchain) => getToolchainCliTool(toolchain));
 
     expect(cliCommandManifestData.map((manifest) => manifest.tool)).toEqual(expectedTools);
     expect(cliCommandManifests.map((manifest) => manifest.tool)).toEqual(expectedTools);
@@ -61,6 +58,13 @@ describe("CLI command manifests", () => {
       },
       routerOnly: { cliName: "--router-only", type: "boolean" },
     });
+
+    const storybookCliManifest = getCliCommandManifest("storybook");
+    expect(storybookCliManifest?.commands[0]?.flags).toMatchObject({
+      force: { cliName: "--force", type: "boolean" },
+      skipInstall: { cliName: "--skip-install", type: "boolean" },
+      yes: { cliName: "--yes", type: "boolean" },
+    });
   });
 
   it("resolves pinned Playwright init commands by package manager", () => {
@@ -88,9 +92,12 @@ describe("CLI command manifests", () => {
 
   it("infers package-manager commands from the CLI package shape", () => {
     const biomeCliManifest = getCliCommandManifest("biome");
+    const eslintCliManifest = getCliCommandManifest("eslint");
     const knipCliManifest = getCliCommandManifest("knip");
     const oxfmtCliManifest = getCliCommandManifest("oxfmt");
     const oxlintCliManifest = getCliCommandManifest("oxlint");
+    const prettierCliManifest = getCliCommandManifest("prettier");
+    const storybookCliManifest = getCliCommandManifest("storybook");
     const yarnSdksCliManifest = getCliCommandManifest("yarn-sdks");
 
     expect(biomeCliManifest?.commands[0]?.packageManagers).toMatchObject({
@@ -121,10 +128,30 @@ describe("CLI command manifests", () => {
       bun: ["bunx", "oxlint@{version}"],
       deno: ["deno", "x", "-A", "npm:oxlint@{version}"],
     });
+    expect(prettierCliManifest?.commands[0]?.packageManagers).toMatchObject({
+      npm: ["npx", "prettier@{version}"],
+      pnpm: ["pnpm", "dlx", "prettier@{version}"],
+      yarn: ["yarn", "dlx", "prettier@{version}"],
+      bun: ["bunx", "prettier@{version}"],
+      deno: ["deno", "x", "-A", "npm:prettier@{version}"],
+    });
+    expect(eslintCliManifest?.commands[0]?.packageManagers).toMatchObject({
+      npm: ["npx", "@eslint/create-config@{version}"],
+      pnpm: ["pnpm", "dlx", "@eslint/create-config@{version}"],
+      yarn: ["yarn", "dlx", "@eslint/create-config@{version}"],
+      bun: ["bunx", "@eslint/create-config@{version}"],
+      deno: ["deno", "x", "-A", "npm:@eslint/create-config@{version}"],
+    });
     expect(yarnSdksCliManifest?.commands[0]?.packageManagers).toEqual({
       yarn: ["yarn", "dlx", "@yarnpkg/sdks@{version}", "vscode"],
     });
     expect(yarnSdksCliManifest?.sources.map((source) => source.kind)).toEqual(["npm"]);
+    expect(storybookCliManifest?.commands[0]?.packageManagers).toEqual({
+      npm: ["npm", "init", "storybook@{version}", "--"],
+      pnpm: ["pnpm", "create", "storybook@{version}"],
+      yarn: ["yarn", "create", "storybook@{version}"],
+      bun: ["bun", "create", "storybook@{version}"],
+    });
   });
 
   it("keeps flag-only initializers free of positional init subcommands", () => {

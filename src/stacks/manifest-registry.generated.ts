@@ -4,9 +4,14 @@ import {
   tanStackRouterCliManifest,
   tanStackRouterCliManifestData,
 } from "./tanstack-router/manifest";
+import { hotUpdaterCliManifest, hotUpdaterCliManifestData } from "./hot-updater/manifest";
 import { playwrightCliManifest, playwrightCliManifestData } from "./playwright/manifest";
+import { storybookCliManifest, storybookCliManifestData } from "./storybook/manifest";
+import { mswCliManifest, mswCliManifestData } from "./msw/manifest";
 import { oxfmtCliManifest, oxfmtCliManifestData } from "./oxfmt/manifest";
+import { prettierCliManifest, prettierCliManifestData } from "./prettier/manifest";
 import { oxlintCliManifest, oxlintCliManifestData } from "./oxlint/manifest";
+import { eslintCliManifest, eslintCliManifestData } from "./eslint/manifest";
 import { biomeCliManifest, biomeCliManifestData } from "./biome/manifest";
 import { knipCliManifest, knipCliManifestData } from "./knip/manifest";
 import { reactDoctorCliManifest, reactDoctorCliManifestData } from "./react-doctor/manifest";
@@ -15,9 +20,14 @@ import { yarnSdksCliManifest, yarnSdksCliManifestData } from "./yarn-sdks/manife
 
 export const cliCommandManifests = [
   tanStackRouterCliManifest,
+  hotUpdaterCliManifest,
   playwrightCliManifest,
+  storybookCliManifest,
+  mswCliManifest,
   oxfmtCliManifest,
+  prettierCliManifest,
   oxlintCliManifest,
+  eslintCliManifest,
   biomeCliManifest,
   knipCliManifest,
   reactDoctorCliManifest,
@@ -27,9 +37,14 @@ export const cliCommandManifests = [
 
 export const cliCommandManifestData = [
   tanStackRouterCliManifestData,
+  hotUpdaterCliManifestData,
   playwrightCliManifestData,
+  storybookCliManifestData,
+  mswCliManifestData,
   oxfmtCliManifestData,
+  prettierCliManifestData,
   oxlintCliManifestData,
+  eslintCliManifestData,
   biomeCliManifestData,
   knipCliManifestData,
   reactDoctorCliManifestData,

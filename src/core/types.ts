@@ -1,21 +1,16 @@
+import type { BuiltInFeature } from "../stacks/toolchains.generated";
+
 export type PackageJson = {
   name?: string;
   packageManager?: string;
   scripts?: Record<string, string>;
   dependencies?: Record<string, string>;
   devDependencies?: Record<string, string>;
+  msw?: {
+    workerDirectory?: string | string[];
+  };
 };
 
-export type BuiltInFeature =
-  | "router"
-  | "playwright"
-  | "oxfmt"
-  | "oxlint"
-  | "biome"
-  | "knip"
-  | "reactDoctor"
-  | "changesets"
-  | "yarnSdks";
 export type Feature = BuiltInFeature | (string & {});
 export type RouterMode = "code" | "file";
 

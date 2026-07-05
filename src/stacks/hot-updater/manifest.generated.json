@@ -1,0 +1,54 @@
+{
+  "schemaVersion": "toolchains-init/cli-command-manifest/v1",
+  "tool": "hot-updater",
+  "package": "hot-updater",
+  "version": "0.35.1",
+  "commands": [
+    {
+      "id": "init",
+      "packageManagers": {
+        "npm": ["npx", "hot-updater@{version}", "init"],
+        "pnpm": ["pnpm", "dlx", "hot-updater@{version}", "init"],
+        "yarn": ["yarn", "dlx", "hot-updater@{version}", "init"],
+        "bun": ["bunx", "hot-updater@{version}", "init"]
+      },
+      "flags": {
+        "provider": {
+          "type": "string",
+          "cliName": "--provider",
+          "supported": true
+        },
+        "build": {
+          "type": "string",
+          "cliName": "--build",
+          "supported": true
+        },
+        "help": {
+          "type": "boolean",
+          "cliName": "--help",
+          "supported": true
+        }
+      },
+      "interactive": true
+    }
+  ],
+  "sources": [
+    {
+      "kind": "npm",
+      "package": "hot-updater",
+      "version": "0.35.1",
+      "distTag": "latest",
+      "resolvedAt": "2026-06-23T14:37:48.868Z"
+    },
+    {
+      "kind": "cli-help",
+      "command": ["npx", "--yes", "hot-updater@0.35.1", "init", "--help"],
+      "commandId": "init"
+    },
+    {
+      "kind": "docs",
+      "url": "https://hot-updater.dev/docs/get-started/basic-usage",
+      "confidence": "high"
+    }
+  ]
+}

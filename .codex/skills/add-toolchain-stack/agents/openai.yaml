@@ -1,0 +1,4 @@
+interface:
+  display_name: "Add Toolchain Stack"
+  short_description: "Add stacks to ait-toolchain correctly"
+  default_prompt: "Use $add-toolchain-stack to add a new toolchain stack to this repo."

@@ -13,7 +13,12 @@ import type { Option } from "@clack/prompts";
 import path from "node:path";
 import pc from "picocolors";
 import { runExternalToolchains, runPostInstallToolchains } from "../core/external-toolchains";
-import { existingTargetFiles, readPackageJson, writeToolchain } from "../core/files";
+import {
+  existingTargetFiles,
+  readPackageJson,
+  writeBeforeRunToolchain,
+  writeToolchain,
+} from "../core/files";
 import { detectPackageManager, runInstall } from "../core/package-manager";
 import { getAvailableToolchains, getSelectedToolchains } from "../stacks";
 import { DEFAULT_ROUTER_MODE, type Feature, type RouterMode } from "../core/types";
@@ -65,7 +70,7 @@ export async function runInit(args: string[]) {
   log.warn("Files at the same paths may be overwritten.");
 
   const packageManager = detectPackageManager();
-  const availableToolchains = await getAvailableToolchains({ cwd, packageManager });
+  const availableToolchains = await getAvailableToolchains({ cwd, packageJson, packageManager });
   const availableFeatures = availableToolchains.map((toolchain) => toolchain.feature);
   const features = yes ? availableFeatures : await selectFeatures(availableToolchains);
   if (features == null) {
@@ -103,6 +108,10 @@ export async function runInit(args: string[]) {
   s.stop("Toolchain prepared");
 
   if (!skipInstall) {
+    if (await writeBeforeRunToolchain(cwd, packageJson, options)) {
+      log.info(`Running ${packageManager} install before official initializers.`);
+      await runInstall(packageManager, cwd);
+    }
     log.info("Running official initializers.");
     await runExternalToolchains(cwd, packageManager, options, yes);
     log.info("Official initializers completed.");

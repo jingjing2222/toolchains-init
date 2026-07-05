@@ -1,0 +1,154 @@
+{
+  "schemaVersion": "toolchains-init/cli-command-manifest/v1",
+  "tool": "storybook",
+  "package": "create-storybook",
+  "version": "10.4.6",
+  "commands": [
+    {
+      "id": "init",
+      "packageManagers": {
+        "npm": ["npm", "init", "storybook@{version}", "--"],
+        "pnpm": ["pnpm", "create", "storybook@{version}"],
+        "yarn": ["yarn", "create", "storybook@{version}"],
+        "bun": ["bun", "create", "storybook@{version}"]
+      },
+      "flags": {
+        "disableTelemetry": {
+          "type": "boolean",
+          "cliName": "--disable-telemetry",
+          "supported": true
+        },
+        "features": {
+          "type": "string",
+          "cliName": "--features",
+          "supported": true
+        },
+        "noFeatures": {
+          "type": "boolean",
+          "cliName": "--no-features",
+          "supported": true
+        },
+        "debug": {
+          "type": "boolean",
+          "cliName": "--debug",
+          "supported": true
+        },
+        "enableCrashReports": {
+          "type": "boolean",
+          "cliName": "--enable-crash-reports",
+          "supported": true
+        },
+        "force": {
+          "type": "boolean",
+          "cliName": "--force",
+          "supported": true
+        },
+        "skipInstall": {
+          "type": "boolean",
+          "cliName": "--skip-install",
+          "supported": true
+        },
+        "packageManager": {
+          "type": "string",
+          "cliName": "--package-manager",
+          "supported": true
+        },
+        "usePnp": {
+          "type": "boolean",
+          "cliName": "--use-pnp",
+          "supported": true
+        },
+        "parser": {
+          "type": "string",
+          "cliName": "--parser",
+          "supported": true
+        },
+        "type": {
+          "type": "string",
+          "cliName": "--type",
+          "supported": true
+        },
+        "yes": {
+          "type": "boolean",
+          "cliName": "--yes",
+          "supported": true
+        },
+        "builder": {
+          "type": "string",
+          "cliName": "--builder",
+          "supported": true
+        },
+        "linkable": {
+          "type": "boolean",
+          "cliName": "--linkable",
+          "supported": true
+        },
+        "dev": {
+          "type": "boolean",
+          "cliName": "--dev",
+          "supported": true
+        },
+        "noDev": {
+          "type": "boolean",
+          "cliName": "--no-dev",
+          "supported": true
+        },
+        "agent": {
+          "type": "boolean",
+          "cliName": "--agent",
+          "supported": true
+        },
+        "noAgent": {
+          "type": "boolean",
+          "cliName": "--no-agent",
+          "supported": true
+        },
+        "logfile": {
+          "type": "string",
+          "cliName": "--logfile",
+          "supported": true
+        },
+        "loglevel": {
+          "type": "string",
+          "cliName": "--loglevel",
+          "supported": true
+        },
+        "version": {
+          "type": "boolean",
+          "cliName": "--version",
+          "supported": true
+        },
+        "help": {
+          "type": "boolean",
+          "cliName": "--help",
+          "supported": true
+        }
+      },
+      "interactive": true
+    }
+  ],
+  "sources": [
+    {
+      "kind": "npm",
+      "package": "create-storybook",
+      "version": "10.4.6",
+      "distTag": "latest",
+      "resolvedAt": "2026-06-16T11:43:10.268Z"
+    },
+    {
+      "kind": "cli-help",
+      "command": ["npx", "--yes", "create-storybook@10.4.6", "--help"],
+      "commandId": "init"
+    },
+    {
+      "kind": "docs",
+      "url": "https://storybook.js.org/docs/get-started/install",
+      "confidence": "high"
+    },
+    {
+      "kind": "docs",
+      "url": "https://storybook.js.org/docs/api/cli-options",
+      "confidence": "high"
+    }
+  ]
+}

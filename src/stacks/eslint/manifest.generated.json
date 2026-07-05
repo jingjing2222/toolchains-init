@@ -1,0 +1,33 @@
+{
+  "schemaVersion": "toolchains-init/cli-command-manifest/v1",
+  "tool": "eslint",
+  "package": "@eslint/create-config",
+  "version": "2.0.0",
+  "commands": [
+    {
+      "id": "init",
+      "packageManagers": {
+        "npm": ["npx", "@eslint/create-config@{version}"],
+        "pnpm": ["pnpm", "dlx", "@eslint/create-config@{version}"],
+        "yarn": ["yarn", "dlx", "@eslint/create-config@{version}"],
+        "bun": ["bunx", "@eslint/create-config@{version}"],
+        "deno": ["deno", "x", "-A", "npm:@eslint/create-config@{version}"]
+      },
+      "interactive": true
+    }
+  ],
+  "sources": [
+    {
+      "kind": "npm",
+      "package": "@eslint/create-config",
+      "version": "2.0.0",
+      "distTag": "latest",
+      "resolvedAt": "2026-05-20T21:19:12.112Z"
+    },
+    {
+      "kind": "docs",
+      "url": "https://eslint.org/docs/latest/use/getting-started",
+      "confidence": "high"
+    }
+  ]
+}

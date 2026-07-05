@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "toolchains-init/cli-command-manifest/v1",
+  "tool": "msw",
+  "package": "msw",
+  "version": "2.14.6",
+  "commands": [
+    {
+      "id": "init",
+      "packageManagers": {
+        "npm": ["npx", "msw@{version}", "init"],
+        "pnpm": ["pnpm", "dlx", "msw@{version}", "init"],
+        "yarn": ["yarn", "dlx", "msw@{version}", "init"],
+        "bun": ["bunx", "msw@{version}", "init"]
+      },
+      "flags": {
+        "version": {
+          "type": "boolean",
+          "cliName": "--version",
+          "supported": true
+        },
+        "help": {
+          "type": "boolean",
+          "cliName": "--help",
+          "supported": true
+        },
+        "save": {
+          "type": "boolean",
+          "cliName": "--save",
+          "supported": true
+        },
+        "cwd": {
+          "type": "boolean",
+          "cliName": "--cwd",
+          "supported": true
+        }
+      },
+      "interactive": true
+    }
+  ],
+  "sources": [
+    {
+      "kind": "npm",
+      "package": "msw",
+      "version": "2.14.6",
+      "distTag": "latest",
+      "resolvedAt": "2026-05-11T09:41:46.655Z"
+    },
+    {
+      "kind": "cli-help",
+      "command": ["npx", "--yes", "msw@2.14.6", "init", "--help"],
+      "commandId": "init"
+    },
+    {
+      "kind": "docs",
+      "url": "https://mswjs.io/docs/cli/init/",
+      "confidence": "high"
+    },
+    {
+      "kind": "docs",
+      "url": "https://mswjs.io/docs/best-practices/managing-the-worker/",
+      "confidence": "high"
+    }
+  ]
+}

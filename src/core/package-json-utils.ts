@@ -32,3 +32,7 @@ export function setManifestDevDependency(
   packageJson.devDependencies ??= {};
   packageJson.devDependencies[manifest.package] = manifest.version;
 }
+
+export function hasPackageDependency(packageJson: PackageJson, name: string) {
+  return packageJson.dependencies?.[name] != null || packageJson.devDependencies?.[name] != null;
+}
