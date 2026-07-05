@@ -10,6 +10,7 @@ export const tanStackRouter = defineToolchain({
   feature: "router",
   label: "TanStack Router",
   hint: "File-Based Routing or Code-Based Routing",
+  catalog: "app",
   order: 10,
   package: "@tanstack/cli",
   command: "create-router",

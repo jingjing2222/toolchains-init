@@ -15,6 +15,7 @@ export const oxfmt = defineToolchain({
   feature: "oxfmt",
   label: "oxfmt",
   hint: "Oxc formatter",
+  catalog: "quality",
   order: 30,
   package: "oxfmt",
   command: "init",

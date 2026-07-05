@@ -18,6 +18,7 @@ export const oxlint = defineToolchain({
   feature: "oxlint",
   label: "oxlint",
   hint: "Oxc linter",
+  catalog: "quality",
   order: 40,
   package: "oxlint",
   command: "init",

@@ -6,6 +6,7 @@ export const reactDoctor = defineToolchain({
   feature: "reactDoctor",
   label: "React Doctor",
   hint: "React health checks",
+  catalog: "quality",
   order: 70,
   package: "react-doctor",
   command: "check",

@@ -6,6 +6,7 @@ export const playwright = defineToolchain({
   feature: "playwright",
   label: "Playwright",
   hint: "Runs the official Playwright initializer",
+  catalog: "quality",
   order: 20,
   package: "create-playwright",
   command: "init",

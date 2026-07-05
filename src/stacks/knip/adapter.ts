@@ -6,6 +6,7 @@ export const knip = defineToolchain({
   feature: "knip",
   label: "Knip",
   hint: "Runs Knip through npx without installing it",
+  catalog: "quality",
   order: 60,
   package: "knip",
   command: "check",

@@ -15,6 +15,7 @@ export const biome = defineToolchain({
   feature: "biome",
   label: "Biome",
   hint: "Formatter and linter setup through Biome CLI",
+  catalog: "quality",
   order: 50,
   package: "@biomejs/biome",
   command: "init",

@@ -8,6 +8,7 @@ export const changesets = defineToolchain({
   feature: "changesets",
   label: "Changesets",
   hint: "Versioning and changelog workflow",
+  catalog: "release",
   order: 80,
   package: "@changesets/cli",
   command: "init",

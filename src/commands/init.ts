@@ -1,14 +1,15 @@
 import {
   cancel,
   confirm,
+  groupMultiselect,
   intro,
   isCancel,
   log,
-  multiselect,
   outro,
   select,
   spinner,
 } from "@clack/prompts";
+import type { Option } from "@clack/prompts";
 import path from "node:path";
 import pc from "picocolors";
 import { runExternalToolchains, runPostInstallToolchains } from "../core/external-toolchains";
@@ -16,6 +17,14 @@ import { existingTargetFiles, readPackageJson, writeToolchain } from "../core/fi
 import { detectPackageManager, runInstall } from "../core/package-manager";
 import { getAvailableToolchains, getSelectedToolchains } from "../stacks";
 import { DEFAULT_ROUTER_MODE, type Feature, type RouterMode } from "../core/types";
+import type { ToolchainAdapter, ToolchainCatalog } from "../core/toolchain-adapter";
+
+const toolchainCatalogs = [
+  ["app", "App Foundation"],
+  ["quality", "Quality & Testing"],
+  ["release", "Release"],
+  ["editor", "Editor"],
+] as const satisfies readonly (readonly [ToolchainCatalog, string])[];
 
 export async function runInit(args: string[]) {
   const unknownArg = findUnknownArg(args);
@@ -170,18 +179,37 @@ function parseRouterMode(args: string[]): RouterMode | "invalid" | null {
 export async function selectFeatures(
   availableToolchains: Awaited<ReturnType<typeof getAvailableToolchains>>,
 ): Promise<Feature[] | null> {
-  const selected = await multiselect({
+  const selected = await groupMultiselect({
     message: "What should be initialized?",
-    options: availableToolchains.map((toolchain) => ({
-      value: toolchain.feature,
-      label: toolchain.label,
-      hint: toolchain.hint,
-    })),
+    options: groupToolchainOptions(availableToolchains),
     required: true,
     initialValues: [],
+    selectableGroups: true,
   });
 
   return isCancel(selected) ? null : (selected as Feature[]);
+}
+
+function groupToolchainOptions(availableToolchains: readonly ToolchainAdapter[]) {
+  const entries: Array<[string, Option<Feature>[]]> = [];
+
+  for (const [catalog, label] of toolchainCatalogs) {
+    const options = availableToolchains
+      .filter((toolchain) => toolchain.catalog === catalog)
+      .map(
+        (toolchain): Option<Feature> => ({
+          value: toolchain.feature,
+          label: toolchain.label,
+          hint: toolchain.hint,
+        }),
+      );
+
+    if (options.length > 0) {
+      entries.push([label, options]);
+    }
+  }
+
+  return Object.fromEntries(entries);
 }
 
 async function selectRouterMode(): Promise<RouterMode | null> {

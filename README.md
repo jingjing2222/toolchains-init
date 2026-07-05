@@ -22,6 +22,7 @@ Then choose what you want to add from the interactive prompt.
 
 - **Official setup commands**: runs each tool's own initializer instead of copying a template.
 - **Pick only what you need**: router, E2E, formatter, linter, dead-code checks, release tooling, or editor SDKs.
+- **Cataloged prompt**: toolchains are grouped by app foundation, quality, release, and editor setup.
 - **Fresh app friendly**: designed for newly scaffolded Vite React projects.
 - **Monorepo support**: initialize an app package from the workspace root with `--target`.
 - **Package-manager aware**: works with npm, yarn, pnpm, Bun, and Deno.

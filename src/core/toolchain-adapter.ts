@@ -29,6 +29,8 @@ export type ToolchainAvailabilityContext = {
   packageManager: PackageManager;
 };
 
+export type ToolchainCatalog = "app" | "quality" | "release" | "editor";
+
 export type PackageManagerCommandTemplates = Partial<Record<PackageManager, readonly string[]>>;
 
 export type ToolchainCliRunner = "auto" | "create" | "dlx" | PackageManagerCommandTemplates;
@@ -52,6 +54,7 @@ export type ToolchainAdapter = {
   feature: ToolchainOptions["features"][number];
   label: string;
   hint: string;
+  catalog: ToolchainCatalog;
   order?: number;
   cli?: ToolchainCliDefinition;
   isAvailable?: (context: ToolchainAvailabilityContext) => boolean | Promise<boolean>;
@@ -63,7 +66,10 @@ export type ToolchainAdapter = {
   notes?: (context: ToolchainNoteContext) => string[];
 };
 
-export type DefineToolchainOptions = Omit<ToolchainAdapter, "cli" | "hint"> & { hint?: string } & (
+export type DefineToolchainOptions = Omit<ToolchainAdapter, "catalog" | "cli" | "hint"> & {
+  catalog?: ToolchainCatalog;
+  hint?: string;
+} & (
     | {
         package: string;
         command: string;
@@ -85,9 +91,10 @@ export type DefineToolchainOptions = Omit<ToolchainAdapter, "cli" | "hint"> & { 
   );
 
 export function defineToolchain(options: DefineToolchainOptions): ToolchainAdapter {
+  const catalog = options.catalog ?? "quality";
   const hint = options.hint ?? "";
   if (options.package == null || options.command == null) {
-    return { ...options, hint };
+    return { ...options, catalog, hint };
   }
 
   const {
@@ -108,6 +115,7 @@ export function defineToolchain(options: DefineToolchainOptions): ToolchainAdapt
 
   return {
     ...adapter,
+    catalog,
     hint,
     cli: {
       command,

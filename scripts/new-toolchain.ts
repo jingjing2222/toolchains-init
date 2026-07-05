@@ -5,11 +5,13 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { parseArgs, promisify } from "node:util";
 import pc from "picocolors";
+import type { ToolchainCatalog } from "../src/core/toolchain-adapter";
 
 const execFileAsync = promisify(execFile);
 
 type NewToolchainOptions = {
   adapterExportName: string;
+  catalog: ToolchainCatalog;
   command: string;
   commandId?: string;
   distTag?: string;
@@ -94,6 +96,7 @@ export async function main(argv: readonly string[]) {
 
 type ParsedArgs = {
   command?: string;
+  catalog?: string;
   commandId?: string;
   distTag?: string;
   feature?: string;
@@ -117,6 +120,7 @@ function parseNewToolchainArgs(argv: readonly string[]): ParsedArgs {
     allowPositionals: true,
     options: {
       cmd: { type: "string" },
+      catalog: { type: "string" },
       command: { type: "string" },
       "command-id": { type: "string" },
       "dist-tag": { type: "string" },
@@ -140,6 +144,7 @@ function parseNewToolchainArgs(argv: readonly string[]): ParsedArgs {
 
   return {
     command: values.command ?? values.cmd,
+    catalog: values.catalog,
     commandId: values["command-id"],
     distTag: values["dist-tag"],
     feature: positionals[0] ?? values.feature,
@@ -195,11 +200,13 @@ async function resolveOptions(parsed: ParsedArgs): Promise<NewToolchainOptions |
   assertIdentifier(adapterExportName, "adapter export");
   assertIdentifier(manifestExportName, "manifest export");
   assertStackDir(stackDir);
+  assertCatalog(parsed.catalog);
   assertPackageManagers(parsed.packageManagers);
   assertRunner(parsed.runner);
 
   return {
     adapterExportName,
+    catalog: parsed.catalog ?? "quality",
     command,
     commandId: parsed.commandId,
     distTag: parsed.distTag,
@@ -253,6 +260,18 @@ function assertIdentifier(value: string, label: string) {
 function assertStackDir(value: string) {
   if (value.length === 0 || path.isAbsolute(value) || value.includes("..")) {
     throw new Error(`Invalid stack directory: ${value}`);
+  }
+}
+
+function assertCatalog(value: string | undefined): asserts value is ToolchainCatalog | undefined {
+  if (
+    value != null &&
+    value !== "app" &&
+    value !== "quality" &&
+    value !== "release" &&
+    value !== "editor"
+  ) {
+    throw new Error(`Invalid catalog: ${value}`);
   }
 }
 
@@ -310,6 +329,7 @@ function renderAdapter(options: NewToolchainOptions) {
   const properties: Array<readonly [string, unknown]> = [
     ["feature", options.feature],
     ["label", options.label],
+    ["catalog", options.catalog],
     ["package", options.packageName],
     ["command", options.command],
   ];
@@ -353,6 +373,7 @@ Example:
 Options:
   --stack-dir <name>           Directory under src/stacks. Defaults to kebab-case feature.
   --label <label>              Prompt label. Defaults to title-cased feature.
+  --catalog <name>             app,quality,release,editor. Defaults to quality.
   --hint <hint>                Optional prompt hint.
   --export <name>              Adapter export name. Defaults to camel-cased feature.
   --manifest-export <name>     Manifest export name. Defaults to <feature>CliManifest.

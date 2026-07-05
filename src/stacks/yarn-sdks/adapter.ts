@@ -7,6 +7,7 @@ export const yarnSdks = defineToolchain({
   feature: "yarnSdks",
   label: "Yarn SDKs",
   hint: "Generates Yarn PnP editor SDKs for VSCode",
+  catalog: "editor",
   order: 90,
   package: "@yarnpkg/sdks",
   command: "vscode",
