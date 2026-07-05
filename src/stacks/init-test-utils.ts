@@ -4,6 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
 import { expect } from "vitest";
+import { createCommandEnvironment } from "../core/run-command";
 import type { PackageJson, ToolchainOptions } from "../core/types";
 
 const execFileAsync = promisify(execFile);
@@ -45,7 +46,10 @@ export async function createFreshYarnPnpProject() {
     )}\n`,
   );
   await writeFile(path.join(cwd, ".yarnrc.yml"), "nodeLinker: pnp\n");
-  await execFileAsync("corepack", ["yarn", "install"], { cwd });
+  await execFileAsync("corepack", ["yarn", "install"], {
+    cwd,
+    env: createCommandEnvironment(cwd),
+  });
   return cwd;
 }
 
@@ -55,6 +59,7 @@ function createPackageJson(): PackageJson {
     version: "0.0.0",
     private: true,
     type: "module",
+    packageManager: "npm@11.16.0",
     scripts: {
       build: "tsc -b && vite build",
       dev: "vite",
