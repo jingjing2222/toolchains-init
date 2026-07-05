@@ -31,7 +31,7 @@ describe("CLI command manifests", () => {
   it("resolves every command for its declared package managers", () => {
     for (const manifest of cliCommandManifests) {
       for (const command of manifest.commands) {
-        for (const packageManager of ["npm", "pnpm", "yarn", "bun"] as const) {
+        for (const packageManager of ["npm", "pnpm", "yarn", "bun", "deno"] as const) {
           if (command.packageManagers[packageManager] == null) {
             continue;
           }
@@ -80,6 +80,10 @@ describe("CLI command manifests", () => {
       bin: "bun",
       args: ["create", `playwright@${playwrightCliManifest.version}`],
     });
+    expect(resolveCliCommand(playwrightCliManifest, "init", "deno")).toEqual({
+      bin: "deno",
+      args: ["x", "-A", `npm:create-playwright@${playwrightCliManifest.version}`],
+    });
   });
 
   it("infers package-manager commands from the CLI package shape", () => {
@@ -94,24 +98,28 @@ describe("CLI command manifests", () => {
       pnpm: ["pnpm", "dlx", "@biomejs/biome@{version}", "init"],
       yarn: ["yarn", "dlx", "@biomejs/biome@{version}", "init"],
       bun: ["bunx", "@biomejs/biome@{version}", "init"],
+      deno: ["deno", "x", "-A", "npm:@biomejs/biome@{version}", "init"],
     });
     expect(knipCliManifest?.commands[0]?.packageManagers).toMatchObject({
       npm: ["npx", "knip@{version}"],
       pnpm: ["pnpm", "dlx", "knip@{version}"],
       yarn: ["yarn", "dlx", "knip@{version}"],
       bun: ["bunx", "knip@{version}"],
+      deno: ["deno", "x", "-A", "npm:knip@{version}"],
     });
     expect(oxfmtCliManifest?.commands[0]?.packageManagers).toMatchObject({
       npm: ["npx", "oxfmt@{version}"],
       pnpm: ["pnpm", "dlx", "oxfmt@{version}"],
       yarn: ["yarn", "dlx", "oxfmt@{version}"],
       bun: ["bunx", "oxfmt@{version}"],
+      deno: ["deno", "x", "-A", "npm:oxfmt@{version}"],
     });
     expect(oxlintCliManifest?.commands[0]?.packageManagers).toMatchObject({
       npm: ["npx", "oxlint@{version}"],
       pnpm: ["pnpm", "dlx", "oxlint@{version}"],
       yarn: ["yarn", "dlx", "oxlint@{version}"],
       bun: ["bunx", "oxlint@{version}"],
+      deno: ["deno", "x", "-A", "npm:oxlint@{version}"],
     });
     expect(yarnSdksCliManifest?.commands[0]?.packageManagers).toEqual({
       yarn: ["yarn", "dlx", "@yarnpkg/sdks@{version}", "vscode"],
@@ -145,7 +153,7 @@ describe("CLI command manifests", () => {
           docs: [],
           exportName: "scopedCreateCliManifest",
           help: undefined,
-          packageManagers: ["npm", "pnpm", "yarn", "bun"],
+          packageManagers: ["npm", "pnpm", "yarn", "bun", "deno"],
           packageName: "@scope/create-widget",
           runner: "auto",
           stackDir: "scoped-create",
@@ -159,6 +167,7 @@ describe("CLI command manifests", () => {
       pnpm: ["pnpm", "create", "@scope/widget@{version}"],
       yarn: ["yarn", "create", "@scope/widget@{version}"],
       bun: ["bun", "create", "@scope/widget@{version}"],
+      deno: ["deno", "x", "-A", "npm:@scope/create-widget@{version}"],
     });
   });
 

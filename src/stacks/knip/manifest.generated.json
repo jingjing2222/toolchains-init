@@ -10,7 +10,8 @@
         "npm": ["npx", "knip@{version}"],
         "pnpm": ["pnpm", "dlx", "knip@{version}"],
         "yarn": ["yarn", "dlx", "knip@{version}"],
-        "bun": ["bunx", "knip@{version}"]
+        "bun": ["bunx", "knip@{version}"],
+        "deno": ["deno", "x", "-A", "npm:knip@{version}"]
       },
       "flags": {
         "help": {

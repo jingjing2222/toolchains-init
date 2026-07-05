@@ -10,7 +10,8 @@
         "npm": ["npx", "@changesets/cli@{version}", "init"],
         "pnpm": ["pnpm", "dlx", "@changesets/cli@{version}", "init"],
         "yarn": ["yarn", "dlx", "@changesets/cli@{version}", "init"],
-        "bun": ["bunx", "@changesets/cli@{version}", "init"]
+        "bun": ["bunx", "@changesets/cli@{version}", "init"],
+        "deno": ["deno", "x", "-A", "npm:@changesets/cli@{version}", "init"]
       },
       "interactive": true
     }

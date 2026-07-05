@@ -46,6 +46,7 @@ const packageManagerCommandsSchema = v.object({
   pnpm: v.optional(v.array(v.string())),
   yarn: v.optional(v.array(v.string())),
   bun: v.optional(v.array(v.string())),
+  deno: v.optional(v.array(v.string())),
 });
 
 const cliCommandContractSchema = v.object({

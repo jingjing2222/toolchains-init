@@ -10,7 +10,8 @@
         "npm": ["npx", "@tanstack/cli@{version}", "create"],
         "pnpm": ["pnpm", "dlx", "@tanstack/cli@{version}", "create"],
         "yarn": ["yarn", "dlx", "@tanstack/cli@{version}", "create"],
-        "bun": ["bunx", "@tanstack/cli@{version}", "create"]
+        "bun": ["bunx", "@tanstack/cli@{version}", "create"],
+        "deno": ["deno", "x", "-A", "npm:@tanstack/cli@{version}", "create"]
       },
       "flags": {
         "framework": {

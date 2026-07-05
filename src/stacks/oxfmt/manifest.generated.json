@@ -10,7 +10,8 @@
         "npm": ["npx", "oxfmt@{version}"],
         "pnpm": ["pnpm", "dlx", "oxfmt@{version}"],
         "yarn": ["yarn", "dlx", "oxfmt@{version}"],
-        "bun": ["bunx", "oxfmt@{version}"]
+        "bun": ["bunx", "oxfmt@{version}"],
+        "deno": ["deno", "x", "-A", "npm:oxfmt@{version}"]
       },
       "flags": {
         "init": {

@@ -10,7 +10,8 @@
         "npm": ["npx", "oxlint@{version}"],
         "pnpm": ["pnpm", "dlx", "oxlint@{version}"],
         "yarn": ["yarn", "dlx", "oxlint@{version}"],
-        "bun": ["bunx", "oxlint@{version}"]
+        "bun": ["bunx", "oxlint@{version}"],
+        "deno": ["deno", "x", "-A", "npm:oxlint@{version}"]
       },
       "flags": {
         "config": {

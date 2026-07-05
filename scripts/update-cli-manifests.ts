@@ -87,7 +87,7 @@ function createManifestInput(toolchain: ToolchainAdapter): ManifestInput {
     docs: cli.docs ?? [],
     exportName: cli.exportName ?? `${toolchain.feature}CliManifest`,
     help: cli.help,
-    packageManagers: cli.packageManagers ?? ["npm", "pnpm", "yarn", "bun"],
+    packageManagers: cli.packageManagers ?? ["npm", "pnpm", "yarn", "bun", "deno"],
     packageName: cli.package,
     runner: cli.runner ?? "auto",
     stackDir: cli.stackDir ?? tool,
@@ -505,6 +505,7 @@ export function resolvePackageManagerCommands(
       pnpm: ["pnpm", "create", `${initializer}@{version}`],
       yarn: ["yarn", "create", `${initializer}@{version}`],
       bun: ["bun", "create", `${initializer}@{version}`],
+      deno: ["deno", "x", "-A", `npm:${input.packageName}@{version}`],
     });
   }
 
@@ -514,6 +515,7 @@ export function resolvePackageManagerCommands(
     pnpm: ["pnpm", "dlx", `${input.packageName}@{version}`, ...subcommand],
     yarn: ["yarn", "dlx", `${input.packageName}@{version}`, ...subcommand],
     bun: ["bunx", `${input.packageName}@{version}`, ...subcommand],
+    deno: ["deno", "x", "-A", `npm:${input.packageName}@{version}`, ...subcommand],
   });
 }
 

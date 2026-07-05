@@ -244,5 +244,8 @@ function buildCheckCommand(packageManager: string) {
   if (packageManager === "bun") {
     return "bun run build";
   }
+  if (packageManager === "deno") {
+    return "deno task build";
+  }
   return `${packageManager} build`;
 }
