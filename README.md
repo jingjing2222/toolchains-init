@@ -55,7 +55,7 @@ External initializer commands are described with versioned CLI command manifests
 yarn manifests:update
 ```
 
-The generator reads each JSON manifest, resolves the configured npm dist-tag, executes recorded CLI help commands, validates required flags from the help output, and rewrites the stack's `manifest.generated.json`. Use `yarn manifests:check` to fail when generated manifests are stale.
+The generator reads each JSON manifest, resolves the configured npm dist-tag, executes recorded CLI help commands, derives flag contracts from the help output, and rewrites the stack's `manifest.generated.json`. Use `yarn manifests:check` to fail when generated manifests are stale.
 
 ## Usage
 

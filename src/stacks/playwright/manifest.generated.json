@@ -12,9 +12,49 @@
         "yarn": ["yarn", "create", "playwright@{version}"]
       },
       "flags": {
+        "browser": {
+          "type": "string",
+          "cliName": "--browser",
+          "supported": true
+        },
+        "noBrowsers": {
+          "type": "boolean",
+          "cliName": "--no-browsers",
+          "supported": true
+        },
+        "noExamples": {
+          "type": "boolean",
+          "cliName": "--no-examples",
+          "supported": true
+        },
+        "installDeps": {
+          "type": "boolean",
+          "cliName": "--install-deps",
+          "supported": true
+        },
+        "next": {
+          "type": "boolean",
+          "cliName": "--next",
+          "supported": true
+        },
+        "beta": {
+          "type": "boolean",
+          "cliName": "--beta",
+          "supported": true
+        },
+        "ct": {
+          "type": "boolean",
+          "cliName": "--ct",
+          "supported": true
+        },
         "quiet": {
           "type": "boolean",
           "cliName": "--quiet",
+          "supported": true
+        },
+        "gha": {
+          "type": "boolean",
+          "cliName": "--gha",
           "supported": true
         },
         "lang": {
@@ -23,9 +63,9 @@
           "values": ["js", "TypeScript"],
           "supported": true
         },
-        "noBrowsers": {
+        "help": {
           "type": "boolean",
-          "cliName": "--no-browsers",
+          "cliName": "--help",
           "supported": true
         }
       },

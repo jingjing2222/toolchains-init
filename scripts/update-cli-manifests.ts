@@ -6,6 +6,8 @@ import { promisify } from "node:util";
 import type { CliCommandManifest } from "../src/core/cli-command-manifest";
 import { defineCliCommandManifest } from "../src/core/cli-command-manifest";
 
+type CliHelpSource = Extract<CliCommandManifest["sources"][number], { kind: "cli-help" }>;
+
 const execFileAsync = promisify(execFile);
 const shouldCheck = process.argv.includes("--check");
 const manifestPaths = await findManifestPaths();
@@ -77,8 +79,15 @@ async function refreshManifest(manifestPath: string): Promise<CliCommandManifest
     }),
   });
 
-  await validateManifestHelp(next);
-  return next;
+  return defineCliCommandManifest({
+    ...next,
+    commands: await Promise.all(
+      next.commands.map(async (command) => ({
+        ...command,
+        flags: await deriveFlagsForCommand(next, command.id),
+      })),
+    ),
+  });
 }
 
 async function resolvePackageVersion(packageName: string, distTag: string) {
@@ -123,36 +132,6 @@ async function runHelpCommand(command: readonly string[]) {
     maxBuffer: 10 * 1024 * 1024,
   });
   return `${stdout}\n${stderr}`;
-}
-
-async function validateManifestHelp(manifest: CliCommandManifest) {
-  const helpOutputs = await Promise.all(
-    manifest.sources
-      .filter((source) => source.kind === "cli-help")
-      .map(async (source) => ({
-        command: source.command,
-        output: await runHelpCommand(source.command),
-      })),
-  );
-
-  if (helpOutputs.length === 0) {
-    return;
-  }
-
-  const combinedHelpOutput = helpOutputs.map((help) => help.output).join("\n");
-  for (const command of manifest.commands) {
-    for (const flag of Object.values(command.flags ?? {})) {
-      if (!flag.supported || combinedHelpOutput.includes(flag.cliName)) {
-        continue;
-      }
-
-      throw new Error(
-        `${manifest.tool}/${command.id} expected ${flag.cliName} in ${helpOutputs
-          .map((help) => help.command.join(" "))
-          .join(", ")}`,
-      );
-    }
-  }
 }
 
 function renderManifestFile(manifestPath: string, manifest: CliCommandManifest) {
@@ -229,4 +208,112 @@ async function formatInTempDir(files: readonly GeneratedFile[]) {
 
 function replaceVersion(token: string, previousVersion: string, nextVersion: string) {
   return token.replaceAll(previousVersion, nextVersion);
+}
+
+async function deriveFlagsForCommand(manifest: CliCommandManifest, commandId: string) {
+  const helpSources = manifest.sources.filter((source): source is CliHelpSource =>
+    isCliHelpForCommand(source, commandId, manifest.commands.length),
+  );
+  const flags = Object.fromEntries(
+    (
+      await Promise.all(
+        helpSources.map(async (source) => parseHelpFlags(await runHelpCommand(source.command))),
+      )
+    )
+      .flat()
+      .map((flag) => [toFlagKey(flag.cliName), flag]),
+  );
+
+  return Object.keys(flags).length > 0 ? flags : undefined;
+}
+
+type ParsedHelpFlag =
+  | {
+      type: "boolean";
+      cliName: string;
+      supported: true;
+    }
+  | {
+      type: "string";
+      cliName: string;
+      supported: true;
+    }
+  | {
+      type: "enum";
+      cliName: string;
+      values: string[];
+      supported: true;
+    };
+
+function parseHelpFlags(helpOutput: string): ParsedHelpFlag[] {
+  return helpOutput
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .flatMap((line) => parseHelpFlagLine(line));
+}
+
+function parseHelpFlagLine(line: string): ParsedHelpFlag[] {
+  if (!line.includes("--")) {
+    return [];
+  }
+
+  const [optionSpec = ""] = line.split(/\s{2,}/);
+  const optionMatch =
+    /(?:^|,\s*)(--[A-Za-z0-9][A-Za-z0-9-]*)(?:[=\s]+(<[^>]+>|\[[^\]]+\]|[A-Z][A-Z0-9_-]*))?/.exec(
+      optionSpec,
+    );
+  if (optionMatch == null) {
+    return [];
+  }
+
+  const [, cliName, valueHint] = optionMatch;
+  if (cliName == null) {
+    return [];
+  }
+
+  const values = parseEnumValues(valueHint, line);
+  if (values.length > 0) {
+    return [{ type: "enum", cliName, values, supported: true }];
+  }
+
+  return [
+    {
+      type: valueHint == null ? "boolean" : "string",
+      cliName,
+      supported: true,
+    },
+  ];
+}
+
+function parseEnumValues(valueHint: string | undefined, line: string) {
+  const fromHint = valueHint?.match(/[<[]([^>\]]*\|[^>\]]*)[>\]]/)?.[1]?.split("|") ?? [];
+  if (fromHint.length > 0) {
+    return fromHint.map((value) => value.trim()).filter(Boolean);
+  }
+
+  const parenthesized = line.match(/\(([^)]*,[^)]*)\)/)?.[1];
+  if (parenthesized == null || /default/i.test(parenthesized)) {
+    return [];
+  }
+
+  const values = parenthesized.split(",").map((value) => value.trim());
+  return values.every((value) => /^[A-Za-z0-9_-]+$/.test(value)) ? values : [];
+}
+
+function toFlagKey(cliName: string) {
+  const words = cliName.replace(/^--/, "").split("-").filter(Boolean);
+  return words
+    .map((word, index) => (index === 0 ? word : `${word[0]?.toUpperCase() ?? ""}${word.slice(1)}`))
+    .join("");
+}
+
+function isCliHelpForCommand(
+  source: CliCommandManifest["sources"][number],
+  commandId: string,
+  commandCount: number,
+): source is CliHelpSource {
+  return (
+    source.kind === "cli-help" &&
+    (source.commandId === commandId || (source.commandId == null && commandCount === 1))
+  );
 }

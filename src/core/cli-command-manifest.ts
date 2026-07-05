@@ -13,6 +13,7 @@ const cliManifestSourceSchema = v.union([
   v.object({
     kind: v.literal("cli-help"),
     command: v.array(v.string()),
+    commandId: v.optional(v.string()),
   }),
   v.object({
     kind: v.literal("docs"),

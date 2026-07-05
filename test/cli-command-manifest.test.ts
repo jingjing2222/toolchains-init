@@ -42,6 +42,24 @@ describe("CLI command manifests", () => {
     }
   });
 
+  it("derives CLI flags from help output, not a hand-written subset", () => {
+    expect(playwrightCliManifest.commands[0]?.flags).toMatchObject({
+      browser: { cliName: "--browser", type: "string" },
+      noBrowsers: { cliName: "--no-browsers", type: "boolean" },
+      lang: { cliName: "--lang", type: "enum", values: ["js", "TypeScript"] },
+    });
+
+    const tanStackCliManifest = getCliCommandManifest("tanstack-router");
+    expect(tanStackCliManifest?.commands[0]?.flags).toMatchObject({
+      deployment: {
+        cliName: "--deployment",
+        type: "enum",
+        values: ["cloudflare", "netlify", "nitro", "railway"],
+      },
+      routerOnly: { cliName: "--router-only", type: "boolean" },
+    });
+  });
+
   it("resolves pinned Playwright init commands by package manager", () => {
     expect(resolveCliCommand(playwrightCliManifest, "init", "npm")).toEqual({
       bin: "npm",

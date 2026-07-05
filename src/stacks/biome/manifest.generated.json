@@ -11,6 +11,18 @@
         "pnpm": ["pnpm", "dlx", "@biomejs/biome@{version}", "init"],
         "yarn": ["yarn", "dlx", "@biomejs/biome@{version}", "init"]
       },
+      "flags": {
+        "help": {
+          "type": "boolean",
+          "cliName": "--help",
+          "supported": true
+        },
+        "version": {
+          "type": "boolean",
+          "cliName": "--version",
+          "supported": true
+        }
+      },
       "interactive": false
     }
   ],

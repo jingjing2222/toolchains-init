@@ -11,6 +11,238 @@
         "pnpm": ["pnpm", "dlx", "knip@{version}"],
         "yarn": ["yarn", "dlx", "knip@{version}"]
       },
+      "flags": {
+        "help": {
+          "type": "boolean",
+          "cliName": "--help",
+          "supported": true
+        },
+        "version": {
+          "type": "boolean",
+          "cliName": "--version",
+          "supported": true
+        },
+        "noProgress": {
+          "type": "boolean",
+          "cliName": "--no-progress",
+          "supported": true
+        },
+        "config": {
+          "type": "string",
+          "cliName": "--config",
+          "supported": true
+        },
+        "useTsconfigFiles": {
+          "type": "boolean",
+          "cliName": "--use-tsconfig-files",
+          "supported": true
+        },
+        "tsConfig": {
+          "type": "string",
+          "cliName": "--tsConfig",
+          "supported": true
+        },
+        "cache": {
+          "type": "boolean",
+          "cliName": "--cache",
+          "supported": true
+        },
+        "cacheLocation": {
+          "type": "boolean",
+          "cliName": "--cache-location",
+          "supported": true
+        },
+        "includeEntryExports": {
+          "type": "boolean",
+          "cliName": "--include-entry-exports",
+          "supported": true
+        },
+        "noGitignore": {
+          "type": "boolean",
+          "cliName": "--no-gitignore",
+          "supported": true
+        },
+        "production": {
+          "type": "boolean",
+          "cliName": "--production",
+          "supported": true
+        },
+        "strict": {
+          "type": "boolean",
+          "cliName": "--strict",
+          "supported": true
+        },
+        "watch": {
+          "type": "boolean",
+          "cliName": "--watch",
+          "supported": true
+        },
+        "workspace": {
+          "type": "string",
+          "cliName": "--workspace",
+          "supported": true
+        },
+        "directory": {
+          "type": "string",
+          "cliName": "--directory",
+          "supported": true
+        },
+        "include": {
+          "type": "boolean",
+          "cliName": "--include",
+          "supported": true
+        },
+        "exclude": {
+          "type": "boolean",
+          "cliName": "--exclude",
+          "supported": true
+        },
+        "dependencies": {
+          "type": "boolean",
+          "cliName": "--dependencies",
+          "supported": true
+        },
+        "exports": {
+          "type": "boolean",
+          "cliName": "--exports",
+          "supported": true
+        },
+        "files": {
+          "type": "boolean",
+          "cliName": "--files",
+          "supported": true
+        },
+        "tags": {
+          "type": "boolean",
+          "cliName": "--tags",
+          "supported": true
+        },
+        "fix": {
+          "type": "boolean",
+          "cliName": "--fix",
+          "supported": true
+        },
+        "fixType": {
+          "type": "boolean",
+          "cliName": "--fix-type",
+          "supported": true
+        },
+        "allowRemoveFiles": {
+          "type": "boolean",
+          "cliName": "--allow-remove-files",
+          "supported": true
+        },
+        "format": {
+          "type": "boolean",
+          "cliName": "--format",
+          "supported": true
+        },
+        "preprocessor": {
+          "type": "boolean",
+          "cliName": "--preprocessor",
+          "supported": true
+        },
+        "preprocessorOptions": {
+          "type": "boolean",
+          "cliName": "--preprocessor-options",
+          "supported": true
+        },
+        "reporter": {
+          "type": "boolean",
+          "cliName": "--reporter",
+          "supported": true
+        },
+        "reporterOptions": {
+          "type": "boolean",
+          "cliName": "--reporter-options",
+          "supported": true
+        },
+        "noConfigHints": {
+          "type": "boolean",
+          "cliName": "--no-config-hints",
+          "supported": true
+        },
+        "noTagHints": {
+          "type": "boolean",
+          "cliName": "--no-tag-hints",
+          "supported": true
+        },
+        "treatConfigHintsAsErrors": {
+          "type": "boolean",
+          "cliName": "--treat-config-hints-as-errors",
+          "supported": true
+        },
+        "treatTagHintsAsErrors": {
+          "type": "boolean",
+          "cliName": "--treat-tag-hints-as-errors",
+          "supported": true
+        },
+        "maxIssues": {
+          "type": "boolean",
+          "cliName": "--max-issues",
+          "supported": true
+        },
+        "maxShowIssues": {
+          "type": "boolean",
+          "cliName": "--max-show-issues",
+          "supported": true
+        },
+        "noExitCode": {
+          "type": "boolean",
+          "cliName": "--no-exit-code",
+          "supported": true
+        },
+        "debug": {
+          "type": "boolean",
+          "cliName": "--debug",
+          "supported": true
+        },
+        "memory": {
+          "type": "boolean",
+          "cliName": "--memory",
+          "supported": true
+        },
+        "memoryRealtime": {
+          "type": "boolean",
+          "cliName": "--memory-realtime",
+          "supported": true
+        },
+        "performance": {
+          "type": "boolean",
+          "cliName": "--performance",
+          "supported": true
+        },
+        "performanceFn": {
+          "type": "string",
+          "cliName": "--performance-fn",
+          "supported": true
+        },
+        "duration": {
+          "type": "boolean",
+          "cliName": "--duration",
+          "supported": true
+        },
+        "trace": {
+          "type": "boolean",
+          "cliName": "--trace",
+          "supported": true
+        },
+        "traceDependency": {
+          "type": "string",
+          "cliName": "--trace-dependency",
+          "supported": true
+        },
+        "traceExport": {
+          "type": "string",
+          "cliName": "--trace-export",
+          "supported": true
+        },
+        "traceFile": {
+          "type": "string",
+          "cliName": "--trace-file",
+          "supported": true
+        }
+      },
       "interactive": false
     }
   ],
