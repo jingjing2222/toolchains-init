@@ -599,6 +599,9 @@ function renderToolchainsRegistry(toolchains: readonly DiscoveredToolchain[]): G
     )
     .join("\n");
   const registry = toolchains.map((toolchain) => `  ${toolchain.exportName},`).join("\n");
+  const featureUnion = toolchains
+    .map((toolchain) => `  | ${JSON.stringify(toolchain.adapter.feature)}`)
+    .join("\n");
 
   return {
     path: path.resolve("src", "stacks", "toolchains.generated.ts"),
@@ -609,6 +612,9 @@ ${imports}
 export const toolchains = [
 ${registry}
 ] satisfies readonly ToolchainAdapter[];
+
+export type BuiltInFeature =
+${featureUnion};
 
 export const ALL_FEATURES = toolchains.map((toolchain) => toolchain.feature);
 

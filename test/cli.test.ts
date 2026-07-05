@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 import { biomeCliManifest } from "../src/stacks/biome";
 import { changesetsCliManifest } from "../src/stacks/changesets";
 import { knipCliManifest } from "../src/stacks/knip";
+import { prettierCliManifest } from "../src/stacks/prettier";
 
 const cliPath = path.resolve("dist/cli.mjs");
 
@@ -55,9 +56,9 @@ describe("toolchains-init CLI", () => {
     expect(packageJson.devDependencies["@biomejs/biome"]).toBe(biomeCliManifest.version);
     expect(packageJson.devDependencies.esbuild).toBeUndefined();
     expect(packageJson.devDependencies.eslint).toBe("^9.0.0");
-    expect(packageJson.devDependencies.prettier).toBe("^3.0.0");
+    expect(packageJson.devDependencies.prettier).toBe(prettierCliManifest.version);
     expect(packageJson.devDependencies["react-doctor"]).toBeUndefined();
-    expect(packageJson.scripts.format).toBeUndefined();
+    expect(packageJson.scripts.format).toBe("prettier --write .");
     expect(packageJson.scripts["format:check"]).toBe("prettier --check .");
     expect(packageJson.scripts.changeset).toBeUndefined();
     expect(packageJson.scripts.knip).toBe(`npx knip@${knipCliManifest.version}`);
@@ -201,13 +202,19 @@ async function expectFileToExist(rootDir: string, file: string) {
 
 async function expectEditorSettingsToExist(rootDir: string) {
   const vsCodeExtensions = await readJson(path.join(rootDir, ".vscode", "extensions.json"));
-  expect(vsCodeExtensions.recommendations).toEqual(["biomejs.biome", "oxc.oxc-vscode"]);
+  expect(vsCodeExtensions.recommendations).toEqual([
+    "biomejs.biome",
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode",
+    "oxc.oxc-vscode",
+  ]);
 
   const vsCodeSettings = await readJson(path.join(rootDir, ".vscode", "settings.json"));
   expect(vsCodeSettings["biome.enabled"]).toBe(true);
   expect(vsCodeSettings["biome.requireConfiguration"]).toBe(true);
   expect(vsCodeSettings["oxc.fmt.configPath"]).toBe(".oxfmtrc.json");
   expect(vsCodeSettings["editor.codeActionsOnSave"]).toEqual({
+    "source.fixAll.eslint": "always",
     "source.fixAll.oxc": "always",
   });
   expect(vsCodeSettings["[typescript]"]).toBeUndefined();

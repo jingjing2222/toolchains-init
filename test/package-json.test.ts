@@ -6,6 +6,7 @@ import { changesetsCliManifest } from "../src/stacks/changesets";
 import { knipCliManifest } from "../src/stacks/knip";
 import { oxfmtCliManifest } from "../src/stacks/oxfmt";
 import { oxlintCliManifest } from "../src/stacks/oxlint";
+import { prettierCliManifest } from "../src/stacks/prettier";
 import { reactDoctorCliManifest } from "../src/stacks/react-doctor";
 
 describe("package.json updates", () => {
@@ -111,18 +112,35 @@ describe("package.json updates", () => {
     expect(updated.scripts?.lint).toBeUndefined();
   });
 
+  it("sets up Prettier as an exact dev dependency", () => {
+    const updated = updatePackageJson(basePackageJson(), ["prettier"]);
+
+    expect(updated.devDependencies?.prettier).toBe(prettierCliManifest.version);
+    expect(updated.scripts?.format).toBe("prettier --write .");
+    expect(updated.scripts?.["format:check"]).toBe("prettier --check .");
+  });
+
+  it("leaves ESLint dependencies to the official initializer", () => {
+    const updated = updatePackageJson(basePackageJson(), ["eslint"]);
+
+    expect(updated.devDependencies?.eslint).toBeUndefined();
+    expect(updated.scripts?.lint).toBe("eslint .");
+  });
+
   it("keeps manifest-backed dependencies aligned with manifest versions", () => {
     const updated = updatePackageJson(
       {
         ...basePackageJson(),
         devDependencies: {
           "@biomejs/biome": "^1.9.4",
+          prettier: "^3.0.0",
         },
       },
-      ["biome"],
+      ["biome", "prettier"],
     );
 
     expect(updated.devDependencies?.["@biomejs/biome"]).toBe(biomeCliManifest.version);
+    expect(updated.devDependencies?.prettier).toBe(prettierCliManifest.version);
   });
 });
 

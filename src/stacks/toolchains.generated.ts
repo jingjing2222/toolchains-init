@@ -4,7 +4,9 @@ import { tanStackRouter } from "./tanstack-router/adapter";
 import { hotUpdater } from "./hot-updater/adapter";
 import { playwright } from "./playwright/adapter";
 import { oxfmt } from "./oxfmt/adapter";
+import { prettier } from "./prettier/adapter";
 import { oxlint } from "./oxlint/adapter";
+import { eslint } from "./eslint/adapter";
 import { biome } from "./biome/adapter";
 import { knip } from "./knip/adapter";
 import { reactDoctor } from "./react-doctor/adapter";
@@ -16,13 +18,29 @@ export const toolchains = [
   hotUpdater,
   playwright,
   oxfmt,
+  prettier,
   oxlint,
+  eslint,
   biome,
   knip,
   reactDoctor,
   changesets,
   yarnSdks,
 ] satisfies readonly ToolchainAdapter[];
+
+export type BuiltInFeature =
+  | "router"
+  | "hotUpdater"
+  | "playwright"
+  | "oxfmt"
+  | "prettier"
+  | "oxlint"
+  | "eslint"
+  | "biome"
+  | "knip"
+  | "reactDoctor"
+  | "changesets"
+  | "yarnSdks";
 
 export const ALL_FEATURES = toolchains.map((toolchain) => toolchain.feature);
 

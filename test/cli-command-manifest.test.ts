@@ -17,7 +17,9 @@ describe("CLI command manifests", () => {
       "hot-updater",
       "playwright",
       "oxfmt",
+      "prettier",
       "oxlint",
+      "eslint",
       "biome",
       "knip",
       "react-doctor",
@@ -89,9 +91,11 @@ describe("CLI command manifests", () => {
 
   it("infers package-manager commands from the CLI package shape", () => {
     const biomeCliManifest = getCliCommandManifest("biome");
+    const eslintCliManifest = getCliCommandManifest("eslint");
     const knipCliManifest = getCliCommandManifest("knip");
     const oxfmtCliManifest = getCliCommandManifest("oxfmt");
     const oxlintCliManifest = getCliCommandManifest("oxlint");
+    const prettierCliManifest = getCliCommandManifest("prettier");
     const yarnSdksCliManifest = getCliCommandManifest("yarn-sdks");
 
     expect(biomeCliManifest?.commands[0]?.packageManagers).toMatchObject({
@@ -121,6 +125,20 @@ describe("CLI command manifests", () => {
       yarn: ["yarn", "dlx", "oxlint@{version}"],
       bun: ["bunx", "oxlint@{version}"],
       deno: ["deno", "x", "-A", "npm:oxlint@{version}"],
+    });
+    expect(prettierCliManifest?.commands[0]?.packageManagers).toMatchObject({
+      npm: ["npx", "prettier@{version}"],
+      pnpm: ["pnpm", "dlx", "prettier@{version}"],
+      yarn: ["yarn", "dlx", "prettier@{version}"],
+      bun: ["bunx", "prettier@{version}"],
+      deno: ["deno", "x", "-A", "npm:prettier@{version}"],
+    });
+    expect(eslintCliManifest?.commands[0]?.packageManagers).toMatchObject({
+      npm: ["npx", "@eslint/create-config@{version}"],
+      pnpm: ["pnpm", "dlx", "@eslint/create-config@{version}"],
+      yarn: ["yarn", "dlx", "@eslint/create-config@{version}"],
+      bun: ["bunx", "@eslint/create-config@{version}"],
+      deno: ["deno", "x", "-A", "npm:@eslint/create-config@{version}"],
     });
     expect(yarnSdksCliManifest?.commands[0]?.packageManagers).toEqual({
       yarn: ["yarn", "dlx", "@yarnpkg/sdks@{version}", "vscode"],

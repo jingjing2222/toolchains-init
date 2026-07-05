@@ -7,7 +7,9 @@ import {
 import { hotUpdaterCliManifest, hotUpdaterCliManifestData } from "./hot-updater/manifest";
 import { playwrightCliManifest, playwrightCliManifestData } from "./playwright/manifest";
 import { oxfmtCliManifest, oxfmtCliManifestData } from "./oxfmt/manifest";
+import { prettierCliManifest, prettierCliManifestData } from "./prettier/manifest";
 import { oxlintCliManifest, oxlintCliManifestData } from "./oxlint/manifest";
+import { eslintCliManifest, eslintCliManifestData } from "./eslint/manifest";
 import { biomeCliManifest, biomeCliManifestData } from "./biome/manifest";
 import { knipCliManifest, knipCliManifestData } from "./knip/manifest";
 import { reactDoctorCliManifest, reactDoctorCliManifestData } from "./react-doctor/manifest";
@@ -19,7 +21,9 @@ export const cliCommandManifests = [
   hotUpdaterCliManifest,
   playwrightCliManifest,
   oxfmtCliManifest,
+  prettierCliManifest,
   oxlintCliManifest,
+  eslintCliManifest,
   biomeCliManifest,
   knipCliManifest,
   reactDoctorCliManifest,
@@ -32,7 +36,9 @@ export const cliCommandManifestData = [
   hotUpdaterCliManifestData,
   playwrightCliManifestData,
   oxfmtCliManifestData,
+  prettierCliManifestData,
   oxlintCliManifestData,
+  eslintCliManifestData,
   biomeCliManifestData,
   knipCliManifestData,
   reactDoctorCliManifestData,

@@ -30,18 +30,20 @@ Then choose what you want to add from the interactive prompt.
 
 ## What It Can Add
 
-| Toolchain       | What You Get                                        |
-| --------------- | --------------------------------------------------- |
-| TanStack Router | File-Based Routing or Code-Based Routing setup      |
-| Hot Updater     | React Native OTA update initializer                 |
-| Playwright      | Browser E2E test setup                              |
-| oxfmt           | Oxc formatter setup and editor integration          |
-| oxlint          | Oxc linter setup and editor integration             |
-| Biome           | Biome formatter/linter setup and editor integration |
-| Knip            | `knip` package script                               |
-| React Doctor    | `react-doctor` package script                       |
-| Changesets      | Changeset release workflow                          |
-| Yarn SDKs       | Yarn PnP editor SDKs for VS Code                    |
+| Toolchain       | What You Get                                        | Setup Source   |
+| --------------- | --------------------------------------------------- | -------------- |
+| TanStack Router | File-Based Routing or Code-Based Routing setup      | Official CLI   |
+| Hot Updater     | React Native OTA update initializer                 | Official CLI   |
+| Playwright      | Browser E2E test setup                              | Official CLI   |
+| oxfmt           | Oxc formatter setup and editor integration          | Official CLI   |
+| Prettier        | Prettier formatter setup and editor integration     | Built-in setup |
+| oxlint          | Oxc linter setup and editor integration             | Official CLI   |
+| ESLint          | ESLint config initializer and editor integration    | Official CLI   |
+| Biome           | Biome formatter/linter setup and editor integration | Official CLI   |
+| Knip            | `knip` package script                               | Built-in setup |
+| React Doctor    | `react-doctor` package script                       | Built-in setup |
+| Changesets      | Changeset release workflow                          | Official CLI   |
+| Yarn SDKs       | Yarn PnP editor SDKs for VS Code                    | Official CLI   |
 
 ## Usage
 
