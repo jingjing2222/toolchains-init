@@ -1,6 +1,6 @@
 {
   "name": "toolchains-init",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "Run setup commands for selected toolchains.",
   "keywords": [
     "cli",

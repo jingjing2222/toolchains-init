@@ -1,5 +1,19 @@
 # toolchains-init
 
+## 0.0.5
+
+### Patch Changes
+
+- 25d9dda: Add generated CLI command manifests as the source of truth for stack initializers.
+
+  This includes Valibot validation, generated stack registries, exported `manifest.generated.json` files, Bun and Deno command templates, cataloged interactive prompts, a `yarn new` scaffold for co-located adapters and init tests, daily manifest update automation, and mise-based CI setup.
+
+- 1ea3347: Add an MSW toolchain backed by the official `msw init` CLI for Vite browser worker setup.
+- 1ea3347: Add a React Native-only Hot Updater toolchain and prepare manifest-backed CLI dependencies before running interactive initializers.
+- 1ea3347: Add Prettier and ESLint toolchains with manifest-pinned package versions, config files, package scripts, and editor recommendations.
+- 5650f65: Update package metadata and document TanStack Router dependency section merge behavior.
+- 1ea3347: Add a React Vite Storybook toolchain backed by the official create-storybook initializer.
+
 ## 0.0.4
 
 ### Patch Changes
