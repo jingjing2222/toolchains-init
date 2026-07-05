@@ -35,6 +35,7 @@ Then choose what you want to add from the interactive prompt.
 | TanStack Router | File-Based Routing or Code-Based Routing setup      | Official CLI   |
 | Hot Updater     | React Native OTA update initializer                 | Official CLI   |
 | Playwright      | Browser E2E test setup                              | Official CLI   |
+| Storybook       | React Vite component workshop setup                 | Official CLI   |
 | oxfmt           | Oxc formatter setup and editor integration          | Official CLI   |
 | Prettier        | Prettier formatter setup and editor integration     | Built-in setup |
 | oxlint          | Oxc linter setup and editor integration             | Official CLI   |

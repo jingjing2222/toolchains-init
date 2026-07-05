@@ -423,7 +423,7 @@ function parseHelpFlagLine(line: string): ParsedHelpFlag[] {
 
   const [optionSpec = ""] = line.split(/\s{2,}/);
   const optionMatch =
-    /(?:^|,\s*)(--[A-Za-z0-9][A-Za-z0-9-]*)(?:[=\s]+(<[^>]+>|\[[^\]]+\]|[A-Z][A-Z0-9_-]*))?/.exec(
+    /(?:^|,\s*|-[A-Za-z0-9],?\s+)(--[A-Za-z0-9][A-Za-z0-9-]*)(?:[=\s]+(<[^>]+>|\[[^\]]+\]|[A-Z][A-Z0-9_-]*))?/.exec(
       optionSpec,
     );
   if (optionMatch == null) {

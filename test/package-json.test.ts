@@ -120,11 +120,11 @@ describe("package.json updates", () => {
     expect(updated.scripts?.["format:check"]).toBe("prettier --check .");
   });
 
-  it("leaves ESLint dependencies to the official initializer", () => {
+  it("leaves ESLint package entries to the official initializer", () => {
     const updated = updatePackageJson(basePackageJson(), ["eslint"]);
 
     expect(updated.devDependencies?.eslint).toBeUndefined();
-    expect(updated.scripts?.lint).toBe("eslint .");
+    expect(updated.scripts?.lint).toBeUndefined();
   });
 
   it("keeps manifest-backed dependencies aligned with manifest versions", () => {

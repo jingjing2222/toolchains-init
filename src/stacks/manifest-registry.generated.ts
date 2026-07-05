@@ -6,6 +6,7 @@ import {
 } from "./tanstack-router/manifest";
 import { hotUpdaterCliManifest, hotUpdaterCliManifestData } from "./hot-updater/manifest";
 import { playwrightCliManifest, playwrightCliManifestData } from "./playwright/manifest";
+import { storybookCliManifest, storybookCliManifestData } from "./storybook/manifest";
 import { oxfmtCliManifest, oxfmtCliManifestData } from "./oxfmt/manifest";
 import { prettierCliManifest, prettierCliManifestData } from "./prettier/manifest";
 import { oxlintCliManifest, oxlintCliManifestData } from "./oxlint/manifest";
@@ -20,6 +21,7 @@ export const cliCommandManifests = [
   tanStackRouterCliManifest,
   hotUpdaterCliManifest,
   playwrightCliManifest,
+  storybookCliManifest,
   oxfmtCliManifest,
   prettierCliManifest,
   oxlintCliManifest,
@@ -35,6 +37,7 @@ export const cliCommandManifestData = [
   tanStackRouterCliManifestData,
   hotUpdaterCliManifestData,
   playwrightCliManifestData,
+  storybookCliManifestData,
   oxfmtCliManifestData,
   prettierCliManifestData,
   oxlintCliManifestData,

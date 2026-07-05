@@ -16,6 +16,7 @@ describe("CLI command manifests", () => {
       "tanstack-router",
       "hot-updater",
       "playwright",
+      "storybook",
       "oxfmt",
       "prettier",
       "oxlint",
@@ -64,6 +65,13 @@ describe("CLI command manifests", () => {
       },
       routerOnly: { cliName: "--router-only", type: "boolean" },
     });
+
+    const storybookCliManifest = getCliCommandManifest("storybook");
+    expect(storybookCliManifest?.commands[0]?.flags).toMatchObject({
+      force: { cliName: "--force", type: "boolean" },
+      skipInstall: { cliName: "--skip-install", type: "boolean" },
+      yes: { cliName: "--yes", type: "boolean" },
+    });
   });
 
   it("resolves pinned Playwright init commands by package manager", () => {
@@ -96,6 +104,7 @@ describe("CLI command manifests", () => {
     const oxfmtCliManifest = getCliCommandManifest("oxfmt");
     const oxlintCliManifest = getCliCommandManifest("oxlint");
     const prettierCliManifest = getCliCommandManifest("prettier");
+    const storybookCliManifest = getCliCommandManifest("storybook");
     const yarnSdksCliManifest = getCliCommandManifest("yarn-sdks");
 
     expect(biomeCliManifest?.commands[0]?.packageManagers).toMatchObject({
@@ -144,6 +153,12 @@ describe("CLI command manifests", () => {
       yarn: ["yarn", "dlx", "@yarnpkg/sdks@{version}", "vscode"],
     });
     expect(yarnSdksCliManifest?.sources.map((source) => source.kind)).toEqual(["npm"]);
+    expect(storybookCliManifest?.commands[0]?.packageManagers).toEqual({
+      npm: ["npm", "init", "storybook@{version}", "--"],
+      pnpm: ["pnpm", "create", "storybook@{version}"],
+      yarn: ["yarn", "create", "storybook@{version}"],
+      bun: ["bun", "create", "storybook@{version}"],
+    });
   });
 
   it("keeps flag-only initializers free of positional init subcommands", () => {
