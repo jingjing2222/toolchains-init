@@ -1,5 +1,11 @@
 # toolchains-init
 
+## 0.0.7
+
+### Patch Changes
+
+- da26a0e: Update generated CLI command manifests from upstream package metadata.
+
 ## 0.0.6
 
 ### Patch Changes
