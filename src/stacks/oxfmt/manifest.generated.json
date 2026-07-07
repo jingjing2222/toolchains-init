@@ -2,7 +2,7 @@
   "schemaVersion": "toolchains-init/cli-command-manifest/v1",
   "tool": "oxfmt",
   "package": "oxfmt",
-  "version": "0.57.0",
+  "version": "0.58.0",
   "commands": [
     {
       "id": "init",
@@ -97,13 +97,13 @@
     {
       "kind": "npm",
       "package": "oxfmt",
-      "version": "0.57.0",
+      "version": "0.58.0",
       "distTag": "latest",
-      "resolvedAt": "2026-06-29T23:08:50.068Z"
+      "resolvedAt": "2026-07-06T23:07:38.808Z"
     },
     {
       "kind": "cli-help",
-      "command": ["npx", "--yes", "oxfmt@0.57.0", "--help"],
+      "command": ["npx", "--yes", "oxfmt@0.58.0", "--help"],
       "commandId": "init"
     },
     {
