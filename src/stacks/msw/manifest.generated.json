@@ -2,7 +2,7 @@
   "schemaVersion": "toolchains-init/cli-command-manifest/v1",
   "tool": "msw",
   "package": "msw",
-  "version": "2.14.6",
+  "version": "2.15.0",
   "commands": [
     {
       "id": "init",
@@ -41,13 +41,13 @@
     {
       "kind": "npm",
       "package": "msw",
-      "version": "2.14.6",
+      "version": "2.15.0",
       "distTag": "latest",
-      "resolvedAt": "2026-05-11T09:41:46.655Z"
+      "resolvedAt": "2026-07-08T01:43:07.502Z"
     },
     {
       "kind": "cli-help",
-      "command": ["npx", "--yes", "msw@2.14.6", "init", "--help"],
+      "command": ["npx", "--yes", "msw@2.15.0", "init", "--help"],
       "commandId": "init"
     },
     {
