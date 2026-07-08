@@ -36,22 +36,30 @@ export async function main() {
   const generatedFiles: GeneratedFile[] = [renderToolchainsRegistry(toolchains)];
 
   for (const input of manifestInputs) {
-    const manifest = await createManifest(input);
+    const manifest = await createManifestWithLog(input);
     generatedFiles.push(...renderManifestFiles(input, manifest));
   }
   generatedFiles.push(renderManifestRegistry(manifestInputs));
 
+  const formattedFiles = await formatInTempDir(generatedFiles);
+  const fileStatuses = await getGeneratedFileStatuses(formattedFiles);
+
   if (shouldCheck) {
-    await checkGeneratedFiles(generatedFiles);
+    logGeneratedFileSummary("check", fileStatuses);
+    await checkGeneratedFiles(fileStatuses);
   } else {
-    await writeGeneratedFiles(generatedFiles);
-    await formatGeneratedFiles(generatedFiles.map((file) => file.path));
+    await writeGeneratedFiles(formattedFiles);
+    logGeneratedFileSummary("update", fileStatuses);
   }
 }
 
 type GeneratedFile = {
   path: string;
   content: string;
+};
+
+type GeneratedFileStatus = GeneratedFile & {
+  status: "added" | "changed" | "unchanged";
 };
 
 type DiscoveredToolchain = {
@@ -194,6 +202,28 @@ async function createManifest(input: ManifestInput): Promise<CliCommandManifest>
       })),
     ),
   });
+}
+
+async function createManifestWithLog(input: ManifestInput) {
+  console.log(
+    `manifest ${input.tool}: ${shouldCheck ? "checking pinned" : "resolving"} ${input.packageName}@${input.distTag}`,
+  );
+
+  try {
+    const manifest = await createManifest(input);
+    const commandSummary = manifest.commands
+      .map((command) => {
+        const flagCount = Object.keys(command.flags ?? {}).length;
+        return `${command.id} (${flagCount} flags)`;
+      })
+      .join(", ");
+    console.log(
+      `manifest ${input.tool}: ${manifest.package}@${manifest.version}; ${commandSummary}`,
+    );
+    return manifest;
+  } catch (error) {
+    throw new Error(`Failed to generate CLI manifest for ${input.tool}: ${formatError(error)}`);
+  }
 }
 
 async function createDocsSources(docs: ManifestInput["docs"]) {
@@ -372,22 +402,8 @@ function getStackDir(input: ManifestInput) {
   return path.resolve("src", "stacks", input.stackDir);
 }
 
-async function checkGeneratedFiles(files: readonly GeneratedFile[]) {
-  const formattedFiles = await formatInTempDir(files);
-  const staleFiles: string[] = [];
-  for (const file of formattedFiles) {
-    let current = "";
-    try {
-      current = await readFile(file.path, "utf8");
-    } catch {
-      staleFiles.push(file.path);
-      continue;
-    }
-    if (current !== file.content) {
-      staleFiles.push(file.path);
-    }
-  }
-
+async function checkGeneratedFiles(files: readonly GeneratedFileStatus[]) {
+  const staleFiles = files.filter((file) => file.status !== "unchanged").map((file) => file.path);
   if (staleFiles.length > 0) {
     throw new Error(
       `Stale CLI manifests. Run yarn manifests:update.\n${staleFiles
@@ -397,11 +413,46 @@ async function checkGeneratedFiles(files: readonly GeneratedFile[]) {
   }
 }
 
+async function getGeneratedFileStatuses(
+  files: readonly GeneratedFile[],
+): Promise<GeneratedFileStatus[]> {
+  return Promise.all(
+    files.map(async (file) => {
+      try {
+        const current = await readFile(file.path, "utf8");
+        return {
+          ...file,
+          status: current === file.content ? ("unchanged" as const) : ("changed" as const),
+        };
+      } catch {
+        return { ...file, status: "added" as const };
+      }
+    }),
+  );
+}
+
 async function writeGeneratedFiles(files: readonly GeneratedFile[]) {
   for (const file of files) {
     await mkdir(path.dirname(file.path), { recursive: true });
     await writeFile(file.path, file.content);
-    console.log(`updated ${path.relative(process.cwd(), file.path)}`);
+  }
+}
+
+function logGeneratedFileSummary(mode: "check" | "update", files: readonly GeneratedFileStatus[]) {
+  const changedFiles = files.filter((file) => file.status !== "unchanged");
+  const heading = mode === "check" ? "CLI manifest check result" : "CLI manifest update result";
+  console.log("");
+  console.log(heading);
+  console.log(`- generated files: ${files.length}`);
+  console.log(`- changed files: ${changedFiles.length}`);
+
+  if (changedFiles.length === 0) {
+    console.log("- status: up to date");
+    return;
+  }
+
+  for (const file of changedFiles) {
+    console.log(`- ${file.status}: ${path.relative(process.cwd(), file.path)}`);
   }
 }
 

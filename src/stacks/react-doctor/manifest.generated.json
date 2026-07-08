@@ -2,7 +2,7 @@
   "schemaVersion": "toolchains-init/cli-command-manifest/v1",
   "tool": "react-doctor",
   "package": "react-doctor",
-  "version": "0.7.1",
+  "version": "0.7.2",
   "commands": [
     {
       "id": "check",
@@ -37,6 +37,16 @@
         "noDeadCode": {
           "type": "boolean",
           "cliName": "--no-dead-code",
+          "supported": true
+        },
+        "supplyChain": {
+          "type": "boolean",
+          "cliName": "--supply-chain",
+          "supported": true
+        },
+        "noSupplyChain": {
+          "type": "boolean",
+          "cliName": "--no-supply-chain",
           "supported": true
         },
         "verbose": {
@@ -167,13 +177,13 @@
     {
       "kind": "npm",
       "package": "react-doctor",
-      "version": "0.7.1",
+      "version": "0.7.2",
       "distTag": "latest",
-      "resolvedAt": "2026-07-04T09:08:37.294Z"
+      "resolvedAt": "2026-07-08T03:52:28.366Z"
     },
     {
       "kind": "cli-help",
-      "command": ["npx", "--yes", "react-doctor@0.7.1", "--help"],
+      "command": ["npx", "--yes", "react-doctor@0.7.2", "--help"],
       "commandId": "check"
     },
     {

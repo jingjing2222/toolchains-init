@@ -2,7 +2,7 @@
   "schemaVersion": "toolchains-init/cli-command-manifest/v1",
   "tool": "knip",
   "package": "knip",
-  "version": "6.24.0",
+  "version": "6.25.0",
   "commands": [
     {
       "id": "check",
@@ -112,6 +112,11 @@
         "files": {
           "type": "boolean",
           "cliName": "--files",
+          "supported": true
+        },
+        "cycles": {
+          "type": "boolean",
+          "cliName": "--cycles",
           "supported": true
         },
         "tags": {
@@ -252,13 +257,13 @@
     {
       "kind": "npm",
       "package": "knip",
-      "version": "6.24.0",
+      "version": "6.25.0",
       "distTag": "latest",
-      "resolvedAt": "2026-07-02T06:36:36.617Z"
+      "resolvedAt": "2026-07-07T08:47:13.416Z"
     },
     {
       "kind": "cli-help",
-      "command": ["npx", "--yes", "knip@6.24.0", "--help"],
+      "command": ["npx", "--yes", "knip@6.25.0", "--help"],
       "commandId": "check"
     },
     {
