@@ -1,5 +1,11 @@
 # toolchains-init
 
+## 0.0.8
+
+### Patch Changes
+
+- ff2d323: Update generated CLI command manifests from upstream package metadata.
+
 ## 0.0.7
 
 ### Patch Changes
