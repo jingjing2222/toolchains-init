@@ -1,37 +1,23 @@
 #!/usr/bin/env node
 
 import { runInit } from "./commands/init";
+import { parseCliOptions, renderHelp } from "./core/cli-options";
 import { packageVersion } from "./package-info";
 
 async function main() {
-  const [, , firstArg, ...restArgs] = process.argv;
+  const options = parseCliOptions(process.argv.slice(2));
 
-  if (firstArg === "--version" || firstArg === "-v") {
+  if (options.help) {
+    console.log(renderHelp(packageVersion));
+    return;
+  }
+
+  if (options.version) {
     console.log(packageVersion);
     return;
   }
 
-  if (firstArg === "--help" || firstArg === "-h") {
-    printHelp();
-    return;
-  }
-
-  await runInit(firstArg == null ? [] : [firstArg, ...restArgs]);
-}
-
-function printHelp() {
-  console.log(`toolchains-init ${packageVersion}
-
-Usage:
-  toolchains-init [--target path] [--yes] [--no-install] [--router file|code]
-
-Examples:
-  yarn dlx toolchains-init
-  npx toolchains-init
-  pnpm dlx toolchains-init
-  toolchains-init --target apps/web
-  toolchains-init --yes --router code
-`);
+  await runInit(options);
 }
 
 main().catch((error: unknown) => {

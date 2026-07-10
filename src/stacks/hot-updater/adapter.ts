@@ -11,6 +11,10 @@ export const hotUpdater = defineToolchain({
   package: "hot-updater",
   command: "init",
   packageManagers: ["npm", "pnpm", "yarn", "bun"],
+  nonInteractive: {
+    supported: false,
+    reason: "provider setup requires project-specific interactive choices",
+  },
   hint: "Self-hostable OTA update solution for React Native",
   docs: [
     {
@@ -29,11 +33,7 @@ export const hotUpdater = defineToolchain({
       },
     },
   ],
-  isAvailable({ packageJson, packageManager }) {
-    if (packageManager === "deno") {
-      return false;
-    }
-
+  isAvailable({ packageJson }) {
     return hasPackageDependency(packageJson, "react-native");
   },
   async run({ cwd, packageManager, yes }) {

@@ -2,7 +2,7 @@
   "schemaVersion": "toolchains-init/cli-command-manifest/v1",
   "tool": "knip",
   "package": "knip",
-  "version": "6.25.0",
+  "version": "6.26.0",
   "commands": [
     {
       "id": "check",
@@ -250,20 +250,20 @@
           "supported": true
         }
       },
-      "interactive": true
+      "interactive": false
     }
   ],
   "sources": [
     {
       "kind": "npm",
       "package": "knip",
-      "version": "6.25.0",
+      "version": "6.26.0",
       "distTag": "latest",
-      "resolvedAt": "2026-07-07T08:47:13.416Z"
+      "resolvedAt": "2026-07-10T09:42:56.333Z"
     },
     {
       "kind": "cli-help",
-      "command": ["npx", "--yes", "knip@6.25.0", "--help"],
+      "command": ["npx", "--yes", "knip@6.26.0", "--help"],
       "commandId": "check"
     },
     {

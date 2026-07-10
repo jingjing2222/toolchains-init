@@ -6,141 +6,388 @@ on:
     - cron: "0 4 * * *"
   workflow_dispatch:
 
-permissions:
-  contents: write
-  pull-requests: write
+permissions: {}
 
 concurrency:
   group: update-cli-manifests
   cancel-in-progress: false
 
+env:
+  AUTOMATION_BRANCH_PREFIX: automation/update-cli-manifests
+  ARTIFACT_NAME: cli-manifest-update-${{ github.run_id }}-${{ github.run_attempt }}
+  DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+
 jobs:
-  update:
-    name: Update CLI manifests
+  guard:
+    name: Check for an existing automation PR
     runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      base_sha: ${{ steps.pr.outputs.base_sha }}
+      skip: ${{ steps.pr.outputs.skip }}
     steps:
-      - name: Checkout
+      - name: Find an open automation PR
+        id: pr
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          base_sha="$(
+            gh api \
+              "repos/$GITHUB_REPOSITORY/commits/$DEFAULT_BRANCH" \
+              --jq '.sha'
+          )"
+          if [[ ! "$base_sha" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "Could not resolve the default branch SHA." >&2
+            exit 1
+          fi
+          echo "base_sha=$base_sha" >> "$GITHUB_OUTPUT"
+
+          existing_pr="$({
+            gh pr list \
+              --repo "$GITHUB_REPOSITORY" \
+              --state open \
+              --limit 100 \
+              --json number,headRefName,isCrossRepository \
+              --jq '[.[] | select(.isCrossRepository == false and (.headRefName | startswith("'"$AUTOMATION_BRANCH_PREFIX"'")))][0].number // ""'
+          })"
+
+          if [[ -n "$existing_pr" ]]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "An automation PR is already open (#$existing_pr); leaving its branch untouched." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  generate:
+    name: Generate and validate artifacts
+    needs: guard
+    if: needs.guard.outputs.skip != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    outputs:
+      result: ${{ steps.generate.outputs.result }}
+    steps:
+      - name: Checkout without persisted credentials
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          persist-credentials: false
+          ref: ${{ needs.guard.outputs.base_sha }}
 
       - name: Setup
         uses: ./.github/actions/setup
 
-      - name: Update manifests
-        id: update
+      - name: Generate validated manifest artifacts
+        id: generate
         shell: bash
         run: |
-          set +e
-          yarn manifests:update > "$RUNNER_TEMP/manifest-update.log" 2>&1
-          status=$?
-          cat "$RUNNER_TEMP/manifest-update.log"
-          echo "status=$status" >> "$GITHUB_OUTPUT"
-          exit 0
+          set -euo pipefail
 
-      - name: Open failure pull request
-        if: steps.update.outputs.status != '0'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        shell: bash
-        run: |
-          branch="automation/update-cli-manifests"
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git checkout -B "$branch"
-          git commit --allow-empty -m "report cli manifest update failure"
-          git fetch origin "$branch:refs/remotes/origin/$branch" || true
-          git push --force-with-lease origin "$branch"
+          artifact_dir="$RUNNER_TEMP/manifest-artifact"
+          log_file="$artifact_dir/manifest-update.log"
+          mkdir -p "$artifact_dir"
 
-          body_file="$(mktemp)"
+          write_failure_artifact() {
+            local reason="$1"
+            {
+              printf '%s\n' \
+                "Automated CLI manifest update failed before a validated generated patch could be published." \
+                "" \
+                "Failure stage: $reason" \
+                "" \
+                "This is an explicit CLI/generation failure, so inspect the named adapter policy or manifest generator, then run:" \
+                "" \
+                '```sh' \
+                "yarn manifests:update" \
+                "yarn manifests:check" \
+                "yarn verify" \
+                '```' \
+                "" \
+                "Failure output:" \
+                ""
+              tail -n 160 "$log_file" | sed 's/^/    /'
+            } > "$artifact_dir/pr-body.md"
+            echo "result=failure" >> "$GITHUB_OUTPUT"
+          }
+
+          : > "$log_file"
+          if ! timeout --signal=TERM --kill-after=30s 15m \
+            yarn manifests:update > "$log_file" 2>&1
+          then
+            cat "$log_file"
+            write_failure_artifact "manifest generation"
+            exit 0
+          fi
+          cat "$log_file"
+
+          status_output="$(git status --porcelain=v1 --untracked-files=all)"
+          deleted_manifests="$(
+            git diff \
+              --diff-filter=D \
+              --name-only \
+              -- ':(top,glob)src/stacks/*/manifest.generated.json'
+          )"
+          if [[ -n "$deleted_manifests" ]]; then
+            {
+              echo "Generated manifest deletion requires explicit maintainer review:"
+              echo "$deleted_manifests"
+            } >> "$log_file"
+            write_failure_artifact "orphan generated manifest removal"
+            exit 0
+          fi
+          unexpected_changes="$(
+            printf '%s\n' "$status_output" |
+              cut -c4- |
+              sed -E '\|^src/stacks/[^/]+/manifest\.generated\.json$|d'
+          )"
+          if [[ -n "$unexpected_changes" ]]; then
+            {
+              echo "Generator changed files outside the generated-manifest allowlist:"
+              echo "$unexpected_changes"
+            } >> "$log_file"
+            write_failure_artifact "generated-file allowlist validation"
+            exit 0
+          fi
+
+          has_changes=false
+          if [[ -n "$status_output" ]]; then
+            has_changes=true
+            while IFS= read -r -d '' file; do
+              git add -N -- "$file"
+            done < <(
+              git ls-files \
+                --others \
+                --exclude-standard \
+                -z \
+                -- ':(top,glob)src/stacks/*/manifest.generated.json'
+            )
+          fi
+          verified_status="$(git status --porcelain=v1 --untracked-files=all)"
+          baseline_patch="$RUNNER_TEMP/manifest-before-verification.patch"
+          git diff --binary -- \
+            ':(top,glob)src/stacks/*/manifest.generated.json' > "$baseline_patch"
+          if [[ "$has_changes" == true && ! -s "$baseline_patch" ]]; then
+            echo "Generated manifest patch was unexpectedly empty." >> "$log_file"
+            write_failure_artifact "generated patch baseline"
+            exit 0
+          fi
+
+          if ! timeout --signal=TERM --kill-after=30s 20m \
+            yarn verify >> "$log_file" 2>&1
+          then
+            cat "$log_file"
+            write_failure_artifact "repository verification"
+            exit 0
+          fi
+
+          if [[ "$has_changes" == true ]]; then
+            if ! timeout --signal=TERM --kill-after=30s 2m \
+              yarn tsx scripts/render-cli-manifest-pr-body.ts > "$artifact_dir/pr-body.md" 2>> "$log_file"
+            then
+              cat "$log_file"
+              write_failure_artifact "pull request body rendering"
+              exit 0
+            fi
+          fi
+
+          post_verification_status="$(git status --porcelain=v1 --untracked-files=all)"
+          post_verification_patch="$RUNNER_TEMP/manifest-after-verification.patch"
+          git diff --binary -- \
+            ':(top,glob)src/stacks/*/manifest.generated.json' > "$post_verification_patch"
+          if [[ "$post_verification_status" != "$verified_status" ]] || \
+            { [[ "$has_changes" == true ]] && ! cmp -s "$baseline_patch" "$post_verification_patch"; }
+          then
+            {
+              echo "Repository or upstream code changed the generated patch during verification."
+              echo "Before verification:"
+              echo "$verified_status"
+              echo "After verification:"
+              echo "$post_verification_status"
+            } >> "$log_file"
+            write_failure_artifact "post-verification artifact integrity"
+            exit 0
+          fi
+
+          if [[ "$has_changes" == false ]]; then
+            echo "result=no-change" >> "$GITHUB_OUTPUT"
+            echo "Generated manifests and adapter smoke tests are current." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          # Create workflow-owned content only after all repository and upstream code has run.
+          changeset=".changeset/cli-manifest-update-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}.md"
           {
             printf '%s\n' \
-              "Automated CLI manifest update failed before generated manifests could be refreshed." \
-              "" \
-              "Fix the adapter policy or manifest generation logic on this branch, then run:" \
-              "" \
-              '```sh' \
-              "yarn manifests:update" \
-              "yarn manifests:check" \
-              '```' \
-              "" \
-              "Failure output:" \
-              "" \
-              '```text'
-            tail -n 160 "$RUNNER_TEMP/manifest-update.log"
-            printf '%s\n' '```'
-          } > "$body_file"
+              '---' \
+              '"toolchains-init": patch' \
+              '---' \
+              '' \
+              'Update generated CLI command manifests from upstream package metadata.'
+          } > "$changeset"
 
-          existing_pr="$(gh pr list --state open --head "$branch" --json number --jq '.[0].number')"
-          if [[ -n "$existing_pr" ]]; then
-            gh pr edit "$existing_pr" \
-              --title "Fix CLI manifest update failure" \
-              --body-file "$body_file"
-          else
-            gh pr create \
-              --base main \
-              --head "$branch" \
-              --title "Fix CLI manifest update failure" \
-              --body-file "$body_file"
+          git add -N -- "$changeset"
+          if ! git diff --check -- \
+            ':(top,glob)src/stacks/*/manifest.generated.json' \
+            "$changeset" >> "$log_file" 2>&1
+          then
+            cat "$log_file"
+            write_failure_artifact "generated patch validation"
+            exit 0
           fi
 
-          exit 1
-
-      - name: Detect changes
-        if: steps.update.outputs.status == '0'
-        id: diff
-        shell: bash
-        run: |
-          if [[ -n "$(git status --porcelain)" ]]; then
-            echo "changed=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "changed=false" >> "$GITHUB_OUTPUT"
+          git diff --binary -- \
+            ':(top,glob)src/stacks/*/manifest.generated.json' \
+            "$changeset" > "$artifact_dir/manifest-update.patch"
+          if [[ ! -s "$artifact_dir/manifest-update.patch" ]]; then
+            echo "Generated patch was unexpectedly empty." >> "$log_file"
+            write_failure_artifact "generated patch creation"
+            exit 0
           fi
 
-      - name: Add changeset
-        if: steps.update.outputs.status == '0' && steps.diff.outputs.changed == 'true'
-        shell: bash
-        run: |
-          changeset=".changeset/cli-manifest-update-$(date -u +%Y%m%d%H%M%S).md"
-          printf '%s\n' \
-            '---' \
-            '"toolchains-init": patch' \
-            '---' \
-            '' \
-            'Update generated CLI command manifests from upstream package metadata.' \
-            > "$changeset"
+          echo "result=changed" >> "$GITHUB_OUTPUT"
 
-      - name: Validate generated manifests
-        if: steps.update.outputs.status == '0' && steps.diff.outputs.changed == 'true'
-        run: yarn manifests:check
+      - name: Upload generated artifact
+        if: steps.generate.outputs.result == 'changed' || steps.generate.outputs.result == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.ARTIFACT_NAME }}
+          path: ${{ runner.temp }}/manifest-artifact
+          if-no-files-found: error
+          retention-days: 7
 
-      - name: Open pull request
-        if: steps.update.outputs.status == '0' && steps.diff.outputs.changed == 'true'
+  publish:
+    name: Publish automation PR
+    needs:
+      - guard
+      - generate
+    if: >-
+      always() &&
+      needs.guard.outputs.skip != 'true' &&
+      (needs.generate.outputs.result == 'changed' || needs.generate.outputs.result == 'failure')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Checkout without persisted credentials
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+          # Apply the artifact to the exact commit that generated and validated it.
+          ref: ${{ needs.guard.outputs.base_sha }}
+
+      - name: Download validated artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.ARTIFACT_NAME }}
+          path: ${{ runner.temp }}/manifest-artifact
+
+      - name: Recheck the open-PR guard
+        id: guard
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
-          branch="automation/update-cli-manifests"
+          existing_pr="$({
+            gh pr list \
+              --repo "$GITHUB_REPOSITORY" \
+              --state open \
+              --limit 100 \
+              --json number,headRefName,isCrossRepository \
+              --jq '[.[] | select(.isCrossRepository == false and (.headRefName | startswith("'"$AUTOMATION_BRANCH_PREFIX"'")))][0].number // ""'
+          })"
+
+          if [[ -n "$existing_pr" ]]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "An automation PR opened during generation (#$existing_pr); leaving it untouched." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create isolated automation branch
+        if: steps.guard.outputs.skip != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RESULT: ${{ needs.generate.outputs.result }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          artifact_dir="$RUNNER_TEMP/manifest-artifact"
+          branch="${AUTOMATION_BRANCH_PREFIX}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          changeset=".changeset/cli-manifest-update-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}.md"
+
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git checkout -B "$branch"
-          yarn format
-          body_file="$(mktemp)"
-          yarn tsx scripts/render-cli-manifest-pr-body.ts > "$body_file"
-          git add .changeset src/stacks
-          git commit -m "update cli command manifests"
-          git fetch origin "$branch:refs/remotes/origin/$branch" || true
-          git push --force-with-lease origin "$branch"
+          git switch -c "$branch"
 
-          existing_pr="$(gh pr list --state open --head "$branch" --json number --jq '.[0].number')"
-          if [[ -n "$existing_pr" ]]; then
-            gh pr edit "$existing_pr" \
-              --title "Update CLI command manifests" \
-              --body-file "$body_file"
+          if [[ "$RESULT" == "changed" ]]; then
+            git apply --check "$artifact_dir/manifest-update.patch"
+            git apply --index "$artifact_dir/manifest-update.patch"
+
+            manifest_count=0
+            while IFS= read -r -d '' file; do
+              if [[ "$file" == "$changeset" ]]; then
+                continue
+              fi
+              if [[ "$file" =~ ^src/stacks/[^/]+/manifest\.generated\.json$ ]]; then
+                if [[ ! -f "$file" || -L "$file" ]] || ! jq -e . "$file" > /dev/null; then
+                  echo "Refusing to publish a non-regular or invalid manifest: $file" >&2
+                  exit 1
+                fi
+                manifest_count=$((manifest_count + 1))
+                continue
+              fi
+              echo "Refusing to publish non-allowlisted path: $file" >&2
+              exit 1
+            done < <(git diff --cached --name-only -z)
+
+            if [[ "$manifest_count" -eq 0 ]]; then
+              echo "Validated patch does not contain a generated manifest change." >&2
+              exit 1
+            fi
+            if ! git diff --cached --name-only -- "$changeset" | grep -Fxq "$changeset"; then
+              echo "Validated patch is missing the expected changeset: $changeset" >&2
+              exit 1
+            fi
+            expected_changeset="$RUNNER_TEMP/expected-changeset.md"
+            {
+              printf '%s\n' \
+                '---' \
+                '"toolchains-init": patch' \
+                '---' \
+                '' \
+                'Update generated CLI command manifests from upstream package metadata.'
+            } > "$expected_changeset"
+            if [[ ! -f "$changeset" || -L "$changeset" ]] || ! cmp -s "$changeset" "$expected_changeset"; then
+              echo "Refusing to publish a modified automation changeset." >&2
+              exit 1
+            fi
+
+            git commit -m "update cli command manifests"
+            title="Update CLI command manifests"
           else
-            gh pr create \
-              --base main \
-              --head "$branch" \
-              --title "Update CLI command manifests" \
-              --body-file "$body_file"
+            git commit --allow-empty -m "report cli manifest update failure"
+            title="Fix CLI manifest update failure"
+          fi
+
+          gh auth setup-git
+          git push origin "HEAD:refs/heads/$branch"
+          gh pr create \
+            --repo "$GITHUB_REPOSITORY" \
+            --base "${{ github.event.repository.default_branch }}" \
+            --head "$branch" \
+            --title "$title" \
+            --body-file "$artifact_dir/pr-body.md"
+
+          if [[ "$RESULT" == "failure" ]]; then
+            exit 1
           fi

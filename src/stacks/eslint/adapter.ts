@@ -26,9 +26,28 @@ export const eslint = defineToolchain({
         ],
       },
     },
+    {
+      url: "https://raw.githubusercontent.com/eslint/create-config/main/lib/config-generator.js",
+      confidence: "high",
+      review: {
+        reason:
+          "Adapter marks the initializer interactive-only because its output phase always asks installation questions.",
+        files: ["src/stacks/eslint/adapter.ts", "src/stacks/eslint/init.test.ts"],
+        sections: ["ConfigGenerator.output"],
+        mustContain: ["installationQuestions", "enquirer.prompt"],
+        checks: [
+          "Confirm the output phase still prompts for dependency installation.",
+          "If a stable full-argument path bypasses every prompt, remove the interactive-only marker and add an enabled `yes: true` smoke test.",
+        ],
+      },
+    },
   ],
   help: false,
   hint: "Find and fix problems in JavaScript code",
+  nonInteractive: {
+    supported: false,
+    reason: "@eslint/create-config still prompts for dependency installation",
+  },
   runner: "dlx",
   subcommand: null,
   async run({ cwd, packageManager }) {

@@ -1,3 +1,6 @@
+import { access, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { resolveCliCommand } from "../src/core/cli-command-manifest";
 import { defineToolchain, getToolchainCliTool } from "../src/core/toolchain-adapter";
@@ -7,7 +10,13 @@ import {
   getCliCommandManifest,
   toolchains,
 } from "../src/stacks";
-import { resolvePackageManagerCommands, runHelpCommand } from "../scripts/update-cli-manifests";
+import {
+  findOrphanGeneratedFiles,
+  removeOrphanGeneratedFiles,
+  resolvePackageManagerCommands,
+  runHelpCommand,
+  validateDiscoveredToolchains,
+} from "../scripts/update-cli-manifests";
 import packageJson from "../package.json" with { type: "json" };
 
 const playwrightCliManifest = getCliCommandManifest("playwright");
@@ -23,6 +32,15 @@ describe("CLI command manifests", () => {
 
     expect(cliCommandManifestData.map((manifest) => manifest.tool)).toEqual(expectedTools);
     expect(cliCommandManifests.map((manifest) => manifest.tool)).toEqual(expectedTools);
+  });
+
+  it("derives manifest interaction contracts from the adapter exception", () => {
+    for (const toolchain of toolchains.filter((candidate) => candidate.cli != null)) {
+      const manifest = getCliCommandManifest(getToolchainCliTool(toolchain));
+      expect(manifest?.commands[0]?.interactive).toBe(
+        toolchain.nonInteractive?.supported === false,
+      );
+    }
   });
 
   it("resolves every command for its declared package managers", () => {
@@ -200,6 +218,7 @@ describe("CLI command manifests", () => {
           docs: [],
           exportName: "scopedCreateCliManifest",
           help: undefined,
+          interactive: false,
           packageManagers: ["npm", "pnpm", "yarn", "bun", "deno"],
           packageName: "@scope/create-widget",
           runner: "auto",
@@ -226,6 +245,360 @@ describe("CLI command manifests", () => {
         "console.log('--flag  useful help'); process.exit(2)",
       ]),
     ).resolves.toContain("--flag  useful help");
+  });
+
+  it("rejects non-help output from CLIs that exit non-zero", async () => {
+    await expect(
+      runHelpCommand([
+        process.execPath,
+        "-e",
+        "console.error('configuration is invalid'); process.exit(2)",
+      ]),
+    ).rejects.toThrow();
+  });
+
+  it("bounds CLI help probes even when a child process stays open", async () => {
+    await expect(
+      runHelpCommand([process.execPath, "-e", "setTimeout(() => {}, 10_000)"], 50),
+    ).rejects.toThrow();
+  });
+
+  it("rejects duplicate generated identities before probing external sources", async () => {
+    const biome = toolchains.find((toolchain) => toolchain.feature === "biome");
+    const eslint = toolchains.find((toolchain) => toolchain.feature === "eslint");
+    if (biome?.cli == null || eslint?.cli == null) {
+      throw new Error("Missing CLI-backed test adapters");
+    }
+
+    const discoveredBiome = { adapter: biome, exportName: "biome", stackDir: "biome" };
+    await expect(
+      validateDiscoveredToolchains([
+        discoveredBiome,
+        {
+          adapter: {
+            ...eslint,
+            cli: { ...eslint.cli, tool: getToolchainCliTool(biome) },
+          },
+          exportName: "eslint",
+          stackDir: "eslint",
+        },
+      ]),
+    ).rejects.toThrow("Duplicate CLI tool");
+
+    await expect(
+      validateDiscoveredToolchains([
+        discoveredBiome,
+        {
+          adapter: { ...eslint, feature: biome.feature },
+          exportName: "eslint",
+          stackDir: "eslint",
+        },
+      ]),
+    ).rejects.toThrow("Duplicate feature");
+
+    await expect(
+      validateDiscoveredToolchains([
+        discoveredBiome,
+        { adapter: eslint, exportName: "biome", stackDir: "eslint" },
+      ]),
+    ).rejects.toThrow("Duplicate adapter export name");
+
+    await expect(
+      validateDiscoveredToolchains([
+        discoveredBiome,
+        {
+          adapter: {
+            ...eslint,
+            cli: {
+              ...eslint.cli,
+              exportName: biome.cli.exportName ?? `${biome.feature}CliManifest`,
+            },
+          },
+          exportName: "eslint",
+          stackDir: "eslint",
+        },
+      ]),
+    ).rejects.toThrow("Duplicate manifest export name");
+
+    await expect(
+      validateDiscoveredToolchains([
+        discoveredBiome,
+        {
+          adapter: {
+            ...eslint,
+            cli: {
+              ...eslint.cli,
+              stackDir: biome.cli.stackDir ?? getToolchainCliTool(biome),
+            },
+          },
+          exportName: "eslint",
+          stackDir: "eslint",
+        },
+      ]),
+    ).rejects.toThrow("Duplicate stack path");
+  });
+
+  it("rejects generated stack paths outside a single safe stack directory", async () => {
+    const biome = toolchains.find((toolchain) => toolchain.feature === "biome");
+    if (biome?.cli == null) {
+      throw new Error("Missing Biome adapter");
+    }
+
+    await expect(
+      validateDiscoveredToolchains([
+        {
+          adapter: { ...biome, cli: { ...biome.cli, stackDir: "../outside" } },
+          exportName: "biome",
+          stackDir: "biome",
+        },
+      ]),
+    ).rejects.toThrow("stack path must be one lowercase kebab-case directory");
+  });
+
+  it("rejects features that normalize to the same user-facing selector", async () => {
+    const hotUpdater = toolchains.find((toolchain) => toolchain.feature === "hotUpdater");
+    const biome = toolchains.find((toolchain) => toolchain.feature === "biome");
+    if (hotUpdater == null || biome == null) {
+      throw new Error("Missing selector collision test adapters");
+    }
+
+    await expect(
+      validateDiscoveredToolchains([
+        { adapter: hotUpdater, exportName: "hotUpdater", stackDir: "hot-updater" },
+        {
+          adapter: { ...biome, feature: "hot-updater" as typeof biome.feature },
+          exportName: "hyphenatedHotUpdater",
+          stackDir: "hyphenated-hot-updater",
+        },
+      ]),
+    ).rejects.toThrow("Duplicate toolchain selector: hot-updater");
+  });
+
+  it("requires canonical lowerCamelCase feature ids", async () => {
+    const biome = toolchains.find((toolchain) => toolchain.feature === "biome");
+    if (biome == null) {
+      throw new Error("Missing feature syntax test adapter");
+    }
+
+    await expect(
+      validateDiscoveredToolchains([
+        {
+          adapter: { ...biome, feature: "URLParser" as typeof biome.feature },
+          exportName: "urlParser",
+          stackDir: "url-parser",
+        },
+      ]),
+    ).rejects.toThrow("must use lowerCamelCase");
+
+    await expect(
+      validateDiscoveredToolchains([
+        {
+          adapter: { ...biome, feature: "all" as typeof biome.feature },
+          exportName: "allToolchains",
+          stackDir: "all-toolchains",
+        },
+      ]),
+    ).rejects.toThrow('selector "all" is reserved');
+  });
+
+  it("requires complete docs review metadata and existing review files", async () => {
+    const adapter = defineToolchain({
+      feature: "biome",
+      label: "Example",
+      package: "example",
+      command: "init",
+      docs: [
+        {
+          url: "https://example.com/docs",
+          confidence: "high",
+          review: {
+            reason: "Review the initializer contract.",
+            files: ["test/does-not-exist.ts"],
+            mustContain: ["init"],
+            checks: ["Confirm init remains supported."],
+          },
+        },
+      ],
+    });
+
+    await expect(
+      validateDiscoveredToolchains([{ adapter, exportName: "example", stackDir: "example" }]),
+    ).rejects.toThrow("references a missing review file");
+
+    const incomplete = defineToolchain({
+      ...adapter,
+      package: "example",
+      command: "init",
+      docs: [
+        {
+          url: "https://example.com/docs",
+          confidence: "high",
+          review: {
+            reason: "Review the initializer contract.",
+            files: ["test/cli-command-manifest.test.ts"],
+            mustContain: ["init"],
+            checks: [],
+          },
+        },
+      ],
+    });
+    await expect(
+      validateDiscoveredToolchains([
+        { adapter: incomplete, exportName: "example", stackDir: "example" },
+      ]),
+    ).rejects.toThrow("review.checks must contain at least one nonempty value");
+
+    const absoluteReviewFile = defineToolchain({
+      feature: "biome",
+      label: "Example",
+      package: "example",
+      command: "init",
+      docs: [
+        {
+          url: "https://example.com/docs",
+          confidence: "high",
+          review: {
+            reason: "Review the initializer contract.",
+            files: [path.resolve("test/cli-command-manifest.test.ts")],
+            mustContain: ["init"],
+            checks: ["Confirm init remains supported."],
+          },
+        },
+      ],
+    });
+    await expect(
+      validateDiscoveredToolchains([
+        { adapter: absoluteReviewFile, exportName: "example", stackDir: "example" },
+      ]),
+    ).rejects.toThrow("review file must be repo-relative");
+  });
+
+  it("requires at least one unique package-manager command contract", async () => {
+    const biome = toolchains.find((toolchain) => toolchain.feature === "biome");
+    if (biome?.cli == null) {
+      throw new Error("Missing Biome CLI adapter");
+    }
+
+    await expect(
+      validateDiscoveredToolchains([
+        {
+          adapter: { ...biome, cli: { ...biome.cli, packageManagers: [] } },
+          exportName: "biome",
+          stackDir: "biome",
+        },
+      ]),
+    ).rejects.toThrow("at least one package manager");
+    await expect(
+      validateDiscoveredToolchains([
+        {
+          adapter: { ...biome, cli: { ...biome.cli, packageManagers: ["npm", "npm"] } },
+          exportName: "biome",
+          stackDir: "biome",
+        },
+      ]),
+    ).rejects.toThrow("repeats package manager: npm");
+  });
+
+  it("requires custom runner templates to exactly cover declared package managers", async () => {
+    const biome = toolchains.find((toolchain) => toolchain.feature === "biome");
+    if (biome?.cli == null) {
+      throw new Error("Missing Biome CLI adapter");
+    }
+    const runner = {
+      npm: ["npx", "@biomejs/biome@{version}", "init"],
+    } as const;
+
+    expect(
+      defineToolchain({
+        feature: "biome",
+        label: "Biome",
+        package: "@biomejs/biome",
+        command: "init",
+        runner,
+      }).cli?.packageManagers,
+    ).toEqual(["npm"]);
+    await expect(
+      validateDiscoveredToolchains([
+        {
+          adapter: {
+            ...biome,
+            cli: { ...biome.cli, packageManagers: ["npm", "pnpm"], runner },
+          },
+          exportName: "biome",
+          stackDir: "biome",
+        },
+      ]),
+    ).rejects.toThrow("no runner template for declared package manager: pnpm");
+    await expect(
+      validateDiscoveredToolchains([
+        {
+          adapter: {
+            ...biome,
+            cli: {
+              ...biome.cli,
+              packageManagers: ["npm"],
+              runner: { ...runner, pnpm: ["pnpm", "dlx", "@biomejs/biome@{version}"] },
+            },
+          },
+          exportName: "biome",
+          stackDir: "biome",
+        },
+      ]),
+    ).rejects.toThrow("undeclared runner template: pnpm");
+    await expect(
+      validateDiscoveredToolchains([
+        {
+          adapter: {
+            ...biome,
+            cli: { ...biome.cli, packageManagers: ["npm"], runner: { npm: [] } },
+          },
+          exportName: "biome",
+          stackDir: "biome",
+        },
+      ]),
+    ).rejects.toThrow("runner template needs a nonempty binary: npm");
+  });
+
+  it("finds and removes orphan generated manifests without touching handwritten wrappers", async () => {
+    const tempDir = await mkdtemp(path.join(os.tmpdir(), "toolchains-init-orphans-"));
+    try {
+      const expectedDir = path.join(tempDir, "expected");
+      const orphanDir = path.join(tempDir, "orphan");
+      const handwrittenDir = path.join(tempDir, "handwritten");
+      await Promise.all([
+        mkdir(expectedDir, { recursive: true }),
+        mkdir(orphanDir, { recursive: true }),
+        mkdir(handwrittenDir, { recursive: true }),
+      ]);
+      const expectedManifest = path.join(expectedDir, "manifest.generated.json");
+      const expectedWrapper = path.join(expectedDir, "manifest.ts");
+      const orphanManifest = path.join(orphanDir, "manifest.generated.json");
+      const orphanWrapper = path.join(orphanDir, "manifest.ts");
+      const handwrittenWrapper = path.join(handwrittenDir, "manifest.ts");
+      await Promise.all([
+        writeFile(expectedManifest, "{}\n"),
+        writeFile(
+          expectedWrapper,
+          "// Generated by scripts/update-cli-manifests.ts. Do not edit directly.\n",
+        ),
+        writeFile(orphanManifest, "{}\n"),
+        writeFile(
+          orphanWrapper,
+          "// Generated by scripts/update-cli-manifests.ts. Do not edit directly.\n",
+        ),
+        writeFile(handwrittenWrapper, "export const manifest = {};\n"),
+      ]);
+
+      const orphaned = await findOrphanGeneratedFiles([expectedManifest, expectedWrapper], tempDir);
+      expect(orphaned).toEqual([orphanManifest, orphanWrapper].sort());
+
+      await removeOrphanGeneratedFiles(orphaned);
+      await expect(access(orphanManifest)).rejects.toThrow();
+      await expect(access(orphanWrapper)).rejects.toThrow();
+      await expect(readFile(handwrittenWrapper, "utf8")).resolves.toContain("manifest");
+    } finally {
+      await rm(tempDir, { force: true, recursive: true });
+    }
   });
 
   it("keeps CLI identity declarations minimal in stack adapters", () => {

@@ -58,10 +58,14 @@ export async function getAvailableToolchains(
   context: Parameters<NonNullable<(typeof toolchains)[number]["isAvailable"]>>[0],
 ) {
   const available = await Promise.all(
-    toolchains.map(async (toolchain) => ({
-      toolchain,
-      isAvailable: (await toolchain.isAvailable?.(context)) ?? true,
-    })),
+    toolchains.map(async (toolchain) => {
+      const supportsPackageManager =
+        toolchain.cli?.packageManagers?.includes(context.packageManager) ?? true;
+      return {
+        toolchain,
+        isAvailable: supportsPackageManager && ((await toolchain.isAvailable?.(context)) ?? true),
+      };
+    }),
   );
 
   return available.filter(({ isAvailable }) => isAvailable).map(({ toolchain }) => toolchain);

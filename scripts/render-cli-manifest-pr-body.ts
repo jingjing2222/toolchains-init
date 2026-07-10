@@ -28,8 +28,12 @@ export async function renderCliManifestPrBody() {
   const lines = [
     "Automated daily update for generated CLI command manifests.",
     "",
+    "Routine package version, command template, and unused flag metadata changes do not require handwritten adapter edits.",
+    "Review an adapter only when the `Docs-backed adapter review required` section below names it, an adapter test fails, or the upstream CLI no longer runs.",
+    "",
     "Validation:",
     "- yarn manifests:check",
+    "- yarn verify",
     "",
   ];
 

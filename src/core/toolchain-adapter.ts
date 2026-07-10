@@ -36,6 +36,8 @@ export type PackageManagerCommandTemplates = Partial<Record<PackageManager, read
 
 export type ToolchainCliRunner = "auto" | "create" | "dlx" | PackageManagerCommandTemplates;
 
+const packageManagerNames = ["npm", "pnpm", "yarn", "bun", "deno"] as const;
+
 export type ToolchainCliDocs = Omit<
   Extract<CliCommandManifest["sources"][number], { kind: "docs" }>,
   "checks" | "kind"
@@ -63,6 +65,10 @@ export type ToolchainAdapter = {
   catalog: ToolchainCatalog;
   order?: number;
   cli?: ToolchainCliDefinition;
+  nonInteractive?: {
+    supported: false;
+    reason: string;
+  };
   isAvailable?: (context: ToolchainAvailabilityContext) => boolean | Promise<boolean>;
   beforeRun?: (context: UpdatePackageJsonContext) => void;
   run?: (context: RunToolchainContext) => Promise<void>;
@@ -119,6 +125,11 @@ export function defineToolchain(options: DefineToolchainOptions): ToolchainAdapt
     tool,
     ...adapter
   } = options;
+  const resolvedPackageManagers =
+    packageManagers ??
+    (runner != null && typeof runner === "object"
+      ? packageManagerNames.filter((packageManager) => runner[packageManager] != null)
+      : undefined);
 
   return {
     ...adapter,
@@ -132,7 +143,7 @@ export function defineToolchain(options: DefineToolchainOptions): ToolchainAdapt
       exportName,
       help,
       package: packageName,
-      packageManagers,
+      packageManagers: resolvedPackageManagers,
       runner,
       stackDir,
       subcommand,
@@ -142,9 +153,9 @@ export function defineToolchain(options: DefineToolchainOptions): ToolchainAdapt
 }
 
 export function getToolchainCliTool(toolchain: ToolchainAdapter) {
-  return toolchain.cli?.tool ?? kebabCase(toolchain.feature);
+  return toolchain.cli?.tool ?? getToolchainId(toolchain);
 }
 
-function kebabCase(value: string) {
-  return value.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`);
+export function getToolchainId(toolchain: Pick<ToolchainAdapter, "feature">) {
+  return toolchain.feature.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`);
 }

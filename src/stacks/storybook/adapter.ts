@@ -45,11 +45,7 @@ export const storybook = defineToolchain({
   packageManagers: ["npm", "pnpm", "yarn", "bun"],
   runner: "create",
   subcommand: null,
-  isAvailable({ packageJson, packageManager }) {
-    if (packageManager === "deno") {
-      return false;
-    }
-
+  isAvailable({ packageJson }) {
     return hasPackageDependency(packageJson, "react") && hasPackageDependency(packageJson, "vite");
   },
   async run({ cwd, packageManager, yes }) {

@@ -1,15 +1,21 @@
 import { describe, expect, it } from "vitest";
 import { resolveCliCommand } from "../../core/cli-command-manifest";
-import { createFreshViteProject, options, readPackageJson } from "../init-test-utils";
+import { runExternalToolchains } from "../../core/external-toolchains";
+import {
+  adapterInitTimeout,
+  createFreshViteProject,
+  expectFileToExist,
+  options,
+  readPackageJson,
+} from "../init-test-utils";
 
 describe("Storybook adapter init", () => {
-  it("is only available for React Vite projects with supported package managers", async () => {
+  it("is only available for React Vite projects", async () => {
     const cwd = await createFreshViteProject();
     const packageJson = await readPackageJson(cwd);
     const { storybook } = await import("./adapter");
 
     expect(await storybook.isAvailable?.({ cwd, packageJson, packageManager: "npm" })).toBe(true);
-    expect(await storybook.isAvailable?.({ cwd, packageJson, packageManager: "deno" })).toBe(false);
     expect(
       await storybook.isAvailable?.({
         cwd,
@@ -18,6 +24,21 @@ describe("Storybook adapter init", () => {
       }),
     ).toBe(false);
   });
+
+  it(
+    "scaffolds Storybook without stdin when yes is selected",
+    async () => {
+      const cwd = await createFreshViteProject();
+      const toolchainOptions = options(["storybook"]);
+
+      await runExternalToolchains(cwd, "npm", toolchainOptions, true);
+
+      await expectFileToExist(cwd, ".storybook/main.ts");
+      await expectFileToExist(cwd, "src/stories/Button.stories.ts");
+      expect((await readPackageJson(cwd)).devDependencies?.storybook).toBeDefined();
+    },
+    adapterInitTimeout,
+  );
 
   it("declares Storybook generated files as overwrite targets", async () => {
     const { storybook } = await import("./adapter");

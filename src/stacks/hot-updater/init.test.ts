@@ -3,8 +3,12 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { resolveCliCommand } from "../../core/cli-command-manifest";
 import { updatePackageJsonBeforeRun } from "../../core/package-json";
+import { getAvailableToolchains } from "..";
+import { hotUpdater } from "./adapter";
+import { hotUpdaterCliManifest } from "./manifest";
 import {
   adapterInitTimeout,
   createFreshViteProject,
@@ -16,15 +20,65 @@ import {
 const execFileAsync = promisify(execFile);
 const hotUpdaterE2EProvider = process.env.HOT_UPDATER_E2E_PROVIDER;
 const itHotUpdaterE2E = hotUpdaterE2EProvider == null ? it.skip : it;
+const mocks = vi.hoisted(() => ({
+  runCommand: vi.fn(async () => {}),
+}));
+
+vi.mock("../../core/run-command", () => ({
+  runCommand: mocks.runCommand,
+}));
 
 describe("Hot Updater adapter init", () => {
+  beforeEach(() => {
+    mocks.runCommand.mockClear();
+  });
+
+  it("keeps provider setup interactive and the command manifest-backed", async () => {
+    expect(hotUpdater.nonInteractive).toEqual({
+      supported: false,
+      reason: "provider setup requires project-specific interactive choices",
+    });
+    const command = resolveCliCommand(hotUpdaterCliManifest, "init", "npm");
+
+    await hotUpdater.run?.({
+      cwd: ".",
+      packageManager: "npm",
+      options: options(["hotUpdater"]),
+      yes: false,
+    });
+
+    expect(mocks.runCommand).toHaveBeenCalledWith(".", command.bin, command.args);
+    await expect(
+      hotUpdater.run?.({
+        cwd: ".",
+        packageManager: "npm",
+        options: options(["hotUpdater"]),
+        yes: true,
+      }),
+    ).rejects.toThrow("requires interactive provider setup");
+    expect(mocks.runCommand).toHaveBeenCalledTimes(1);
+  });
+
   it("is only available for React Native projects", async () => {
     const cwd = await createFreshViteProject();
-    const { hotUpdater } = await import("./adapter");
-
     const packageJson = await readPackageJson(cwd);
 
     expect(await hotUpdater.isAvailable?.({ cwd, packageJson, packageManager: "npm" })).toBe(false);
+  });
+
+  it("inherits package-manager availability from its CLI declaration", async () => {
+    const cwd = await createFreshReactNativePackageJson();
+    const packageJson = await readPackageJson(cwd);
+
+    const npmFeatures = (
+      await getAvailableToolchains({ cwd, packageJson, packageManager: "npm" })
+    ).map((toolchain) => toolchain.feature);
+    const denoFeatures = (
+      await getAvailableToolchains({ cwd, packageJson, packageManager: "deno" })
+    ).map((toolchain) => toolchain.feature);
+
+    expect(npmFeatures).toContain("hotUpdater");
+    expect(denoFeatures).not.toContain("hotUpdater");
   });
 
   it("adds the Hot Updater CLI package before running the initializer", async () => {
@@ -45,8 +99,6 @@ describe("Hot Updater adapter init", () => {
       const appName = "HotUpdaterSmoke";
       const cwd = path.join(workspace, appName);
       const provider = hotUpdaterE2EProvider ?? "supabase";
-      const { hotUpdaterCliManifest } = await import("./manifest");
-
       try {
         await execFileAsync(
           "npx",
