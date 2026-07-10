@@ -2,7 +2,7 @@
   "schemaVersion": "toolchains-init/cli-command-manifest/v1",
   "tool": "prettier",
   "package": "prettier",
-  "version": "3.9.4",
+  "version": "3.9.5",
   "commands": [
     {
       "id": "check",
@@ -311,13 +311,13 @@
     {
       "kind": "npm",
       "package": "prettier",
-      "version": "3.9.4",
+      "version": "3.9.5",
       "distTag": "latest",
-      "resolvedAt": "2026-06-30T01:11:17.630Z"
+      "resolvedAt": "2026-07-09T16:17:00.997Z"
     },
     {
       "kind": "cli-help",
-      "command": ["npx", "--yes", "prettier@3.9.4", "--help"],
+      "command": ["npx", "--yes", "prettier@3.9.5", "--help"],
       "commandId": "check"
     },
     {

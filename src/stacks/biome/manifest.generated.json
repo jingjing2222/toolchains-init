@@ -2,7 +2,7 @@
   "schemaVersion": "toolchains-init/cli-command-manifest/v1",
   "tool": "biome",
   "package": "@biomejs/biome",
-  "version": "2.5.2",
+  "version": "2.5.3",
   "commands": [
     {
       "id": "init",
@@ -32,13 +32,13 @@
     {
       "kind": "npm",
       "package": "@biomejs/biome",
-      "version": "2.5.2",
+      "version": "2.5.3",
       "distTag": "latest",
-      "resolvedAt": "2026-07-01T10:30:58.351Z"
+      "resolvedAt": "2026-07-08T08:13:37.631Z"
     },
     {
       "kind": "cli-help",
-      "command": ["npx", "--yes", "@biomejs/biome@2.5.2", "init", "--help"],
+      "command": ["npx", "--yes", "@biomejs/biome@2.5.3", "init", "--help"],
       "commandId": "init"
     },
     {
