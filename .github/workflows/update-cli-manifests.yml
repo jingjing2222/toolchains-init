@@ -71,7 +71,7 @@ jobs:
             printf '%s\n' '```'
           } > "$body_file"
 
-          existing_pr="$(gh pr list --state open --head "${GITHUB_REPOSITORY_OWNER}:$branch" --json number --jq '.[0].number')"
+          existing_pr="$(gh pr list --state open --head "$branch" --json number --jq '.[0].number')"
           if [[ -n "$existing_pr" ]]; then
             gh pr edit "$existing_pr" \
               --title "Fix CLI manifest update failure" \
@@ -132,7 +132,7 @@ jobs:
           git fetch origin "$branch:refs/remotes/origin/$branch" || true
           git push --force-with-lease origin "$branch"
 
-          existing_pr="$(gh pr list --state open --head "${GITHUB_REPOSITORY_OWNER}:$branch" --json number --jq '.[0].number')"
+          existing_pr="$(gh pr list --state open --head "$branch" --json number --jq '.[0].number')"
           if [[ -n "$existing_pr" ]]; then
             gh pr edit "$existing_pr" \
               --title "Update CLI command manifests" \
