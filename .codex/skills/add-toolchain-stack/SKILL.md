@@ -1,89 +1,156 @@
 ---
 name: add-toolchain-stack
-description: Add or maintain a CLI-backed toolchain stack in the toolchains-init repo. Use when asked to scaffold an adapter, expose manifest-generated CLI argument groups, add initializer support, review or repair an automated CLI-manifest cron PR, or revisit adapter behavior after upstream docs markers, focused tests, or CLI execution fail. Preserve generated CLI manifests as the source of truth and keep handwritten adapters stable across routine upstream metadata updates.
+description: Add or maintain an init-only origin CLI in the toolchains-init catalog. Use when scaffolding a canonical tool definition, exposing manifest-generated focused help, reviewing origin-command evidence, or repairing an automated manifest update. Keep adapter identity stable, generated manifest v1 data authoritative, and origin arguments opaque.
 ---
 
-# Add or Maintain a Toolchain Stack
+# Add or Maintain a Toolchain
 
-## Ownership Contract
+## Product Boundary
 
-`toolchains-init` is a command runner, not a second implementation of an upstream CLI.
+`toolchains-init` starts where templates stop. It discovers, plans, and runs official setup CLIs for
+an existing app, package, or workspace.
 
-- The wrapper may prepare a prerequisite before the origin command only when official documentation or an executable test proves that the command needs it to start.
-- The origin command is the terminal project mutation. After it returns, the wrapper must not edit files, package metadata, dependencies, or configuration for that tool.
-- Preserve the origin CLI's stdin, prompts, exit status, and argument semantics. Wrapper `--yes` is never forwarded and never changes the origin process's stdin.
-- Do not infer missing upstream choices, inject convenience presets, reinterpret an option, or policy-filter raw upstream tokens because the wrapper considers them unsafe or unnecessary.
-- Handwritten adapters declare only stable command identity, proven prerequisites, and review evidence.
-- `manifest.generated.json` owns the pinned upstream version, package-manager command templates, and discovered flag names for focused help.
+The wrapper owns:
 
-Core derives `--<manifest.tool>` selectors and accepts opaque `--<tool>.<flag>[=value]` options.
-Never add an individual upstream flag or its value type to a handwritten parser.
+- catalog inclusion, labels, areas, capabilities, and ordering;
+- one canonical tool ID;
+- the target directory and package-manager selection;
+- the complete execution plan, pinned invocation, and documentation provenance;
+- informational warnings about overlapping capabilities.
+
+The origin CLI owns:
+
+- prompts, defaults, option names, values, and validation;
+- files, dependencies, package metadata, and configuration it creates or changes;
+- success, failure, exit code, and signal.
+
+The origin process is the only project mutation for its tool. Do not prepare, reproduce, amend,
+clean up, or roll back its project changes. Preserve inherited stdin, stdout, and stderr. Pinning
+makes the handoff inspectable and repeatable; it does not promise identical output from different
+machines or starting project states.
+
+## Catalog Admission Rules
+
+A tool belongs in the catalog only when all of these are true:
+
+1. An official initializer adds a capability to an existing project.
+2. Selecting the tool by itself reaches a valid setup action or an origin-owned prompt.
+3. The wrapper does not need to guess a required positional, preset, or project choice.
+4. The command is not a check, diagnostic, build, migration, or full application scaffold.
+5. Official documentation identifies the exact package and setup command.
+6. A focused test proves the exact pinned invocation and the no-after-mutation boundary.
+7. The exact built-in allowlist is updated intentionally.
+
+Reject a candidate that needs wrapper-authored configuration to appear complete. A useful upstream
+CLI is not automatically a suitable initializer for this catalog.
+
+## One Canonical ID
+
+Every built-in has one kebab-case ID. These values must be identical:
+
+```text
+adapter id = src/stacks/<id> = manifest.tool = --<id>
+```
+
+Do not add aliases or separate internal names. Paths, generated registry entries, selector groups,
+and exports are derived from the canonical ID.
 
 ## Start Here
 
 1. Inspect `git status` and preserve unrelated work.
-2. Run `yarn new --help`; treat it as the authoritative scaffold-argument list.
+2. Run `yarn new --help`; it is the authoritative scaffold-argument list.
 3. Read:
    - `src/core/toolchain-adapter.ts`
+   - `src/core/toolchain-catalog.ts`
    - `src/core/cli-command-manifest.ts`
-   - `src/core/managed-cli.ts`
-   - `src/core/external-toolchains.ts`
+   - `src/core/cli-surface.ts`
+   - `src/core/execution-plan.ts`
+   - `src/core/execute-plan.ts`
+   - `scripts/new-toolchain.ts`
    - `scripts/update-cli-manifests.ts`
-   - the nearest adapter and `init.test.ts`
-4. Verify the exact origin command in official documentation and current package help.
-5. Run that exact command in a clean representative project when practical. Observe its behavior; do not replace its choices with wrapper policy.
+   - the nearest adapter and its focused test
+4. Verify the exact initializer in official documentation and current package help.
+5. Run the origin command in a clean representative project when practical. Observe its prompts,
+   mutations, and exit behavior without replacing them with wrapper policy.
 
-## Scaffold the Exact Command
+## Scaffold from the Canonical ID
 
-Pass every known scaffold decision in one command instead of entering the scaffold prompt UI:
+Pass known scaffold decisions in one command instead of entering the scaffold prompt:
 
 ```bash
 yarn new example \
-  --stack-dir example \
+  --label "Example" \
+  --summary "Initialize Example project configuration" \
+  --area quality \
+  --provides linting \
+  --order 40 \
   --package create-example \
   --command init \
-  --label "Example" \
-  --catalog quality \
   --docs-url https://example.com/docs/cli \
   --docs-confidence high \
-  --docs-reason "The adapter runs the documented origin command unchanged." \
+  --docs-reason "The adapter runs the documented initializer unchanged." \
   --docs-section "CLI setup" \
   --docs-must-contain "create-example init" \
-  --docs-check "Confirm this remains the complete origin command."
+  --docs-check "Confirm this remains the complete official initializer."
 ```
 
-The generated adapter declares `managedCli: true`. The normal `command: "init"` form already puts
-`init` in runtime templates, so do not repeat it in `commandArgs`.
+Repeat `--provides` when the initializer supplies more than one capability. The scaffold derives the
+stack directory, registry identity, selector, and export from `example`.
 
-Use `commandArgs` only for documented static tokens that are part of command identity. For a
-flag-shaped initializer, for example:
+The generated adapter follows this model:
 
-```bash
-yarn new example \
-  --package example-cli \
-  --command init \
-  --subcommand none \
-  --command-arg=--init \
-  --docs-url https://example.com/docs/cli \
-  --docs-must-contain "example-cli --init"
+```ts
+export const example = defineToolchain({
+  id: "example",
+  label: "Example",
+  summary: "Initialize Example project configuration",
+  area: "quality",
+  capabilities: ["linting"],
+  order: 40,
+  origin: {
+    package: "create-example",
+    command: "init",
+    docs: [
+      {
+        url: "https://example.com/docs/cli",
+        confidence: "high",
+        review: {
+          reason: "The adapter runs the documented initializer unchanged.",
+          files: ["src/stacks/example/adapter.ts", "src/stacks/example/init.test.ts"],
+          sections: ["CLI setup"],
+          mustContain: ["create-example init"],
+          checks: ["Confirm this remains the complete official initializer."],
+        },
+      },
+    ],
+  },
+});
 ```
 
-Order matters. Generated package-manager templates append `commandArgs` after the inferred
-subcommand, including custom runner templates.
+Use `origin.subcommand`, `origin.commandArgs`, or `origin.runner` only when they are stable parts of
+the documented command identity:
 
-## Preserve the Upstream Argument Surface
+- `subcommand: null` suppresses an inferred subcommand.
+- `commandArgs` contains documented static tokens in their exact order.
+- A custom `runner` declares exact package-manager templates. Its template keys are the supported
+  package managers for that tool.
 
-Namespaced flags select which origin CLI receives each token:
+Do not put user preferences, inferred defaults, or convenience presets in command identity.
+
+## Preserve the Origin Argument Surface
+
+Namespaced options select which origin receives each token:
 
 ```bash
 toolchains-init --example --example.template=react --example.force
 ```
 
-- Core removes only the tool namespace and preserves the remaining token syntax and order.
-- Do not validate flag names, value types, enum values, repetitions, or support status in the wrapper.
-- Unknown upstream flags are accepted immediately; manifest discovery controls focused help only.
+Core removes only `example.` and preserves the remaining token syntax and order. Do not validate
+option names, value types, enum members, repetitions, or upstream support in a handwritten parser.
+Unknown namespaced options are accepted immediately. Manifest discovery controls focused help, not
+parsing.
 
-Users can repeat `--<tool>.raw.arg=<token>` for positionals, `--`, dash-prefixed values, or complete
+Repeat `--<id>.raw.arg=<token>` for positionals, `--`, dash-prefixed values, or complete
 token-by-token passthrough:
 
 ```bash
@@ -96,81 +163,124 @@ toolchains-init \
   --example.raw.arg=two
 ```
 
-Raw tokens retain their order and reach only the selected origin CLI. They are the escape hatch for
-upstream syntax, not adapter-owned policy.
+Raw tokens retain their order and reach only the selected origin. They are an escape hatch for
+upstream syntax, never adapter-owned policy.
 
-## Keep the Adapter Thin
+## Keep Manifest v1 Generated
 
-For every CLI-backed adapter:
+`manifest.generated.json` remains the source of truth for changing upstream data:
 
-- Declare CLI metadata and at least one official `docs` source with actionable review metadata.
-- Use `managedCli: true`; it is a marker that the manifest command executes.
-- Put only origin-command identity in `command`, `subcommand`, and `commandArgs`.
-- Do not declare package-manager allowlists for inferred runners. A custom runner's actual template keys are the only supported-manager constraint.
-- Let core resolve the pinned package-manager template and append ordered opaque user arguments.
-- Add prerequisite preparation only before command execution and only with evidence tied to the adapter and its focused test.
-- Leave the files and package state produced by the CLI untouched after execution.
-- Keep selection on generated `--<manifest.tool>` groups; do not add aliases or per-tool parser cases.
+- the canonical `tool` ID;
+- the pinned package version;
+- exact package-manager executable and argument templates;
+- flag names discovered for focused help;
+- documentation provenance and review results.
 
-If a generated command is wrong, update CLI metadata or the generator and run
-`yarn manifests:update`. Never patch generated JSON by hand.
+The handwritten adapter owns stable catalog identity, capabilities, order, origin package and
+command identity, and review evidence. Never copy discovered flags into source or teach the wrapper
+their value types.
+
+If an invocation is wrong, update the adapter metadata or generator and run
+`yarn manifests:update`. Never patch generated JSON by hand. Inspect every generated diff and ensure
+`manifest.tool` still equals the adapter ID.
+
+## Build One Plan
+
+All selected tools must resolve into a complete plan before an origin process starts. The printed
+plan and executor consume the same structured command data; never print a shell string and parse it
+back for execution.
+
+For each planned command, preserve and test:
+
+- tool ID and display label;
+- resolved target working directory;
+- package manager and pinned origin version;
+- exact executable and ordered argument array;
+- official documentation source;
+- catalog order.
+
+Capabilities are curation metadata. Multiple selected tools that provide `formatting` or `linting`
+may produce an informational warning. A warning must not reject a selection, change command order,
+or rewrite origin arguments.
+
+Execution is sequential in displayed order. Stop on the first failed command, do not start later
+commands, preserve an exact numeric exit code, and re-raise a terminating signal when Node can do
+so safely. For Node-reserved or ignored signals such as `SIGUSR1` and `SIGPIPE`, return the
+conventional `128 + signal` nonzero status. Leave all completed or partial project changes
+untouched.
 
 ## Test the Boundary
 
-The focused adapter test must mock command execution and assert the exact call:
+The focused adapter test must prove:
 
-- correct working directory;
-- exact package-manager binary and pinned origin arguments;
-- static `commandArgs` in their documented order;
+- canonical ID, area, capabilities, and origin metadata;
+- exact working directory, package-manager binary, pinned package, and ordered arguments;
+- documented static tokens in their exact positions;
 - namespaced and raw user tokens forwarded without reinterpretation;
-- the core runner's unconditional inherited stdio, including when wrapper `yes` is true;
-- exactly one origin-command execution and no wrapper mutation afterward.
+- exactly one handoff to the origin execution boundary;
+- absence of adapter-owned pre-run, post-run, or project-mutation hooks.
 
-Use a real clean-project smoke test only as additional evidence. Assertions about files produced by
-the origin CLI may prove that the command ran, but they do not authorize the wrapper to reproduce or
-amend those files.
+Core plan, executor, and run-command tests separately prove:
 
-## Make Command Identity Docs-Backed
+- plan resolution completes before any process starts;
+- the same structured command is printed and executed;
+- the origin process inherits stdin, stdout, and stderr;
+- overlap warnings are informational only;
+- command A succeeds, command B fails, and command C never starts;
+- completed changes are not rolled back;
+- exact exit-code propagation, safe signal re-raising, and the documented reserved-signal fallback.
 
-Every handwritten prerequisite and static command token needs an official source and review metadata:
+A real clean-project smoke test is useful additional evidence. Assertions about origin-produced
+files prove that the command ran; they never authorize the wrapper to create or amend those files.
 
-- `reason` explains the exact dependency on the source.
+## Keep Command Identity Docs-Backed
+
+Every static command token and custom runner template needs an official source and actionable review
+metadata:
+
+- `reason` explains what the source proves.
 - `files` names the adapter and focused test.
-- `mustContain` proves the relevant command still exists.
-- `checks` asks a maintainer to verify the complete invocation and the no-after-mutation boundary.
-- `sections` identifies the relevant human-facing area when useful.
+- `mustContain` proves the documented command still exists.
+- `checks` asks a maintainer to verify the complete invocation and origin-ownership boundary.
+- `sections` identifies the relevant human-facing documentation area when useful.
 
-Prefer official setup docs, then official package docs, then the upstream raw README or source. Do
-not weaken a failed marker merely to make automation green; determine whether the origin command
-changed.
+Prefer official setup documentation, then official package documentation, then the upstream raw
+README or source. Do not weaken a failed marker merely to make automation green; investigate whether
+the official initializer changed or no longer qualifies for the catalog.
 
 After metadata changes, run `yarn manifests:update` and inspect generated diffs. Accept unrelated
 routine metadata only when it belongs in the requested change.
 
 ## Review an Automated Manifest PR
 
-1. Confirm changes are restricted to generated manifests and the automation changeset.
-2. For version, command-template, or discovered-flag drift, run manifest validation and focused tests without editing the adapter.
-3. Review removed or renamed discovered flags as focused-help changes only; parsing accepts unknown upstream names.
-4. Review handwritten files only when a static command token, prerequisite, docs marker, or exact-command test changed.
-5. Confirm the wrapper still makes no project mutation after each origin command returns.
+1. Confirm changes are limited to generated manifests and the automation changeset.
+2. For version, command-template, or discovered-help drift, run manifest validation and focused
+   tests without editing stable adapter identity.
+3. Treat removed or renamed discovered flags as focused-help changes only; opaque parsing still
+   accepts unknown namespaced options.
+4. Review handwritten files only when origin command identity, capability curation, docs evidence,
+   or an exact-command test must change.
+5. Confirm the printed plan still matches the structured command executed.
+6. Confirm no wrapper project mutation occurs before or after the origin process.
 
-An existing stable adapter should otherwise remain untouched after its initial addition.
+An existing adapter should otherwise remain untouched during a routine upstream metadata refresh.
 
 ## Expected Change Set
 
-A new CLI-backed stack normally includes:
+A new built-in normally includes:
 
-- `src/stacks/<stack>/adapter.ts`
-- `src/stacks/<stack>/index.ts`
-- `src/stacks/<stack>/init.test.ts`
-- `src/stacks/<stack>/manifest.ts`
-- `src/stacks/<stack>/manifest.generated.json`
-- generated registry files produced by `yarn manifests:update`
-- user-facing docs when support is visible
+- `src/stacks/<id>/adapter.ts`
+- `src/stacks/<id>/index.ts`
+- `src/stacks/<id>/init.test.ts`
+- `src/stacks/<id>/manifest.ts`
+- `src/stacks/<id>/manifest.generated.json`
+- generated registry files from `yarn manifests:update`
+- the exact built-in allowlist update
+- user-facing catalog documentation
 - a changeset
 
-Change core command execution only when the exact origin invocation cannot use the existing runner.
+Change core planning or execution only when the documented invocation cannot use the existing
+origin model. Do not special-case one tool in the parser.
 
 ## Validate and Review
 
@@ -189,6 +299,7 @@ Then run:
 yarn verify
 ```
 
-Review the final diff for generated-file ownership, exact origin-command identity, ordered raw
-passthrough, proven prerequisites, inherited stdin, and absence of mutation after the command.
-Repeat independent review and fixes until no P1 or P2 findings remain.
+Review the final diff for canonical identity, init-only catalog fit, generated-file ownership,
+exact origin invocation, ordered opaque passthrough, complete plan output, inherited stdio, and
+absence of wrapper project mutation. Repeat independent review and fixes until no P1 or P2 findings
+remain.

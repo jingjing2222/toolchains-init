@@ -5,29 +5,53 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { parseArgs, promisify } from "node:util";
 import pc from "picocolors";
-import type { PackageManager } from "../src/core/package-manager";
-import type { ToolchainCatalog, ToolchainCliDocs } from "../src/core/toolchain-adapter";
+import type { ToolchainArea, ToolchainOriginDocs } from "../src/core/toolchain-adapter";
+import { toolchainCapabilities, type ToolchainCapability } from "../src/core/toolchain-catalog";
 
 const execFileAsync = promisify(execFile);
+const areas = ["app", "testing", "quality", "release", "editor"] as const;
+const reservedIds = new Set(["help", "package-manager", "plan", "target", "version"]);
 
 type NewToolchainOptions = {
-  adapterExportName: string;
-  catalog: ToolchainCatalog;
+  area: ToolchainArea;
+  capabilities: readonly ToolchainCapability[];
   command: string;
+  commandArgs?: readonly string[];
+  commandId?: string;
+  distTag?: string;
+  docs: readonly ToolchainOriginDocs[];
+  help: boolean;
+  id: string;
+  label: string;
+  order: number;
+  packageName: string;
+  runner?: "auto" | "create" | "dlx";
+  subcommand?: string | null;
+  summary: string;
+};
+
+type ParsedArgs = {
+  area?: ToolchainArea;
+  capabilities?: ToolchainCapability[];
+  command?: string;
   commandArgs?: string[];
   commandId?: string;
   distTag?: string;
-  docs: readonly ToolchainCliDocs[];
-  feature: string;
+  docsChecks?: string[];
+  docsConfidence?: ToolchainOriginDocs["confidence"];
+  docsMustContain?: string[];
+  docsReason?: string;
+  docsSections?: string[];
+  docsUrl?: string;
   help: boolean;
-  hint?: string;
-  label: string;
-  manifestExportName: string;
-  packageName: string;
-  runner?: string;
-  stackDir: string;
+  id?: string;
+  label?: string;
+  order?: number;
+  packageName?: string;
+  runner?: "auto" | "create" | "dlx";
+  shouldProbeHelp: boolean;
   subcommand?: string | null;
-  tool?: string;
+  summary?: string;
 };
 
 if (isMainModule()) {
@@ -50,12 +74,12 @@ export async function main(argv: readonly string[]) {
 
   const options = await resolveOptions(parsed);
   if (options == null) {
-    cancel("Stack creation cancelled.");
+    cancel("Toolchain creation cancelled.");
     process.exitCode = 1;
     return;
   }
 
-  const stackDir = path.resolve("src", "stacks", options.stackDir);
+  const stackDir = path.resolve("src", "stacks", options.id);
   const adapterPath = path.join(stackDir, "adapter.ts");
   const indexPath = path.join(stackDir, "index.ts");
   const testPath = path.join(stackDir, "init.test.ts");
@@ -93,49 +117,22 @@ export async function main(argv: readonly string[]) {
 
   outro(
     [
-      pc.green("Stack adapter created."),
+      pc.green("Toolchain adapter created."),
       `Adapter: ${pc.cyan(path.relative(process.cwd(), adapterPath))}`,
       `Init test: ${pc.cyan(path.relative(process.cwd(), testPath))}`,
       `Manifest: ${pc.cyan(`${path.relative(process.cwd(), stackDir)}/manifest.generated.json`)}`,
-      `Managed group: ${pc.cyan(`--${options.tool ?? kebabCase(options.feature)}`)}`,
+      `Selector: ${pc.cyan(`--${options.id}`)}`,
       "Next: verify the generated test matches the exact documented origin command.",
     ].join("\n"),
   );
 }
-
-type ParsedArgs = {
-  command?: string;
-  commandArgs?: string[];
-  catalog?: string;
-  commandId?: string;
-  distTag?: string;
-  docsChecks?: string[];
-  docsConfidence?: string;
-  docsMustContain?: string[];
-  docsReason?: string;
-  docsSections?: string[];
-  docsUrl?: string;
-  feature?: string;
-  help: boolean;
-  hint?: string;
-  label?: string;
-  adapterExportName?: string;
-  manifestExportName?: string;
-  packageName?: string;
-  runner?: string;
-  stackDir?: string;
-  subcommand?: string | null;
-  tool?: string;
-  shouldProbeHelp: boolean;
-};
 
 export function parseNewToolchainArgs(argv: readonly string[]): ParsedArgs {
   const { positionals, tokens, values } = parseArgs({
     args: [...argv],
     allowPositionals: true,
     options: {
-      cmd: { type: "string" },
-      catalog: { type: "string" },
+      area: { type: "string" },
       command: { type: "string" },
       "command-arg": { type: "string", multiple: true },
       "command-id": { type: "string" },
@@ -146,19 +143,15 @@ export function parseNewToolchainArgs(argv: readonly string[]): ParsedArgs {
       "docs-reason": { type: "string" },
       "docs-section": { type: "string", multiple: true },
       "docs-url": { type: "string" },
-      export: { type: "string" },
-      feature: { type: "string" },
       help: { type: "boolean", short: "h" },
-      hint: { type: "string" },
       label: { type: "string" },
-      "manifest-export": { type: "string" },
       "no-help": { type: "boolean" },
+      order: { type: "string" },
       package: { type: "string" },
-      pkg: { type: "string" },
+      provides: { type: "string", multiple: true },
       runner: { type: "string" },
-      "stack-dir": { type: "string" },
       subcommand: { type: "string" },
-      tool: { type: "string" },
+      summary: { type: "string" },
     },
     strict: true,
     tokens: true,
@@ -167,119 +160,134 @@ export function parseNewToolchainArgs(argv: readonly string[]): ParsedArgs {
   if (positionals.length > 1) {
     throw new Error(`Unknown argument: ${positionals[1]}`);
   }
-  rejectDuplicateNewToolchainOptions(tokens);
-  if (positionals.length === 1 && values.feature != null) {
-    throw new Error("Use either a positional feature or --feature, not both.");
-  }
-  const feature = positionals[0] ?? values.feature;
-  if (feature != null) {
-    assertFeature(feature);
-  }
-  if (values["stack-dir"] != null) {
-    assertStackDir(values["stack-dir"]);
+  rejectDuplicateOptions(tokens);
+
+  const id = positionals[0];
+  if (id != null) {
+    assertCanonicalId(id);
   }
 
   return {
-    command: values.command ?? values.cmd,
+    area: parseArea(values.area),
+    capabilities: parseCapabilities(normalizeRepeatedValues(values.provides)),
+    command: normalizeOptionalValue(values.command, "command"),
     commandArgs: normalizeCommandArgs(values["command-arg"]),
-    catalog: values.catalog,
-    commandId: values["command-id"],
-    distTag: values["dist-tag"],
+    commandId: normalizeOptionalValue(values["command-id"], "command id"),
+    distTag: normalizeOptionalValue(values["dist-tag"], "dist tag"),
     docsChecks: normalizeRepeatedValues(values["docs-check"]),
-    docsConfidence: values["docs-confidence"],
+    docsConfidence: parseDocsConfidence(values["docs-confidence"]),
     docsMustContain: normalizeRepeatedValues(values["docs-must-contain"]),
-    docsReason: values["docs-reason"],
+    docsReason: normalizeOptionalValue(values["docs-reason"], "docs reason"),
     docsSections: normalizeRepeatedValues(values["docs-section"]),
-    docsUrl: values["docs-url"],
-    feature,
+    docsUrl: normalizeOptionalValue(values["docs-url"], "docs URL"),
     help: values.help === true,
-    hint: values.hint,
-    label: values.label,
-    adapterExportName: values.export,
-    manifestExportName: values["manifest-export"],
-    packageName: values.package ?? values.pkg,
-    runner: values.runner,
-    stackDir: values["stack-dir"],
-    subcommand: parseSubcommand(values.subcommand),
-    tool: values.tool,
+    id,
+    label: normalizeOptionalValue(values.label, "label"),
+    order: parseOrder(values.order),
+    packageName: normalizeOptionalValue(values.package, "package"),
+    runner: parseRunner(values.runner),
     shouldProbeHelp: values["no-help"] !== true,
+    subcommand: parseSubcommand(values.subcommand),
+    summary: normalizeOptionalValue(values.summary, "summary"),
   };
 }
 
 async function resolveOptions(parsed: ParsedArgs): Promise<NewToolchainOptions | null> {
-  const feature = await promptRequired({
-    initialValue: parsed.feature,
-    message: "Feature id",
-    placeholder: "hotUpdater",
+  const id = await promptRequired({
+    initialValue: parsed.id,
+    message: "Canonical toolchain id",
+    placeholder: "hot-updater",
   });
-  if (feature == null) {
-    return null;
-  }
-  assertFeature(feature);
+  if (id == null) return null;
+  assertCanonicalId(id);
+
+  const label = await promptRequired({
+    initialValue: parsed.label,
+    message: "Display label",
+    placeholder: "Hot Updater",
+  });
+  if (label == null) return null;
+
+  const summary = await promptRequired({
+    initialValue: parsed.summary,
+    message: "Catalog summary",
+    placeholder: "Runs the official Hot Updater initializer",
+  });
+  if (summary == null) return null;
+
+  const areaValue = await promptRequired({
+    initialValue: parsed.area,
+    message: "Catalog area",
+    placeholder: areas.join(", "),
+  });
+  if (areaValue == null) return null;
+  const area = parseArea(areaValue);
+  if (area == null) throw new Error("Catalog area is required.");
+
+  const capabilityValue = await promptRequired({
+    initialValue: parsed.capabilities?.join(","),
+    message: "Capabilities (comma-separated)",
+    placeholder: Object.keys(toolchainCapabilities).join(", "),
+  });
+  if (capabilityValue == null) return null;
+  const capabilities = parseCapabilities(capabilityValue.split(","));
+  if (capabilities == null) throw new Error("At least one capability is required.");
+
+  const orderValue = await promptRequired({
+    initialValue: parsed.order?.toString(),
+    message: "Catalog order",
+    placeholder: "40",
+  });
+  if (orderValue == null) return null;
+  const order = parseOrder(orderValue);
+  if (order == null) throw new Error("Catalog order is required.");
 
   const packageName = await promptRequired({
     initialValue: parsed.packageName,
     message: "CLI package",
     placeholder: "hot-updater",
   });
-  if (packageName == null) {
-    return null;
-  }
+  if (packageName == null) return null;
 
   const command = await promptRequired({
     initialValue: parsed.command,
-    message: "CLI command",
+    message: "CLI command id",
     placeholder: "init",
   });
-  if (command == null) {
-    return null;
-  }
+  if (command == null) return null;
 
   const docsUrl = await promptRequired({
     initialValue: parsed.docsUrl,
     message: "Official CLI/setup docs URL",
     placeholder: "https://example.com/docs/cli",
   });
-  if (docsUrl == null) {
-    return null;
-  }
+  if (docsUrl == null) return null;
 
   const docsMustContain = await resolveDocsMustContain(
     parsed.docsMustContain,
     packageName,
     command,
   );
-  if (docsMustContain == null) {
-    return null;
-  }
+  if (docsMustContain == null) return null;
 
-  const stackDir = parsed.stackDir ?? kebabCase(feature);
-  const adapterExportName = parsed.adapterExportName ?? camelCase(feature);
-  const manifestExportName = parsed.manifestExportName ?? `${camelCase(feature)}CliManifest`;
-  assertIdentifier(adapterExportName, "adapter export");
-  assertIdentifier(manifestExportName, "manifest export");
-  assertStackDir(stackDir);
-  assertCatalog(parsed.catalog);
-  assertRunner(parsed.runner);
-  const docsConfidence = parseDocsConfidence(parsed.docsConfidence);
   const docsReason =
-    parsed.docsReason?.trim() ||
-    `Adapter runs the exact official ${parsed.label ?? titleCase(feature)} command as the final project mutation.`;
+    parsed.docsReason ??
+    `Adapter runs the exact official ${label} command as the only project mutation.`;
   const docsChecks =
-    parsed.docsChecks?.length != null && parsed.docsChecks.length > 0
+    parsed.docsChecks != null && parsed.docsChecks.length > 0
       ? parsed.docsChecks
       : [
           `Confirm \`${formatOriginCommand(
             packageName,
-            parsed.subcommand === undefined ? command : parsed.subcommand,
+            resolveSubcommand(packageName, parsed.runner, parsed.subcommand, command),
             parsed.commandArgs,
-          )}\` remains the supported command.`,
-          "Confirm the wrapper only prepares documented prerequisites and does not mutate the project after this command returns.",
+          )}\` remains the supported initializer.`,
+          "Confirm the wrapper only plans and invokes this command and never changes the project itself.",
         ];
 
   return {
-    adapterExportName,
-    catalog: parsed.catalog ?? "quality",
+    area,
+    capabilities,
     command,
     commandArgs: parsed.commandArgs,
     commandId: parsed.commandId,
@@ -287,10 +295,10 @@ async function resolveOptions(parsed: ParsedArgs): Promise<NewToolchainOptions |
     docs: [
       {
         url: docsUrl,
-        confidence: docsConfidence,
+        confidence: parsed.docsConfidence ?? "high",
         review: {
           reason: docsReason,
-          files: [`src/stacks/${stackDir}/adapter.ts`, `src/stacks/${stackDir}/init.test.ts`],
+          files: [`src/stacks/${id}/adapter.ts`, `src/stacks/${id}/init.test.ts`],
           ...(parsed.docsSections != null && parsed.docsSections.length > 0
             ? { sections: parsed.docsSections }
             : {}),
@@ -299,16 +307,14 @@ async function resolveOptions(parsed: ParsedArgs): Promise<NewToolchainOptions |
         },
       },
     ],
-    feature,
     help: parsed.shouldProbeHelp,
-    hint: parsed.hint,
-    label: parsed.label ?? titleCase(feature),
-    manifestExportName,
+    id,
+    label,
+    order,
     packageName,
     runner: parsed.runner,
-    stackDir,
     subcommand: parsed.subcommand,
-    tool: parsed.tool,
+    summary,
   };
 }
 
@@ -352,20 +358,17 @@ async function resolveDocsMustContain(
   return marker == null ? null : [marker];
 }
 
-function parseDocsConfidence(value: string | undefined): ToolchainCliDocs["confidence"] {
-  if (value == null || value === "high") {
-    return "high";
+function normalizeOptionalValue(value: string | undefined, label: string) {
+  if (value == null) return undefined;
+  const normalized = value.trim();
+  if (normalized.length === 0) {
+    throw new Error(`${label} cannot be empty.`);
   }
-  if (value === "medium" || value === "low") {
-    return value;
-  }
-  throw new Error(`Invalid docs confidence: ${value}`);
+  return normalized;
 }
 
 function normalizeRepeatedValues(values: string[] | undefined) {
-  if (values == null) {
-    return undefined;
-  }
+  if (values == null) return undefined;
   const normalized = values.map((value) => value.trim());
   if (normalized.some((value) => value.length === 0)) {
     throw new Error("Repeated option values cannot be empty.");
@@ -374,13 +377,71 @@ function normalizeRepeatedValues(values: string[] | undefined) {
 }
 
 function normalizeCommandArgs(values: string[] | undefined) {
-  if (values == null) {
-    return undefined;
-  }
+  if (values == null) return undefined;
   if (values.some((value) => value.length === 0)) {
     throw new Error("Command argument values cannot be empty.");
   }
   return [...values];
+}
+
+function parseArea(value: string | undefined): ToolchainArea | undefined {
+  if (value == null) return undefined;
+  if (areas.some((area) => area === value)) return value as ToolchainArea;
+  throw new Error(`Invalid area: ${value}. Expected one of: ${areas.join(", ")}.`);
+}
+
+function parseCapabilities(values: string[] | undefined): ToolchainCapability[] | undefined {
+  if (values == null) return undefined;
+  const capabilities = values.map((value) => value.trim());
+  if (capabilities.length === 0 || capabilities.some((value) => value.length === 0)) {
+    throw new Error("At least one nonempty --provides capability is required.");
+  }
+  const duplicate = capabilities.find(
+    (capability, index) => capabilities.indexOf(capability) !== index,
+  );
+  if (duplicate != null) {
+    throw new Error(`Duplicate capability: ${duplicate}.`);
+  }
+  const supported = Object.keys(toolchainCapabilities);
+  const invalid = capabilities.find((capability) => !supported.includes(capability));
+  if (invalid != null) {
+    throw new Error(`Invalid capability: ${invalid}. Expected one of: ${supported.join(", ")}.`);
+  }
+  return capabilities as ToolchainCapability[];
+}
+
+function parseOrder(value: string | undefined) {
+  if (value == null) return undefined;
+  if (!/^-?(?:\d+\.?\d*|\.\d+)$/.test(value)) {
+    throw new Error(`Invalid order: ${value}. Expected a finite number.`);
+  }
+  const order = Number(value);
+  if (!Number.isFinite(order)) {
+    throw new Error(`Invalid order: ${value}. Expected a finite number.`);
+  }
+  return order;
+}
+
+function parseRunner(value: string | undefined): ParsedArgs["runner"] {
+  if (value == null || value === "auto" || value === "create" || value === "dlx") {
+    return value;
+  }
+  throw new Error(`Invalid runner: ${value}. Expected one of: auto, create, dlx.`);
+}
+
+function parseSubcommand(value: string | undefined) {
+  if (value == null) return undefined;
+  if (value.length === 0) throw new Error("subcommand cannot be empty.");
+  return value === "none" ? null : value;
+}
+
+function parseDocsConfidence(
+  value: string | undefined,
+): ToolchainOriginDocs["confidence"] | undefined {
+  if (value == null || value === "high" || value === "medium" || value === "low") {
+    return value;
+  }
+  throw new Error(`Invalid docs confidence: ${value}. Expected one of: high, medium, low.`);
 }
 
 function formatOriginCommand(
@@ -393,80 +454,35 @@ function formatOriginCommand(
   );
 }
 
-function rejectDuplicateNewToolchainOptions(tokens: readonly { kind: string; name?: string }[]) {
-  const aliases = [
-    ["command", "cmd"],
-    ["package", "pkg"],
-  ];
-  const repeatable = new Set(["command-arg", "docs-check", "docs-must-contain", "docs-section"]);
+function rejectDuplicateOptions(tokens: readonly { kind: string; name?: string }[]) {
+  const repeatable = new Set([
+    "command-arg",
+    "docs-check",
+    "docs-must-contain",
+    "docs-section",
+    "provides",
+  ]);
   const optionTokens = tokens.filter(
     (token): token is { kind: "option"; name: string } =>
       token.kind === "option" && token.name != null,
   );
-  const checked = new Set<string>();
-
-  for (const aliasGroup of aliases) {
-    const matches = optionTokens.filter((token) => aliasGroup.includes(token.name));
-    if (matches.length > 1) {
-      throw new Error(`Duplicate option: --${matches[1]?.name ?? aliasGroup[0]}.`);
-    }
-    aliasGroup.forEach((name) => checked.add(name));
-  }
+  const seen = new Set<string>();
 
   for (const token of optionTokens) {
-    if (checked.has(token.name) || repeatable.has(token.name)) {
-      continue;
-    }
-    checked.add(token.name);
-    if (optionTokens.filter((candidate) => candidate.name === token.name).length > 1) {
+    if (repeatable.has(token.name)) continue;
+    if (seen.has(token.name)) {
       throw new Error(`Duplicate option: --${token.name}.`);
     }
+    seen.add(token.name);
   }
 }
 
-function parseSubcommand(value: string | undefined) {
-  if (value == null) {
-    return undefined;
-  }
-  return value === "none" || value === "null" ? null : value;
-}
-
-function assertIdentifier(value: string, label: string) {
-  if (!/^[A-Za-z_$][A-Za-z0-9_$]*$/.test(value)) {
-    throw new Error(`Invalid ${label} name: ${value}`);
-  }
-}
-
-function assertFeature(value: string) {
-  if (!/^[a-z][A-Za-z0-9]*$/.test(value)) {
-    throw new Error(`Invalid feature id: ${value}. Use lowerCamelCase.`);
-  }
-  if (value === "all") {
-    throw new Error('Invalid feature id: "all" is reserved by the CLI selector.');
-  }
-}
-
-function assertStackDir(value: string) {
+function assertCanonicalId(value: string) {
   if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value)) {
-    throw new Error(`Invalid stack directory: ${value}`);
+    throw new Error(`Invalid toolchain id: ${value}. Use lowercase kebab-case.`);
   }
-}
-
-function assertCatalog(value: string | undefined): asserts value is ToolchainCatalog | undefined {
-  if (
-    value != null &&
-    value !== "app" &&
-    value !== "quality" &&
-    value !== "release" &&
-    value !== "editor"
-  ) {
-    throw new Error(`Invalid catalog: ${value}`);
-  }
-}
-
-function assertRunner(value: string | undefined) {
-  if (value != null && value !== "auto" && value !== "create" && value !== "dlx") {
-    throw new Error(`Invalid runner: ${value}`);
+  if (reservedIds.has(value)) {
+    throw new Error(`Invalid toolchain id: ${value} is reserved by the CLI.`);
   }
 }
 
@@ -494,70 +510,58 @@ function printProcessError(error: unknown) {
 
   const stdout = "stdout" in error && typeof error.stdout === "string" ? error.stdout.trim() : "";
   const stderr = "stderr" in error && typeof error.stderr === "string" ? error.stderr.trim() : "";
-  if (stdout.length > 0) {
-    log.info(stdout);
-  }
-  if (stderr.length > 0) {
-    log.error(stderr);
-  }
+  if (stdout.length > 0) log.info(stdout);
+  if (stderr.length > 0) log.error(stderr);
   if (stdout.length === 0 && stderr.length === 0 && error instanceof Error) {
     log.error(error.message);
   }
 }
 
 export function renderAdapter(options: NewToolchainOptions) {
-  if (options.docs.length === 0) {
-    throw new Error("At least one docs source is required.");
-  }
-
-  const defaultManifestExportName = `${options.feature}CliManifest`;
-  const properties: Array<readonly [string, unknown]> = [
-    ["feature", options.feature],
-    ["label", options.label],
-    ["catalog", options.catalog],
+  assertRenderableOptions(options);
+  const originProperties: Array<readonly [string, unknown]> = [
     ["package", options.packageName],
     ["command", options.command],
-    ["managedCli", true],
-    ["docs", options.docs],
   ];
-
   if (options.commandArgs != null && options.commandArgs.length > 0) {
-    properties.push(["commandArgs", options.commandArgs]);
+    originProperties.push(["commandArgs", options.commandArgs]);
   }
-  if (options.hint != null) properties.push(["hint", options.hint]);
-  if (options.commandId != null) properties.push(["commandId", options.commandId]);
-  if (options.distTag != null) properties.push(["distTag", options.distTag]);
-  if (options.manifestExportName !== defaultManifestExportName) {
-    properties.push(["exportName", options.manifestExportName]);
-  }
-  const defaultStackDir = options.tool ?? kebabCase(options.feature);
-  if (options.stackDir !== defaultStackDir) {
-    properties.push(["stackDir", options.stackDir]);
-  }
-  if (!options.help) properties.push(["help", false]);
-  if (options.runner != null) properties.push(["runner", options.runner]);
-  if (options.subcommand !== undefined) properties.push(["subcommand", options.subcommand]);
-  if (options.tool != null) properties.push(["tool", options.tool]);
+  if (options.commandId != null) originProperties.push(["commandId", options.commandId]);
+  if (options.distTag != null) originProperties.push(["distTag", options.distTag]);
+  if (!options.help) originProperties.push(["help", false]);
+  if (options.runner != null) originProperties.push(["runner", options.runner]);
+  if (options.subcommand !== undefined) originProperties.push(["subcommand", options.subcommand]);
+  originProperties.push(["docs", options.docs]);
 
   return `import { defineToolchain } from "../../core/toolchain-adapter";
 
-export const ${options.adapterExportName} = defineToolchain({
-${properties.map(([key, value]) => `  ${key}: ${JSON.stringify(value)},`).join("\n")}
+export const ${camelCase(options.id)} = defineToolchain({
+  id: ${JSON.stringify(options.id)},
+  label: ${JSON.stringify(options.label)},
+  summary: ${JSON.stringify(options.summary)},
+  area: ${JSON.stringify(options.area)},
+  capabilities: ${JSON.stringify(options.capabilities)},
+  order: ${JSON.stringify(options.order)},
+  origin: {
+${originProperties.map(([key, value]) => `    ${key}: ${JSON.stringify(value)},`).join("\n")}
+  },
 });
 `;
 }
 
 export function renderInitTest(options: NewToolchainOptions) {
-  const packageManager: PackageManager = "npm";
-  const commandId = options.commandId ?? options.command;
-  const expectedCommand = renderExpectedOriginCommand(options, packageManager);
+  assertRenderableOptions(options);
+  const adapterExportName = camelCase(options.id);
+  const manifestExportName = `${adapterExportName}CliManifest`;
+  const routedArgs = ["--scaffold-test-flag=value", "./scaffold-test-target"];
+  const expectedCommand = renderExpectedOriginCommand(options, manifestExportName, routedArgs);
 
   return `import { beforeEach, describe, expect, it, vi } from "vitest";
-import { resolveCliCommand } from "../../core/cli-command-manifest";
-import { runExternalToolchains } from "../../core/external-toolchains";
-import { ${options.adapterExportName} } from "./adapter";
-import { ${options.manifestExportName} } from "./manifest";
-import { options } from "../init-test-utils";
+import { parseCliOptions } from "../../core/cli-options";
+import { executePlan } from "../../core/execute-plan";
+import { buildExecutionPlan } from "../../core/execution-plan";
+import { ${adapterExportName} } from "./adapter";
+import { ${manifestExportName} } from "./manifest";
 
 const mocks = vi.hoisted(() => ({
   runCommand: vi.fn(async () => {}),
@@ -572,118 +576,112 @@ describe("${options.label} adapter init", () => {
     mocks.runCommand.mockClear();
   });
 
-  it("runs the exact origin command as the terminal mutation", async () => {
-    expect(${options.adapterExportName}.managedCli).toBe(true);
-    const command = resolveCliCommand(
-      ${options.manifestExportName},
-      ${JSON.stringify(commandId)},
-      ${JSON.stringify(packageManager)},
-    );
-    expect(command).toEqual(${expectedCommand});
+  it("plans and hands off the exact origin command once without mutation hooks", async () => {
+    expect(${adapterExportName}).toMatchObject({
+      id: ${JSON.stringify(options.id)},
+      area: ${JSON.stringify(options.area)},
+      capabilities: ${JSON.stringify(options.capabilities)},
+      origin: {
+        package: ${JSON.stringify(options.packageName)},
+        command: ${JSON.stringify(options.command)},
+      },
+    });
+    for (const mutationHook of [
+      "afterInstall",
+      "afterWrite",
+      "beforeRun",
+      "execute",
+      "updatePackageJson",
+    ]) {
+      expect(${adapterExportName}).not.toHaveProperty(mutationHook);
+    }
 
-    await runExternalToolchains(
-      ".",
-      ${JSON.stringify(packageManager)},
-      options([${JSON.stringify(options.feature)}]),
-    );
+    const parsed = parseCliOptions([
+      ${JSON.stringify(`--${options.id}`)},
+      ${JSON.stringify(`--${options.id}.scaffold-test-flag=value`)},
+      ${JSON.stringify(`--${options.id}.raw.arg=./scaffold-test-target`)},
+    ]);
+    expect(parsed.originArgs[${JSON.stringify(options.id)}]).toEqual(${JSON.stringify(routedArgs)});
+
+    const plan = buildExecutionPlan({
+      cwd: ".",
+      manifests: [${manifestExportName}],
+      packageManager: "npm",
+      selectedToolchains: [${adapterExportName}],
+      userArgs: parsed.originArgs,
+    });
+    expect(plan.steps).toHaveLength(1);
+    expect(plan.steps[0]).toEqual({
+      id: ${JSON.stringify(options.id)},
+      label: ${JSON.stringify(options.label)},
+      packageName: ${JSON.stringify(options.packageName)},
+      packageVersion: ${manifestExportName}.version,
+      command: ${expectedCommand},
+      source: ${JSON.stringify(options.docs[0]?.url)},
+    });
+
+    await executePlan(plan);
 
     expect(mocks.runCommand).toHaveBeenCalledOnce();
-    expect(mocks.runCommand).toHaveBeenCalledWith(".", command.bin, command.args);
+    expect(mocks.runCommand).toHaveBeenCalledWith(
+      ".",
+      plan.steps[0]?.command.bin,
+      plan.steps[0]?.command.args,
+    );
   });
 });
 `;
 }
 
-function renderExpectedOriginCommand(options: NewToolchainOptions, packageManager: PackageManager) {
-  const runner =
-    options.runner === "auto" || options.runner == null
-      ? getPackageNameWithoutScope(options.packageName).startsWith("create-")
-        ? "create"
-        : "dlx"
-      : options.runner;
-  const commandArgs = options.commandArgs ?? [];
-  const commandArgTokens = commandArgs.map((argument) => JSON.stringify(argument));
-  const subcommand = options.subcommand === undefined ? options.command : options.subcommand;
+function renderExpectedOriginCommand(
+  options: NewToolchainOptions,
+  manifestExportName: string,
+  userArgs: readonly string[],
+) {
+  const runner = resolveRunner(options.packageName, options.runner);
+  const commandArgs = [...(options.commandArgs ?? []), ...userArgs];
+  const args: string[] = [];
   let bin: string;
-  let args: string[];
   let versionedPackage: string;
 
   if (runner === "create") {
-    versionedPackage =
-      packageManager === "deno"
-        ? options.packageName
-        : getCreateInitializerName(options.packageName);
-    const packageToken = renderVersionedPackageToken(
-      versionedPackage,
-      options.manifestExportName,
-      packageManager === "deno" ? "npm:" : "",
-    );
-    ({ bin, args } = {
-      npm: {
-        bin: "npm",
-        args: [JSON.stringify("init"), packageToken, JSON.stringify("--"), ...commandArgTokens],
-      },
-      pnpm: { bin: "pnpm", args: [JSON.stringify("create"), packageToken, ...commandArgTokens] },
-      yarn: { bin: "yarn", args: [JSON.stringify("create"), packageToken, ...commandArgTokens] },
-      bun: { bin: "bun", args: [JSON.stringify("create"), packageToken, ...commandArgTokens] },
-      deno: {
-        bin: "deno",
-        args: [JSON.stringify("x"), JSON.stringify("-A"), packageToken, ...commandArgTokens],
-      },
-    }[packageManager]);
+    bin = "npm";
+    versionedPackage = getCreateInitializerName(options.packageName);
+    const subcommand = options.subcommand == null ? [] : [options.subcommand];
+    args.push("init", versionedPackage, "--", ...subcommand, ...commandArgs);
   } else {
+    bin = "npx";
     versionedPackage = options.packageName;
-    const packageToken = renderVersionedPackageToken(
-      versionedPackage,
-      options.manifestExportName,
-      packageManager === "deno" ? "npm:" : "",
-    );
-    const originArgs = [...(subcommand == null ? [] : [subcommand]), ...commandArgs].map(
-      (argument) => JSON.stringify(argument),
-    );
-    ({ bin, args } = {
-      npm: { bin: "npx", args: [packageToken, ...originArgs] },
-      pnpm: { bin: "pnpm", args: [JSON.stringify("dlx"), packageToken, ...originArgs] },
-      yarn: { bin: "yarn", args: [JSON.stringify("dlx"), packageToken, ...originArgs] },
-      bun: { bin: "bunx", args: [packageToken, ...originArgs] },
-      deno: {
-        bin: "deno",
-        args: [JSON.stringify("x"), JSON.stringify("-A"), packageToken, ...originArgs],
-      },
-    }[packageManager]);
+    const subcommand = options.subcommand === undefined ? options.command : options.subcommand;
+    args.push(versionedPackage, ...(subcommand == null ? [] : [subcommand]), ...commandArgs);
   }
 
-  return `{
-      bin: ${JSON.stringify(bin)},
-      args: [${args.join(", ")}],
-    }`;
+  const renderedArgs = args.map((argument, index) =>
+    index === (runner === "create" ? 1 : 0)
+      ? `\`${argument}@\${${manifestExportName}.version}\``
+      : JSON.stringify(argument),
+  );
+  return `{ bin: ${JSON.stringify(bin)}, args: [${renderedArgs.join(", ")}] }`;
 }
 
-function renderVersionedPackageToken(
-  packageName: string,
-  manifestExportName: string,
-  prefix: string,
-) {
-  return `\`${prefix}${packageName}@\${${manifestExportName}.version}\``;
-}
-
-function getCreateInitializerName(packageName: string) {
-  const scopedPackageMatch = /^(@[^/]+)\/(.+)$/.exec(packageName);
-  if (scopedPackageMatch != null) {
-    const [, scope, packageNameWithoutScope] = scopedPackageMatch;
-    return `${scope}/${packageNameWithoutScope?.replace(/^create-/, "")}`;
+function assertRenderableOptions(options: NewToolchainOptions) {
+  assertCanonicalId(options.id);
+  if (options.capabilities.length === 0) {
+    throw new Error("At least one capability is required.");
   }
-
-  return packageName.replace(/^create-/, "");
-}
-
-function getPackageNameWithoutScope(packageName: string) {
-  return packageName.split("/").at(-1) ?? packageName;
+  if (options.docs.length === 0) {
+    throw new Error("At least one docs source is required.");
+  }
+  if (!Number.isFinite(options.order)) {
+    throw new Error("Catalog order must be a finite number.");
+  }
 }
 
 function renderIndex(options: NewToolchainOptions) {
-  return `export { ${options.adapterExportName} } from "./adapter";
-export { ${options.manifestExportName}, ${options.manifestExportName}Data } from "./manifest";
+  const adapterExportName = camelCase(options.id);
+  const manifestExportName = `${adapterExportName}CliManifest`;
+  return `export { ${adapterExportName} } from "./adapter";
+export { ${manifestExportName}, ${manifestExportName}Data } from "./manifest";
 `;
 }
 
@@ -692,70 +690,90 @@ function printHelp() {
 }
 
 export function renderNewToolchainHelp() {
-  return `Create a managed CLI-backed stack adapter and generate its manifest.
+  return `Create a canonical origin-CLI toolchain and generate its pinned manifest.
 
 Usage:
-  yarn new <feature> --package <package> --command <command> --docs-url <url> \\
+  yarn new <kebab-id> --label <label> --summary <summary> \\
+    --area <app|testing|quality|release|editor> --provides <capability> \\
+    --order <number> --package <package> --command <command> --docs-url <url> \\
     --docs-must-contain <text>
 
 Example:
-  yarn new example --package create-example --command init \\
-    --docs-url https://example.com/docs/cli --docs-must-contain "create-example init"
+  yarn new example --label "Example" --summary "Runs the official Example initializer" \\
+    --area quality --provides linting --order 40 --package create-example \\
+    --command init --docs-url https://example.com/docs/cli \\
+    --docs-must-contain "create-example init"
 
-Options:
-  <feature>                    lowerCamelCase feature id, such as reactDoctor.
-  --stack-dir <name>           Directory under src/stacks. Defaults to kebab-case feature.
-  --label <label>              Prompt label. Defaults to title-cased feature.
-  --catalog <name>             app,quality,release,editor. Defaults to quality.
-  --hint <hint>                Optional prompt hint.
-  --export <name>              Adapter export name. Defaults to camel-cased feature.
-  --manifest-export <name>     Manifest export name. Defaults to <feature>CliManifest.
-  --tool <tool>                Manifest tool and public argument-group id override.
-  --command-id <id>            Manifest command id override.
-  --subcommand <cmd|none>      Runtime subcommand override.
+Catalog options:
+  <kebab-id>                   Canonical directory, adapter, manifest, and selector id.
+  --label <label>              User-facing catalog label. Required.
+  --summary <summary>          Concise description of the upstream initializer. Required.
+  --area <area>                app, testing, quality, release, or editor. Required.
+  --provides <capability>      Catalog capability; required and repeatable.
+  --order <number>             Numeric catalog order. Required.
+
+Origin command options:
+  --package <package>          Official origin CLI package. Required.
+  --command <command>          Stable command identity. Required.
+  --command-id <id>            Generated manifest command id override.
+  --subcommand <cmd|none>      Runtime subcommand override; none suppresses it.
   --command-arg <arg>          Static origin-command token; repeat to preserve order.
   --dist-tag <tag>             npm dist-tag. Defaults to latest.
-  --runner <auto|create|dlx>   Package manager command inference mode.
-  --no-help                    Skip CLI help probing.
+  --runner <auto|create|dlx>   Package-manager command inference mode.
+  --no-help                    Skip origin CLI help probing.
+
+Documentation evidence:
   --docs-url <url>             Official CLI/setup docs URL. Required.
-  --docs-confidence <level>    high,medium,low. Defaults to high.
-  --docs-reason <reason>       Why the adapter policy depends on the docs.
-  --docs-section <name>        Review section. Repeat for multiple sections.
-  --docs-must-contain <text>   Stable docs marker. At least one; repeatable.
-  --docs-check <check>         Manual review check. Repeat for multiple checks.
-Generated adapter contract:
-  Executable scaffolds declare managedCli: true.
-  commandArgs contains only documented static tokens that identify the origin command.
-  --<manifest.tool> selects the tool; --<tool>.<generated-flag>[=value] forwards an option.
-  --<tool>.raw.arg=<token> repeats positionals, repeated flags, or exact passthrough tokens.
-  Generated manifests own discovered flag names for help; parsing forwards opaque upstream tokens.
-  --yes belongs to toolchains-init only; it is not forwarded and never changes origin CLI stdin.
+  --docs-confidence <level>    high, medium, or low. Defaults to high.
+  --docs-reason <reason>       What the official source proves.
+  --docs-section <name>        Review section; repeatable.
+  --docs-must-contain <text>   Stable docs marker; at least one and repeatable.
+  --docs-check <check>         Manual review check; repeatable.
+
+Generated CLI contract:
+  --<kebab-id> selects the tool.
+  --<kebab-id>.<flag>[=value] forwards an opaque namespaced origin option.
+  --<kebab-id>.raw.arg=<token> forwards one exact token; repeat to preserve order.
+  The wrapper builds and prints the complete execution plan before any origin command runs.
+  There is no wrapper --yes; an origin --<kebab-id>.yes option remains opaque passthrough.
 `;
 }
 
+function resolveRunner(packageName: string, runner: NewToolchainOptions["runner"]) {
+  return runner == null || runner === "auto"
+    ? getPackageNameWithoutScope(packageName).startsWith("create-")
+      ? "create"
+      : "dlx"
+    : runner;
+}
+
+export function resolveSubcommand(
+  packageName: string,
+  runner: NewToolchainOptions["runner"],
+  subcommand: string | null | undefined,
+  command: string,
+) {
+  if (resolveRunner(packageName, runner) === "create") {
+    return subcommand === undefined ? null : subcommand;
+  }
+  return subcommand === undefined ? command : subcommand;
+}
+
+function getCreateInitializerName(packageName: string) {
+  const scopedPackageMatch = /^(@[^/]+)\/(.+)$/.exec(packageName);
+  if (scopedPackageMatch != null) {
+    const [, scope, packageNameWithoutScope] = scopedPackageMatch;
+    return `${scope}/${packageNameWithoutScope?.replace(/^create-/, "")}`;
+  }
+  return packageName.replace(/^create-/, "");
+}
+
+function getPackageNameWithoutScope(packageName: string) {
+  return packageName.split("/").at(-1) ?? packageName;
+}
+
 function camelCase(value: string) {
-  return value
-    .split(/[-_\s]+/)
-    .filter(Boolean)
-    .map((word, index) => (index === 0 ? word : `${word[0]?.toUpperCase() ?? ""}${word.slice(1)}`))
-    .join("");
-}
-
-function kebabCase(value: string) {
-  return value
-    .replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)
-    .split(/[-_\s]+/)
-    .filter(Boolean)
-    .join("-");
-}
-
-function titleCase(value: string) {
-  return value
-    .replace(/[A-Z]/g, (letter) => ` ${letter}`)
-    .split(/[-_\s]+/)
-    .filter(Boolean)
-    .map((word) => `${word[0]?.toUpperCase() ?? ""}${word.slice(1)}`)
-    .join(" ");
+  return value.replace(/-([a-z0-9])/g, (_, character: string) => character.toUpperCase());
 }
 
 function isMainModule() {

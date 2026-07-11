@@ -101,7 +101,7 @@ jobs:
                 "" \
                 "Failure stage: $reason" \
                 "" \
-                "This is an explicit CLI/generation failure, so inspect the named adapter policy or manifest generator, then run:" \
+                "This is an explicit CLI/generation failure, so inspect the named origin identity or manifest generator, then run:" \
                 "" \
                 '```sh' \
                 "yarn manifests:update" \
@@ -228,7 +228,7 @@ jobs:
               '"toolchains-init": patch' \
               '---' \
               '' \
-              'Update generated CLI command manifests from upstream package metadata.'
+              'Update pinned upstream versions, displayed execution plans, command invocations, and generated focused help.'
           } > "$changeset"
 
           git add -N -- "$changeset"
@@ -365,7 +365,7 @@ jobs:
                 '"toolchains-init": patch' \
                 '---' \
                 '' \
-                'Update generated CLI command manifests from upstream package metadata.'
+                'Update pinned upstream versions, displayed execution plans, command invocations, and generated focused help.'
             } > "$expected_changeset"
             if [[ ! -f "$changeset" || -L "$changeset" ]] || ! cmp -s "$changeset" "$expected_changeset"; then
               echo "Refusing to publish a modified automation changeset." >&2

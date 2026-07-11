@@ -1,8 +1,8 @@
 import type { CliCommandManifest } from "./cli-command-manifest";
+import type { ToolchainCapability } from "./toolchain-catalog";
 import type { PackageManager } from "./package-manager";
-import type { ToolchainOptions } from "./types";
 
-export type ToolchainCatalog = "app" | "quality" | "release" | "editor";
+export type ToolchainArea = "app" | "testing" | "quality" | "release" | "editor";
 
 export type PackageManagerCommandTemplates = Partial<Record<PackageManager, readonly string[]>>;
 
@@ -10,114 +10,51 @@ export type ToolchainCliRunner = "auto" | "create" | "dlx" | PackageManagerComma
 
 const packageManagerNames = ["npm", "pnpm", "yarn", "bun", "deno"] as const;
 
-export type ToolchainCliDocs = Omit<
+export type ToolchainOriginDocs = Omit<
   Extract<CliCommandManifest["sources"][number], { kind: "docs" }>,
   "checks" | "kind"
 >;
 
-export type ToolchainCliDefinition = {
+export type ToolchainOriginDefinition = {
   package: string;
   command: string;
   commandArgs?: readonly string[];
   commandId?: string;
   distTag?: string;
-  docs?: readonly ToolchainCliDocs[];
-  exportName?: string;
+  docs: readonly ToolchainOriginDocs[];
   help?: false;
   packageManagers?: readonly PackageManager[];
   runner?: ToolchainCliRunner;
-  stackDir?: string;
   subcommand?: string | null;
-  tool?: string;
 };
 
-export type ToolchainAdapter = {
-  feature: ToolchainOptions["features"][number];
+export type ToolchainDefinition = {
+  id: string;
   label: string;
-  hint: string;
-  catalog: ToolchainCatalog;
-  order?: number;
-  cli?: ToolchainCliDefinition;
-  managedCli?: true;
+  summary: string;
+  area: ToolchainArea;
+  capabilities: readonly ToolchainCapability[];
+  order: number;
+  origin: ToolchainOriginDefinition;
 };
 
-export type DefineToolchainOptions = Omit<ToolchainAdapter, "catalog" | "cli" | "hint"> & {
-  catalog?: ToolchainCatalog;
-  hint?: string;
-} & (
-    | {
-        package: string;
-        command: string;
-        commandArgs?: readonly string[];
-        commandId?: string;
-        distTag?: string;
-        docs?: ToolchainCliDefinition["docs"];
-        exportName?: string;
-        help?: false;
-        runner?: ToolchainCliRunner;
-        stackDir?: string;
-        subcommand?: string | null;
-        tool?: string;
-      }
-    | {
-        package?: never;
-        command?: never;
-      }
-  );
+export type DefineToolchainOptions = Omit<ToolchainDefinition, "origin"> & {
+  origin: Omit<ToolchainOriginDefinition, "packageManagers">;
+};
 
-export function defineToolchain(options: DefineToolchainOptions): ToolchainAdapter {
-  const catalog = options.catalog ?? "quality";
-  const hint = options.hint ?? "";
-  if (options.package == null || options.command == null) {
-    return { ...options, catalog, hint };
-  }
-
-  const {
-    command,
-    commandArgs,
-    commandId,
-    distTag,
-    docs,
-    exportName,
-    help,
-    package: packageName,
-    runner,
-    stackDir,
-    subcommand,
-    tool,
-    ...adapter
-  } = options;
-  const resolvedPackageManagers =
+export function defineToolchain(options: DefineToolchainOptions): ToolchainDefinition {
+  const { origin, ...toolchain } = options;
+  const { runner } = origin;
+  const packageManagers =
     runner != null && typeof runner === "object"
       ? packageManagerNames.filter((packageManager) => runner[packageManager] != null)
       : undefined;
 
   return {
-    ...adapter,
-    catalog,
-    hint,
-    cli: {
-      command,
-      commandArgs,
-      commandId,
-      distTag,
-      docs,
-      exportName,
-      help,
-      package: packageName,
-      packageManagers: resolvedPackageManagers,
-      runner,
-      stackDir,
-      subcommand,
-      tool,
+    ...toolchain,
+    origin: {
+      ...origin,
+      packageManagers,
     },
   };
-}
-
-export function getToolchainCliTool(toolchain: ToolchainAdapter) {
-  return toolchain.cli?.tool ?? getToolchainId(toolchain);
-}
-
-export function getToolchainId(toolchain: Pick<ToolchainAdapter, "feature">) {
-  return toolchain.feature.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`);
 }

@@ -1,33 +1,24 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { resolveCliCommand } from "../../core/cli-command-manifest";
-import { runExternalToolchains } from "../../core/external-toolchains";
+import { vi } from "vitest";
+import { defineFocusedInitContract } from "../init-test-contract";
 import { cspell, cspellCliManifest } from "./index";
-import { options } from "../init-test-utils";
 
-const mocks = vi.hoisted(() => ({
-  runCommand: vi.fn(async () => {}),
-}));
+const mocks = vi.hoisted(() => ({ runCommand: vi.fn(async () => {}) }));
 
-vi.mock("../../core/run-command", () => ({
-  runCommand: mocks.runCommand,
-}));
+vi.mock("../../core/run-command", () => ({ runCommand: mocks.runCommand }));
 
-describe("CSpell adapter init", () => {
-  beforeEach(() => {
-    mocks.runCommand.mockClear();
-  });
-
-  it("executes cspell init with inherited stdin", async () => {
-    expect(cspell.managedCli).toBe(true);
-    const command = resolveCliCommand(cspellCliManifest, "init", "npm");
-    expect(command).toEqual({
-      bin: "npx",
-      args: [`cspell@${cspellCliManifest.version}`, "init"],
-    });
-
-    await runExternalToolchains(".", "npm", options(["cspell"]));
-
-    expect(mocks.runCommand).toHaveBeenCalledTimes(1);
-    expect(mocks.runCommand).toHaveBeenCalledWith(".", command.bin, command.args);
-  });
+defineFocusedInitContract({
+  toolchain: cspell,
+  expectedMetadata: {
+    id: "cspell",
+    area: "quality",
+    capabilities: ["spell-checking"],
+    origin: { package: "cspell", command: "init" },
+  },
+  manifest: cspellCliManifest,
+  packageManager: "npm",
+  baseCommand: {
+    bin: "npx",
+    args: [`cspell@${cspellCliManifest.version}`, "init"],
+  },
+  runCommandMock: mocks.runCommand,
 });

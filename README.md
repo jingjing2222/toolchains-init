@@ -2,15 +2,16 @@
 
 [![NPM](https://img.shields.io/npm/v/toolchains-init)](https://www.npmjs.com/package/toolchains-init)
 
-Run the origin CLIs for the toolchains you usually add after creating a new app or package.
+`toolchains-init` starts where templates stop. Discover, review, and compose official setup CLIs for
+an existing app, package, or workspace.
 
-For a CLI-backed tool, `toolchains-init` may prepare a documented prerequisite, then runs the exact
-origin command as that tool's final project mutation. It never edits the project afterward, guesses
-the CLI's choices, or restricts the CLI's argument surface.
+The wrapper owns the curated catalog, version-pinned invocation, execution plan, and provenance.
+Each origin CLI owns its prompts, arguments, project changes, and success or failure. Choose once;
+run the originals unchanged.
 
 ## Quick Start
 
-Run it from your app directory:
+Run it from the project you want to configure:
 
 ```bash
 npx toolchains-init
@@ -18,137 +19,133 @@ yarn dlx toolchains-init
 pnpm dlx toolchains-init
 ```
 
-Then choose the origin commands you want to run from the prompt.
+The interactive flow is:
 
-## Key Features
-
-- **Origin commands preserved**: runs each tool's own command with its stdin and argument semantics intact.
-- **Pick only what you need**: routing, API mocking, E2E, formatting, linting, dead-code checks, release tooling, or editor SDKs.
-- **Cataloged prompt**: toolchains are grouped by app foundation, quality, release, and editor setup.
-- **Automation friendly**: select toolchains and pass namespaced origin CLI arguments in one command.
-- **Fresh project friendly**: designed for newly scaffolded apps and packages.
-- **Monorepo support**: initialize an app package from the workspace root with `--target`.
-- **Package-manager aware**: works with npm, yarn, pnpm, Bun, and Deno.
-
-## Supported Origin CLIs
-
-| Toolchain            | Origin CLI Action                              | Source       |
-| -------------------- | ---------------------------------------------- | ------------ |
-| TanStack Router      | File-Based Routing or Code-Based Routing setup | Official CLI |
-| Hot Updater          | React Native OTA update initializer            | Official CLI |
-| Supabase             | Local Supabase project configuration           | Official CLI |
-| Prisma               | Prisma schema and project configuration        | Official CLI |
-| shadcn               | shadcn project initializer                     | Official CLI |
-| Playwright           | Browser E2E test setup                         | Official CLI |
-| Storybook            | Component workshop initializer                 | Official CLI |
-| MSW                  | Browser API mocking worker setup               | Official CLI |
-| CSpell               | Spell-checker configuration                    | Official CLI |
-| Secretlint           | Secret-scanning configuration                  | Official CLI |
-| oxfmt                | Oxc formatter initializer                      | Official CLI |
-| Prettier             | Prettier project formatting check              | Official CLI |
-| oxlint               | Oxc linter initializer                         | Official CLI |
-| ESLint               | ESLint configuration initializer               | Official CLI |
-| Biome                | Biome formatter/linter initializer             | Official CLI |
-| Knip                 | Knip project analysis                          | Official CLI |
-| React Doctor         | React project diagnostics                      | Official CLI |
-| publint              | npm package compatibility validation           | Official CLI |
-| Are the Types Wrong? | TypeScript package compatibility validation    | Official CLI |
-| Changesets           | Changeset release workflow                     | Official CLI |
-| Yarn SDKs            | Yarn PnP editor SDKs for VS Code               | Official CLI |
-
-## Usage
-
-Run the prompt-based flow:
-
-```bash
-toolchains-init
+```text
+select tools -> review the complete plan -> confirm -> run
 ```
 
-Each CLI-backed toolchain has a manifest-generated argument group. Select it with `--<tool>` and
-forward a discovered upstream option with `--<tool>.<flag>[=value]`:
+Nothing runs before the plan is complete. Origin commands run sequentially in canonical catalog
+order, which is the displayed order.
+
+## Catalog
+
+The catalog contains setup commands that add a capability to an existing project. It intentionally
+excludes project checks, diagnostics, builds, migrations, and full application scaffolds.
+
+| Area           | Selector        | Setup                                                  |
+| -------------- | --------------- | ------------------------------------------------------ |
+| App & Services | `--hot-updater` | Hot Updater configuration for React Native OTA updates |
+| App & Services | `--prisma`      | Prisma schema and project configuration                |
+| App & Services | `--shadcn`      | shadcn project initialization                          |
+| App & Services | `--supabase`    | Local Supabase project configuration                   |
+| Testing & UI   | `--playwright`  | Playwright browser testing setup                       |
+| Testing & UI   | `--storybook`   | Storybook component workshop setup                     |
+| Code Quality   | `--oxfmt`       | Oxc formatter configuration                            |
+| Code Quality   | `--oxlint`      | Oxc linter configuration                               |
+| Code Quality   | `--eslint`      | ESLint configuration                                   |
+| Code Quality   | `--biome`       | Biome formatter and linter configuration               |
+| Code Quality   | `--cspell`      | CSpell configuration                                   |
+| Code Quality   | `--secretlint`  | Secretlint configuration                               |
+| Release        | `--changesets`  | Changesets versioning and release workflow             |
+| Editor         | `--yarn-sdks`   | Yarn PnP SDK generation for VS Code (Yarn only)        |
+
+## Review a Plan, Then Run
+
+Passing selectors skips the wrapper's selection and confirmation prompts. The complete plan is
+still printed before execution:
+
+```bash
+toolchains-init --playwright --biome
+```
+
+The plan shows the target directory, package manager, command order, pinned package versions, exact
+executables and argument arrays, documentation sources, and any overlapping capabilities. For
+example, choosing Biome with oxfmt or oxlint produces an informational overlap warning; it does not
+block the selection or rewrite either command.
+
+Use `--plan` to inspect the same plan without starting an origin process:
+
+```bash
+toolchains-init --plan --playwright --biome
+```
+
+With no selectors, `--plan` opens the interactive selector and stops after printing the plan. With
+no selectors in a non-interactive environment, the command fails instead of guessing a selection.
+
+There is no wrapper `--yes` option. Explicit selectors are the automation boundary. A namespaced
+origin option such as `--shadcn.yes` is different: it is forwarded to shadcn as `--yes`.
+
+## Forward Origin Arguments
+
+Select an origin CLI with `--<tool>` and route an option to it with
+`--<tool>.<flag>[=value]`:
 
 ```bash
 toolchains-init \
   --playwright \
   --playwright.browser=chromium \
-  --playwright.lang=TypeScript \
-  --tanstack-router \
-  --tanstack-router.tailwind \
-  --yes
+  --biome \
+  --biome.verbose
 ```
 
-Group names come from generated CLI manifests, so TanStack Router uses `--tanstack-router`.
-Namespacing keeps flags from different origin CLIs separate; the wrapper removes that namespace
-and otherwise preserves each token. It does not validate option names, value types, enum values, or
-repetitions. The origin CLI owns all of those decisions.
+The wrapper removes only the tool namespace. It does not validate flag names, infer value types,
+check enum values, deduplicate repetitions, or decide whether an upstream version supports the
+option. Newly added upstream options can therefore be used before the generated manifest is
+refreshed.
 
-For positionals, dash-prefixed values, `--`, or any other arbitrary token, repeat
-`--<tool>.raw.arg=<token>`. Tokens retain their order and are forwarded only to that origin CLI:
+For positionals, `--`, dash-prefixed values, repeated arguments, or complete token-by-token
+passthrough, repeat `--<tool>.raw.arg=<token>`:
 
 ```bash
 toolchains-init \
-  --msw \
-  --msw.raw.arg=./public \
-  --msw.raw.arg=--save
+  --playwright \
+  --playwright.raw.arg=-- \
+  --playwright.raw.arg=tests/e2e
 ```
 
-Newly added upstream options do not have to wait for a manifest refresh. Namespaced options are
-accepted without inspecting their names; discovered manifest names exist only to populate focused
-help.
+Raw tokens retain their order and are sent only to the selected origin CLI.
 
-Run focused help to see the option names currently discovered for one tool:
+Focused help lists the option names currently discovered for one origin CLI:
 
 ```bash
 toolchains-init --playwright --help
-toolchains-init --tanstack-router --help
 ```
 
-Generated manifests own discovered flag names for help. A manifest refresh updates that list
-without handwritten parser or adapter mapping. Parsing remains opaque: after removing the tool
-namespace, tokens are not inferred, rewritten, deduplicated, or policy-filtered.
+Generated manifest flags power help only. Parsing remains opaque, and the origin CLI remains the
+authority on its argument surface.
 
-Automated runs require explicit `--<tool>` selectors. This keeps the command stable
-when another adapter is added to the registry; `--yes` never expands silently to every tool.
+## Targets and Package Managers
 
-`--yes` belongs only to `toolchains-init`: it is never forwarded to an origin CLI and never changes
-that process's stdin. Any prompt or default owned by the origin CLI therefore behaves exactly as it
-does when the command is run directly.
-
-Choose the package manager explicitly when environment-based detection is not enough:
+From a workspace root, point every planned command at a package with `--target`:
 
 ```bash
-toolchains-init --package-manager pnpm --tanstack-router --msw --yes
-```
-
-Supported values are `npm`, `pnpm`, `yarn`, `bun`, and `deno`.
-
-## Monorepos
-
-From a workspace root, point `toolchains-init` at the app package:
-
-```bash
-npx toolchains-init --target apps/web
-yarn dlx toolchains-init --target apps/web
-pnpm dlx toolchains-init --target apps/web
-```
-
-Each origin command uses the target directory as its working directory.
-
-For an automated monorepo setup, combine the target with generated tool groups:
-
-```bash
-npx toolchains-init \
+toolchains-init \
   --target apps/web \
   --package-manager pnpm \
-  --tanstack-router \
-  --msw \
   --playwright \
-  --playwright.browser=chromium \
-  --yes
+  --biome
 ```
 
-## Notes
+Every origin process uses the resolved target as its working directory. Supported package-manager
+values are `npm`, `pnpm`, `yarn`, `bun`, and `deno`, subject to the runner templates available for a
+tool. Yarn SDKs are exposed only when Yarn is selected.
 
-Run this in a freshly scaffolded app. Origin CLIs may overwrite files such as router files,
-Playwright config, formatter config, linter config, or editor settings. `toolchains-init` leaves the
-state returned by each origin command untouched.
+## Execution Contract
+
+- The complete plan must resolve before any origin process starts.
+- Selected commands are sorted into canonical catalog order, then run sequentially in the displayed
+  order with inherited stdin, stdout, and stderr.
+- The first failed command stops the run; later commands are not started.
+- Completed and partial project changes are not rolled back or cleaned up.
+- Exact numeric exit codes are preserved. Terminating signals are re-raised when Node can safely do
+  so; Node-reserved or ignored signals such as `SIGUSR1` and `SIGPIPE` use the conventional
+  `128 + signal` nonzero status.
+- An origin CLI is the final project mutation for its tool. The wrapper does not edit its output,
+  dependencies, package metadata, or configuration afterward.
+
+Generated manifests pin the package version and package-manager invocation and record the official
+source used to review it. This makes the handoff inspectable and repeatable: the same executable,
+argument tokens, working directory, and version can be planned again. It does not promise identical
+project output across operating systems, registries, transitive dependencies, or different starting
+states.

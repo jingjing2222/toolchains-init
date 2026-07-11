@@ -6,12 +6,13 @@ import { pathToFileURL } from "node:url";
 import { promisify } from "node:util";
 import type { CliCommandManifest } from "../src/core/cli-command-manifest";
 import { defineCliCommandManifest } from "../src/core/cli-command-manifest";
+import { assertDirectSelector } from "../src/core/cli-contract";
 import type { PackageManager } from "../src/core/package-manager";
+import { toolchainCapabilities } from "../src/core/toolchain-catalog";
 import type {
   PackageManagerCommandTemplates,
-  ToolchainAdapter,
+  ToolchainDefinition,
 } from "../src/core/toolchain-adapter";
-import { getToolchainCliTool, getToolchainId } from "../src/core/toolchain-adapter";
 
 type CliHelpSource = Extract<CliCommandManifest["sources"][number], { kind: "cli-help" }>;
 type NpmSource = Extract<CliCommandManifest["sources"][number], { kind: "npm" }>;
@@ -37,9 +38,7 @@ if (isMainModule()) {
 export async function main() {
   const toolchains = await discoverToolchains();
   await validateDiscoveredToolchains(toolchains);
-  const manifestInputs = toolchains.flatMap((toolchain) =>
-    toolchain.adapter.cli == null ? [] : [createManifestInput(toolchain.adapter)],
-  );
+  const manifestInputs = toolchains.map((toolchain) => createManifestInput(toolchain.adapter));
 
   const generatedFiles: GeneratedFile[] = [renderToolchainsRegistry(toolchains)];
 
@@ -73,7 +72,7 @@ type GeneratedFileStatus = GeneratedFile & {
 };
 
 export type DiscoveredToolchain = {
-  adapter: ToolchainAdapter;
+  adapter: ToolchainDefinition;
   exportName: string;
   stackDir: string;
 };
@@ -81,72 +80,74 @@ export type DiscoveredToolchain = {
 type ManifestInput = {
   commandArgs: readonly string[];
   commandId: string;
-  docs: NonNullable<NonNullable<ToolchainAdapter["cli"]>["docs"]>;
+  docs: ToolchainDefinition["origin"]["docs"];
   distTag: string;
   exportName: string;
   help: false | undefined;
   packageManagers: readonly PackageManager[];
   packageName: string;
-  runner: NonNullable<NonNullable<ToolchainAdapter["cli"]>["runner"]>;
+  runner: NonNullable<ToolchainDefinition["origin"]["runner"]>;
   stackDir: string;
   subcommand: string | null;
   tool: string;
 };
 
-function createManifestInput(toolchain: ToolchainAdapter): ManifestInput {
-  const cli = toolchain.cli;
-  if (cli == null) {
-    throw new Error(`Missing CLI definition for ${toolchain.feature}`);
-  }
-
-  const tool = cli.tool ?? kebabCase(toolchain.feature);
-  const runner = cli.runner ?? "auto";
-  const resolvedRunner = runner === "auto" ? inferRunner(cli.package) : runner;
+function createManifestInput(toolchain: ToolchainDefinition): ManifestInput {
+  const { origin } = toolchain;
+  const runner = origin.runner ?? "auto";
+  const resolvedRunner = runner === "auto" ? inferRunner(origin.package) : runner;
+  const exportName = `${camelCase(toolchain.id)}CliManifest`;
   return {
-    commandArgs: cli.commandArgs ?? [],
-    commandId: cli.commandId ?? cli.command,
-    distTag: cli.distTag ?? "latest",
-    docs: cli.docs ?? [],
-    exportName: cli.exportName ?? `${toolchain.feature}CliManifest`,
-    help: cli.help,
-    packageManagers: cli.packageManagers ?? ["npm", "pnpm", "yarn", "bun", "deno"],
-    packageName: cli.package,
+    commandArgs: origin.commandArgs ?? [],
+    commandId: origin.commandId ?? origin.command,
+    distTag: origin.distTag ?? "latest",
+    docs: origin.docs,
+    exportName,
+    help: origin.help,
+    packageManagers: origin.packageManagers ?? ["npm", "pnpm", "yarn", "bun", "deno"],
+    packageName: origin.package,
     runner,
-    stackDir: cli.stackDir ?? tool,
+    stackDir: toolchain.id,
     subcommand:
-      cli.subcommand === undefined
+      origin.subcommand === undefined
         ? resolvedRunner === "create"
           ? null
-          : cli.command
-        : cli.subcommand,
-    tool,
+          : origin.command
+        : origin.subcommand,
+    tool: toolchain.id,
   };
 }
 
 export async function validateDiscoveredToolchains(toolchains: readonly DiscoveredToolchain[]) {
-  assertUniqueIdentity(toolchains, "feature", (toolchain) => toolchain.adapter.feature);
-  assertUniqueIdentity(toolchains, "toolchain selector", (toolchain) =>
-    getToolchainId(toolchain.adapter),
-  );
+  assertUniqueIdentity(toolchains, "toolchain id", (toolchain) => toolchain.adapter.id);
   assertUniqueIdentity(toolchains, "adapter export name", (toolchain) => toolchain.exportName);
   for (const toolchain of toolchains) {
-    assertCanonicalFeature(toolchain.adapter.feature);
-    assertDirectSelector(toolchain.adapter);
-    if (toolchain.adapter.managedCli != null && toolchain.adapter.cli == null) {
+    assertCanonicalId(toolchain.adapter.id);
+    assertDirectSelector(toolchain.adapter.id);
+    if (toolchain.stackDir !== toolchain.adapter.id) {
       throw new Error(
-        `Managed CLI adapter ${toolchain.adapter.feature} must declare a CLI command`,
+        `Toolchain ${toolchain.adapter.id} must use the matching stack directory: ${toolchain.adapter.id}`,
       );
+    }
+    const expectedExportName = camelCase(toolchain.adapter.id);
+    if (toolchain.exportName !== expectedExportName) {
+      throw new Error(
+        `Toolchain ${toolchain.adapter.id} must export ${expectedExportName}, received ${toolchain.exportName}`,
+      );
+    }
+    if (toolchain.adapter.capabilities.length === 0) {
+      throw new Error(`Toolchain ${toolchain.adapter.id} must declare at least one capability`);
+    }
+    for (const capability of toolchain.adapter.capabilities) {
+      if (!(capability in toolchainCapabilities)) {
+        throw new Error(
+          `Toolchain ${toolchain.adapter.id} has an unknown capability: ${capability}`,
+        );
+      }
     }
   }
 
-  const cliToolchains = toolchains.filter(
-    (
-      toolchain,
-    ): toolchain is DiscoveredToolchain & {
-      adapter: ToolchainAdapter & { cli: NonNullable<ToolchainAdapter["cli"]> };
-    } => toolchain.adapter.cli != null,
-  );
-  const manifestInputs = cliToolchains.map((toolchain) => createManifestInput(toolchain.adapter));
+  const manifestInputs = toolchains.map((toolchain) => createManifestInput(toolchain.adapter));
   for (const input of manifestInputs) {
     assertSafeStackDir(input);
     assertPackageManagerContract(input);
@@ -154,24 +155,18 @@ export async function validateDiscoveredToolchains(toolchains: readonly Discover
   assertUniqueIdentity(manifestInputs, "CLI tool", (input) => input.tool);
   assertUniqueIdentity(manifestInputs, "manifest export name", (input) => input.exportName);
   assertUniqueIdentity(manifestInputs, "stack path", (input) => getStackDir(input));
-  assertUniqueIdentity(toolchains, "direct CLI selector", (toolchain) =>
-    toolchain.adapter.cli == null
-      ? getToolchainId(toolchain.adapter)
-      : getToolchainCliTool(toolchain.adapter),
-  );
+  assertUniqueIdentity(toolchains, "direct CLI selector", (toolchain) => toolchain.adapter.id);
 
   await Promise.all(
-    cliToolchains.map(async (toolchain) => {
-      const { docs } = toolchain.adapter.cli;
-      if (docs == null || docs.length === 0) {
-        throw new Error(
-          `CLI adapter ${toolchain.adapter.feature} must declare docs review metadata`,
-        );
+    toolchains.map(async (toolchain) => {
+      const { docs } = toolchain.adapter.origin;
+      if (docs.length === 0) {
+        throw new Error(`CLI adapter ${toolchain.adapter.id} must declare docs review metadata`);
       }
 
       await Promise.all(
         docs.map(async (doc, index) => {
-          const context = `CLI adapter ${toolchain.adapter.feature} docs[${index}]`;
+          const context = `CLI adapter ${toolchain.adapter.id} docs[${index}]`;
           const review = doc.review;
           if (review == null || review.reason.trim().length === 0) {
             throw new Error(`${context} must declare a nonempty review reason`);
@@ -260,21 +255,9 @@ function assertPackageManagerContract(input: ManifestInput) {
   }
 }
 
-function assertCanonicalFeature(feature: string) {
-  if (!/^[a-z][A-Za-z0-9]*$/.test(feature)) {
-    throw new Error(`Toolchain feature must use lowerCamelCase: ${feature}`);
-  }
-}
-
-function assertDirectSelector(adapter: ToolchainAdapter) {
-  const selector = adapter.cli == null ? getToolchainId(adapter) : getToolchainCliTool(adapter);
-  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(selector)) {
-    throw new Error(`Direct CLI selector must use lowercase kebab-case: ${selector}`);
-  }
-  if (
-    new Set(["help", "no-install", "package-manager", "target", "version", "yes"]).has(selector)
-  ) {
-    throw new Error(`Direct CLI selector is reserved: ${selector}`);
+function assertCanonicalId(id: string) {
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(id)) {
+    throw new Error(`Toolchain id must use lowercase kebab-case: ${id}`);
   }
 }
 
@@ -344,22 +327,25 @@ async function discoverToolchains(): Promise<DiscoveredToolchain[]> {
   return discovered.sort(compareDiscoveredToolchains);
 }
 
-function isToolchainAdapter(value: unknown): value is ToolchainAdapter {
+function isToolchainAdapter(value: unknown): value is ToolchainDefinition {
   return (
     value != null &&
     typeof value === "object" &&
-    "feature" in value &&
-    typeof value.feature === "string" &&
+    "id" in value &&
+    typeof value.id === "string" &&
     "label" in value &&
     typeof value.label === "string" &&
-    "hint" in value &&
-    typeof value.hint === "string"
+    "summary" in value &&
+    typeof value.summary === "string" &&
+    "origin" in value &&
+    value.origin != null &&
+    typeof value.origin === "object"
   );
 }
 
 function compareDiscoveredToolchains(left: DiscoveredToolchain, right: DiscoveredToolchain) {
   return (
-    (left.adapter.order ?? 1000) - (right.adapter.order ?? 1000) ||
+    left.adapter.order - right.adapter.order ||
     left.stackDir.localeCompare(right.stackDir) ||
     left.exportName.localeCompare(right.exportName)
   );
@@ -900,12 +886,20 @@ export function resolvePackageManagerCommands(
 
   if (runner === "create") {
     const initializer = getCreateInitializerName(input.packageName);
+    const subcommand = input.subcommand == null ? [] : [input.subcommand];
     return pickPackageManagers(input.packageManagers, {
-      npm: ["npm", "init", `${initializer}@{version}`, "--", ...input.commandArgs],
-      pnpm: ["pnpm", "create", `${initializer}@{version}`, ...input.commandArgs],
-      yarn: ["yarn", "create", `${initializer}@{version}`, ...input.commandArgs],
-      bun: ["bun", "create", `${initializer}@{version}`, ...input.commandArgs],
-      deno: ["deno", "x", "-A", `npm:${input.packageName}@{version}`, ...input.commandArgs],
+      npm: ["npm", "init", `${initializer}@{version}`, "--", ...subcommand, ...input.commandArgs],
+      pnpm: ["pnpm", "create", `${initializer}@{version}`, ...subcommand, ...input.commandArgs],
+      yarn: ["yarn", "create", `${initializer}@{version}`, ...subcommand, ...input.commandArgs],
+      bun: ["bun", "create", `${initializer}@{version}`, ...subcommand, ...input.commandArgs],
+      deno: [
+        "deno",
+        "x",
+        "-A",
+        `npm:${input.packageName}@{version}`,
+        ...subcommand,
+        ...input.commandArgs,
+      ],
     });
   }
 
@@ -1006,36 +1000,35 @@ function renderToolchainsRegistry(toolchains: readonly DiscoveredToolchain[]): G
     )
     .join("\n");
   const registry = toolchains.map((toolchain) => `  ${toolchain.exportName},`).join("\n");
-  const featureUnion = toolchains
-    .map((toolchain) => `  | ${JSON.stringify(toolchain.adapter.feature)}`)
+  const idUnion = toolchains
+    .map((toolchain) => `  | ${JSON.stringify(toolchain.adapter.id)}`)
     .join("\n");
 
   return {
     path: path.resolve("src", "stacks", "toolchains.generated.ts"),
     content: `${generatedFileHeader}
-import type { ToolchainAdapter } from "../core/toolchain-adapter";
+import type { ToolchainDefinition } from "../core/toolchain-adapter";
 ${imports}
 
 export const toolchains = [
 ${registry}
-] satisfies readonly ToolchainAdapter[];
+] satisfies readonly ToolchainDefinition[];
 
-export type BuiltInFeature =
-${featureUnion};
+export type BuiltInToolId =
+${idUnion};
 
-export const ALL_FEATURES = toolchains.map((toolchain) => toolchain.feature);
+export const ALL_TOOL_IDS = toolchains.map((toolchain) => toolchain.id);
 
-export function getSelectedToolchains(features: readonly string[]) {
-  return features.flatMap((feature) =>
-    toolchains.filter((toolchain) => toolchain.feature === feature),
-  );
+export function getSelectedToolchains(ids: readonly string[]) {
+  const selectedIds = new Set(ids);
+  return toolchains.filter((toolchain) => selectedIds.has(toolchain.id));
 }
 `,
   };
 }
 
-function kebabCase(value: string) {
-  return value.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`);
+function camelCase(value: string) {
+  return value.replace(/-([a-z0-9])/g, (_, character: string) => character.toUpperCase());
 }
 
 function isMainModule() {

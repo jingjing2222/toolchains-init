@@ -7,11 +7,7 @@
     {
       "id": "vscode",
       "packageManagers": {
-        "npm": ["npx", "@yarnpkg/sdks@{version}", "vscode"],
-        "pnpm": ["pnpm", "dlx", "@yarnpkg/sdks@{version}", "vscode"],
-        "yarn": ["yarn", "dlx", "@yarnpkg/sdks@{version}", "vscode"],
-        "bun": ["bunx", "@yarnpkg/sdks@{version}", "vscode"],
-        "deno": ["deno", "x", "-A", "npm:@yarnpkg/sdks@{version}", "vscode"]
+        "yarn": ["yarn", "dlx", "@yarnpkg/sdks@{version}", "vscode"]
       }
     }
   ],
@@ -25,23 +21,19 @@
     },
     {
       "kind": "docs",
-      "url": "https://yarnpkg.com/cli/sdks",
+      "url": "https://yarnpkg.com/cli/sdks/default",
       "confidence": "high",
       "checks": [
         {
           "found": true,
-          "text": "@yarnpkg/sdks"
-        },
-        {
-          "found": true,
-          "text": "yarn sdks"
+          "text": "yarn sdks vscode"
         }
       ],
       "review": {
         "reason": "Adapter executes the documented yarn sdks vscode command unchanged.",
         "files": ["src/stacks/yarn-sdks/adapter.ts", "src/stacks/yarn-sdks/init.test.ts"],
-        "sections": ["@yarnpkg/sdks CLI Reference"],
-        "mustContain": ["@yarnpkg/sdks", "yarn sdks"],
+        "sections": ["Examples"],
+        "mustContain": ["yarn sdks vscode"],
         "checks": ["Confirm yarn sdks vscode remains the documented editor SDK command."]
       }
     }
