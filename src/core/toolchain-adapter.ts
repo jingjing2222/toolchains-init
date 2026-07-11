@@ -1,84 +1,10 @@
 import type { CliCommandManifest } from "./cli-command-manifest";
 import type { PackageManager } from "./package-manager";
-import type { PackageJson, ToolchainOptions } from "./types";
-
-export type RunToolchainContext = {
-  cwd: string;
-  packageManager: PackageManager;
-  options: ToolchainOptions;
-  yes: boolean;
-};
+import type { ToolchainOptions } from "./types";
 
 export type ManagedCliFlagValue = boolean | string;
 
 export type ManagedCliFlagValues = Readonly<Record<string, ManagedCliFlagValue>>;
-
-type ToolchainSetupOption = Exclude<keyof ToolchainOptions, "features">;
-
-export type ManagedCliSetupContract = {
-  [Option in ToolchainSetupOption]: ToolchainOptions[Option] extends boolean
-    ? {
-        description: string;
-        option: Option;
-        type: "boolean";
-      }
-    : {
-        description: string;
-        option: Option;
-        type: "enum";
-        values: readonly ToolchainOptions[Option][];
-      };
-}[ToolchainSetupOption];
-
-export type ToolchainOptionOverrides = Partial<Omit<ToolchainOptions, "features">>;
-
-export type ManagedCliPolicyContext = {
-  packageManager: PackageManager;
-  options: ToolchainOptions;
-  yes: boolean;
-};
-
-export type ManagedCliPolicyValue<T> = T | ((context: ManagedCliPolicyContext) => T);
-
-export type ResolvedCliCommand = {
-  bin: string;
-  args: readonly string[];
-};
-
-export type ExecuteManagedCliContext = RunToolchainContext & {
-  command: ResolvedCliCommand;
-};
-
-export type ManagedToolchainCli = {
-  phase: "run" | "afterInstall";
-  defaults?: ManagedCliPolicyValue<ManagedCliFlagValues>;
-  locked?: ManagedCliPolicyValue<ManagedCliFlagValues>;
-  blocked?: ManagedCliPolicyValue<Readonly<Record<string, string>>>;
-  positionals?: ManagedCliPolicyValue<readonly string[]>;
-  setup?: Readonly<Record<string, ManagedCliSetupContract>>;
-  execute?: (context: ExecuteManagedCliContext) => Promise<void>;
-};
-
-export type UpdatePackageJsonContext = {
-  cliManifest?: CliCommandManifest;
-  packageJson: PackageJson;
-  options: ToolchainOptions;
-};
-
-export type WriteToolchainContext = {
-  cwd: string;
-  options: ToolchainOptions;
-};
-
-export type ToolchainNoteContext = {
-  options: ToolchainOptions;
-};
-
-export type ToolchainAvailabilityContext = {
-  cwd: string;
-  packageJson: PackageJson;
-  packageManager: PackageManager;
-};
 
 export type ToolchainCatalog = "app" | "quality" | "release" | "editor";
 
@@ -96,6 +22,7 @@ export type ToolchainCliDocs = Omit<
 export type ToolchainCliDefinition = {
   package: string;
   command: string;
+  commandArgs?: readonly string[];
   commandId?: string;
   distTag?: string;
   docs?: readonly ToolchainCliDocs[];
@@ -115,19 +42,7 @@ export type ToolchainAdapter = {
   catalog: ToolchainCatalog;
   order?: number;
   cli?: ToolchainCliDefinition;
-  managedCli?: ManagedToolchainCli;
-  nonInteractive?: {
-    supported: false;
-    reason: string;
-  };
-  isAvailable?: (context: ToolchainAvailabilityContext) => boolean | Promise<boolean>;
-  beforeRun?: (context: UpdatePackageJsonContext) => void;
-  run?: (context: RunToolchainContext) => Promise<void>;
-  updatePackageJson?: (context: UpdatePackageJsonContext) => void;
-  targetFiles?: (options: ToolchainOptions) => readonly string[];
-  afterWrite?: (context: WriteToolchainContext) => Promise<void>;
-  afterInstall?: (context: RunToolchainContext) => Promise<void>;
-  notes?: (context: ToolchainNoteContext) => string[];
+  managedCli?: true;
 };
 
 export type DefineToolchainOptions = Omit<ToolchainAdapter, "catalog" | "cli" | "hint"> & {
@@ -137,6 +52,7 @@ export type DefineToolchainOptions = Omit<ToolchainAdapter, "catalog" | "cli" | 
     | {
         package: string;
         command: string;
+        commandArgs?: readonly string[];
         commandId?: string;
         distTag?: string;
         docs?: ToolchainCliDefinition["docs"];
@@ -163,6 +79,7 @@ export function defineToolchain(options: DefineToolchainOptions): ToolchainAdapt
 
   const {
     command,
+    commandArgs,
     commandId,
     distTag,
     docs,
@@ -188,6 +105,7 @@ export function defineToolchain(options: DefineToolchainOptions): ToolchainAdapt
     hint,
     cli: {
       command,
+      commandArgs,
       commandId,
       distTag,
       docs,

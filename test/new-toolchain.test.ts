@@ -8,28 +8,19 @@ import {
 
 describe("new toolchain scaffolding", () => {
   it("renders a manifest-managed executable adapter with docs policy", () => {
-    const source = renderAdapter(scaffoldOptions({ commandId: "setup" }));
+    const source = renderAdapter(
+      scaffoldOptions({ commandArgs: ["--init"], commandId: "setup", subcommand: null }),
+    );
 
-    expect(source).toContain('managedCli: {"phase":"run"}');
+    expect(source).toContain("managedCli: true");
+    expect(source).toContain('commandArgs: ["--init"]');
     expect(source).not.toContain("resolveCliCommand");
     expect(source).not.toContain("runCommand");
     expect(source).not.toContain("async run");
     expect(source).toContain('mustContain":["hot-updater init"]');
     expect(source).toContain("src/stacks/hot-updater/adapter.ts");
-    expect(source).not.toContain("nonInteractive:");
-  });
-
-  it("renders only the negative non-interactive capability exception", () => {
-    const source = renderAdapter(
-      scaffoldOptions({
-        interactiveOnlyReason: "provider credentials require project-specific choices",
-        supportsNonInteractive: false,
-      }),
-    );
-
-    expect(source).toContain(
-      'nonInteractive: {"supported":false,"reason":"provider credentials require project-specific choices"}',
-    );
+    expect(source).not.toContain("nonInteractive");
+    expect(source).not.toContain("phase");
   });
 
   it("keeps custom manifest tool ids co-located with their adapter", () => {
@@ -39,37 +30,35 @@ describe("new toolchain scaffolding", () => {
     expect(source).toContain('tool: "hot-update-cli"');
   });
 
-  it("renders an enabled unattended lifecycle smoke test", () => {
+  it("renders an exact origin-command execution test", () => {
     const source = renderInitTest(scaffoldOptions());
 
     expect(source).toContain('describe("Hot Updater adapter init"');
-    expect(source).toContain('const toolchainOptions = options(["hotUpdater"]);');
-    expect(source).toContain('expect(hotUpdater.managedCli).toEqual({ phase: "run" })');
-    expect(source).toContain('await runExternalToolchains(cwd, "npm", toolchainOptions, true);');
-    expect(source).toContain("await writeToolchain(cwd, packageJson, toolchainOptions);");
-    expect(source).toContain('await runPostInstallToolchains(cwd, "npm", toolchainOptions, true);');
-    expect(source).not.toContain("it.skip(");
-    expect(source).toContain("TODO: replace with files, package entries, or config");
-  });
-
-  it("renders deterministic command wiring for interactive-only adapters", () => {
-    const source = renderInitTest(
-      scaffoldOptions({
-        interactiveOnlyReason: "provider credentials require project-specific choices",
-        supportsNonInteractive: false,
-      }),
-    );
-
+    expect(source).toContain("expect(hotUpdater.managedCli).toBe(true)");
     expect(source).toContain('vi.mock("../../core/run-command"');
     expect(source).toContain("const command = resolveCliCommand(");
-    expect(source).toContain("hotUpdaterCliManifest");
-    expect(source).toContain('runExternalToolchains(".", "npm", toolchainOptions, false)');
+    expect(source).toContain("`hot-updater@${hotUpdaterCliManifest.version}`");
+    expect(source).toContain('"init"');
+    expect(source).toContain('options(["hotUpdater"])');
     expect(source).toContain("expect(mocks.runCommand).toHaveBeenCalledOnce()");
-    expect(source).toContain("mocks.runCommand.mock.calls[0]?.slice(0, 3)");
-    expect(source).not.toContain("hotUpdater.run");
+    expect(source).toContain(
+      'expect(mocks.runCommand).toHaveBeenCalledWith(".", command.bin, command.args)',
+    );
+    expect(source).not.toContain('stdin: "ignore"');
+    expect(source).not.toContain("writeToolchain");
+    expect(source).not.toContain("runPostInstallToolchains");
   });
 
-  it("parses one-command docs and interaction policy arguments", () => {
+  it("keeps flag-shaped static command identity in the exact-command assertion", () => {
+    const source = renderInitTest(scaffoldOptions({ commandArgs: ["--init"], subcommand: null }));
+
+    expect(source).toContain('args: [`hot-updater@${hotUpdaterCliManifest.version}`, "--init"]');
+    expect(source).not.toContain(
+      'args: [`hot-updater@${hotUpdaterCliManifest.version}`, "init", "--init"]',
+    );
+  });
+
+  it("parses one-command docs and ordered static command arguments", () => {
     const parsed = parseNewToolchainArgs([
       "hotUpdater",
       "--package",
@@ -81,18 +70,21 @@ describe("new toolchain scaffolding", () => {
       "--docs-must-contain",
       "hot-updater init",
       "--docs-check",
-      "Confirm provider setup remains interactive.",
-      "--interactive-only-reason",
-      "provider setup requires project-specific choices",
+      "Confirm the exact command remains supported.",
+      "--subcommand",
+      "none",
+      "--command-arg=--init",
+      "--command-arg",
+      ".",
     ]);
 
     expect(parsed).toMatchObject({
-      docsChecks: ["Confirm provider setup remains interactive."],
+      commandArgs: ["--init", "."],
+      docsChecks: ["Confirm the exact command remains supported."],
       docsMustContain: ["hot-updater init"],
       docsUrl: "https://hot-updater.dev/docs/get-started/basic-usage",
       feature: "hotUpdater",
-      interactiveOnlyReason: "provider setup requires project-specific choices",
-      supportsNonInteractive: false,
+      subcommand: null,
     });
   });
 
@@ -108,17 +100,9 @@ describe("new toolchain scaffolding", () => {
     );
   });
 
-  it("rejects ambiguous or empty interaction policy arguments", () => {
-    expect(() =>
-      parseNewToolchainArgs([
-        "hotUpdater",
-        "--supports-non-interactive",
-        "--interactive-only-reason",
-        "provider prompt remains",
-      ]),
-    ).toThrow("not both");
-    expect(() => parseNewToolchainArgs(["hotUpdater", "--interactive-only-reason="])).toThrow(
-      "non-empty reason",
+  it("rejects ambiguous or invalid scaffold arguments", () => {
+    expect(() => parseNewToolchainArgs(["hotUpdater", "--command-arg="])).toThrow(
+      "cannot be empty",
     );
     expect(() => parseNewToolchainArgs(["hotUpdater", "unexpected"])).toThrow(
       "Unknown argument: unexpected",
@@ -145,12 +129,13 @@ describe("new toolchain scaffolding", () => {
 
     expect(help).toContain("--docs-url <url>");
     expect(help).toContain("--docs-must-contain <text>");
-    expect(help).toContain("--supports-non-interactive");
-    expect(help).toContain("--interactive-only-reason <reason>");
+    expect(help).toContain("--command-arg <arg>");
     expect(help).toContain("lowerCamelCase feature id");
-    expect(help).toContain('managedCli: { phase: "run" }');
+    expect(help).toContain("managedCli: true");
     expect(help).toContain("--<manifest.tool> selects the tool");
     expect(help).toContain("--<tool>.<generated-flag>[=value]");
+    expect(help).toContain("--<tool>.raw.arg=<token>");
+    expect(help).toContain("never changes origin CLI stdin");
   });
 });
 
@@ -179,7 +164,6 @@ function scaffoldOptions(
     manifestExportName: "hotUpdaterCliManifest",
     packageName: "hot-updater",
     stackDir: "hot-updater",
-    supportsNonInteractive: true,
     ...overrides,
   };
 }

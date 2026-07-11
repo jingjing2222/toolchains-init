@@ -1,7 +1,4 @@
-import { hasPackageDependency, setManifestDevDependency } from "../../core/package-json-utils";
 import { defineToolchain } from "../../core/toolchain-adapter";
-
-const workerDirectory = "public";
 
 export const msw = defineToolchain({
   feature: "msw",
@@ -16,64 +13,13 @@ export const msw = defineToolchain({
       url: "https://mswjs.io/docs/cli/init/",
       confidence: "high",
       review: {
-        reason: "Adapter appends `./public --save` to `msw init`.",
+        reason: "Adapter executes the bare msw init command unchanged.",
         files: ["src/stacks/msw/adapter.ts", "src/stacks/msw/init.test.ts"],
         sections: ["init", "Usage"],
-        mustContain: ["npx msw init", "--save"],
-        checks: [
-          "Confirm `msw init <workerDirectory> --save` remains supported.",
-          "Confirm generated worker filename still matches `public/mockServiceWorker.js`.",
-        ],
-      },
-    },
-    {
-      url: "https://mswjs.io/docs/best-practices/managing-the-worker/",
-      confidence: "high",
-      review: {
-        reason: "Adapter writes `package.json` MSW workerDirectory metadata.",
-        files: ["src/stacks/msw/adapter.ts", "src/stacks/msw/init.test.ts"],
-        sections: ["Managing the worker"],
-        mustContain: ["workerDirectory", "mockServiceWorker.js"],
-        checks: [
-          "Confirm `package.json` `msw.workerDirectory` remains the documented way to persist worker paths.",
-          "Confirm merging existing worker directories is still correct.",
-        ],
+        mustContain: ["npx msw init"],
+        checks: ["Confirm msw init remains the official worker initialization command."],
       },
     },
   ],
-  packageManagers: ["npm", "pnpm", "yarn", "bun"],
-  isAvailable({ packageJson, packageManager }) {
-    if (packageManager === "deno") {
-      return false;
-    }
-
-    return hasPackageDependency(packageJson, "vite");
-  },
-  managedCli: {
-    phase: "run",
-    locked() {
-      return { save: true };
-    },
-    blocked: {
-      cwd: "The managed initializer always runs in the selected target directory.",
-    },
-    positionals() {
-      return [`./${workerDirectory}`];
-    },
-  },
-  updatePackageJson({ cliManifest, packageJson }) {
-    setManifestDevDependency(packageJson, cliManifest);
-    packageJson.msw = {
-      ...packageJson.msw,
-      workerDirectory: mergeWorkerDirectory(packageJson.msw?.workerDirectory),
-    };
-  },
-  targetFiles() {
-    return [`${workerDirectory}/mockServiceWorker.js`];
-  },
+  managedCli: true,
 });
-
-function mergeWorkerDirectory(current: string | string[] | undefined) {
-  const directories = Array.isArray(current) ? current : current == null ? [] : [current];
-  return [...new Set([...directories, workerDirectory])];
-}

@@ -7,28 +7,21 @@ export const secretlint = defineToolchain({
   order: 90,
   package: "secretlint",
   command: "init",
-  managedCli: {
-    phase: "run",
-    locked: { init: true },
-  },
   docs: [
     {
       url: "https://raw.githubusercontent.com/secretlint/secretlint/master/README.md",
       confidence: "high",
       review: {
-        reason:
-          "Adapter runs the official Secretlint config initializer without selecting or installing rule presets.",
+        reason: "Adapter executes the documented secretlint --init command unchanged.",
         files: ["src/stacks/secretlint/adapter.ts", "src/stacks/secretlint/init.test.ts"],
         sections: ["Using Node.js"],
         mustContain: ["npx secretlint --init"],
-        checks: ["Confirm secretlint --init still creates .secretlintrc.json without stdin."],
+        checks: ["Confirm secretlint --init remains the configuration initializer."],
       },
     },
   ],
   hint: "Detect credentials and secrets in project files",
-  packageManagers: ["npm", "pnpm", "yarn", "bun"],
   subcommand: null,
-  targetFiles() {
-    return [".secretlintrc.json"];
-  },
+  commandArgs: ["--init"],
+  managedCli: true,
 });

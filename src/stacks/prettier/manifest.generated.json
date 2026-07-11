@@ -7,11 +7,11 @@
     {
       "id": "check",
       "packageManagers": {
-        "npm": ["npx", "prettier@{version}"],
-        "pnpm": ["pnpm", "dlx", "prettier@{version}"],
-        "yarn": ["yarn", "dlx", "prettier@{version}"],
-        "bun": ["bunx", "prettier@{version}"],
-        "deno": ["deno", "x", "-A", "npm:prettier@{version}"]
+        "npm": ["npx", "prettier@{version}", "--check", "."],
+        "pnpm": ["pnpm", "dlx", "prettier@{version}", "--check", "."],
+        "yarn": ["yarn", "dlx", "prettier@{version}", "--check", "."],
+        "bun": ["bunx", "prettier@{version}", "--check", "."],
+        "deno": ["deno", "x", "-A", "npm:prettier@{version}", "--check", "."]
       },
       "flags": {
         "check": {
@@ -303,8 +303,7 @@
           "cliName": "--version",
           "supported": true
         }
-      },
-      "interactive": false
+      }
     }
   ],
   "sources": [
@@ -327,47 +326,15 @@
       "checks": [
         {
           "found": true,
-          "text": "prettier --write ."
-        },
-        {
-          "found": true,
           "text": "prettier --check ."
         }
       ],
       "review": {
-        "reason": "Adapter installs Prettier as a dev dependency and writes package scripts.",
+        "reason": "Adapter executes the documented prettier --check . command unchanged.",
         "files": ["src/stacks/prettier/adapter.ts", "src/stacks/prettier/init.test.ts"],
         "sections": ["Install"],
-        "mustContain": ["prettier --write .", "prettier --check ."],
-        "checks": [
-          "Confirm `prettier --write .` and `prettier --check .` remain documented script commands.",
-          "Confirm installing `prettier` directly remains the recommended package setup."
-        ]
-      }
-    },
-    {
-      "kind": "docs",
-      "url": "https://prettier.io/docs/configuration",
-      "confidence": "high",
-      "checks": [
-        {
-          "found": true,
-          "text": ".prettierrc"
-        },
-        {
-          "found": true,
-          "text": "JSON"
-        }
-      ],
-      "review": {
-        "reason": "Adapter writes an empty `.prettierrc` and Prettier editor defaults.",
-        "files": ["src/stacks/prettier/adapter.ts", "src/stacks/prettier/init.test.ts"],
-        "sections": ["Configuration File"],
-        "mustContain": [".prettierrc", "JSON"],
-        "checks": [
-          "Confirm `.prettierrc` remains a valid configuration file.",
-          "Confirm empty object config remains valid."
-        ]
+        "mustContain": ["prettier --check ."],
+        "checks": ["Confirm prettier --check . remains the documented project check command."]
       }
     }
   ]

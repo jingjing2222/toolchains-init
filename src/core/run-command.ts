@@ -1,30 +1,46 @@
 import { spawn } from "node:child_process";
 import path from "node:path";
 
-export type RunCommandOptions = {
-  stdin?: "ignore" | "inherit";
-};
+export class CommandError extends Error {
+  readonly args: readonly string[];
+  readonly command: string;
+  readonly exitCode: number | null;
+  readonly signal: NodeJS.Signals | null;
 
-export function runCommand(
-  cwd: string,
-  command: string,
-  args: readonly string[],
-  options: RunCommandOptions = {},
-) {
+  constructor(command: string, args: readonly string[], result: number | NodeJS.Signals) {
+    const exited = typeof result === "number";
+    super(
+      `${command} ${args.join(" ")} ${exited ? `failed with exit code ${result}` : `terminated by signal ${result}`}`,
+    );
+    this.name = "CommandError";
+    this.args = [...args];
+    this.command = command;
+    this.exitCode = exited ? result : null;
+    this.signal = exited ? null : result;
+  }
+}
+
+export function runCommand(cwd: string, command: string, args: readonly string[]) {
   return new Promise<void>((resolve, reject) => {
     const child = spawn(command, args, {
       cwd,
       env: createCommandEnvironment(cwd),
-      stdio: options.stdin === "ignore" ? (["ignore", "inherit", "inherit"] as const) : "inherit",
+      stdio: "inherit",
     });
-    child.on("exit", (code) => {
+    child.once("exit", (code, signal) => {
       if (code === 0) {
         resolve();
+      } else if (code != null) {
+        reject(new CommandError(command, args, code));
       } else {
-        reject(new Error(`${command} ${args.join(" ")} failed with exit code ${code}`));
+        reject(
+          signal == null
+            ? new Error(`${command} ${args.join(" ")} terminated without an exit status`)
+            : new CommandError(command, args, signal),
+        );
       }
     });
-    child.on("error", reject);
+    child.once("error", reject);
   });
 }
 
@@ -46,7 +62,6 @@ export function createCommandEnvironment(cwd: string, baseEnv: NodeJS.ProcessEnv
   } else {
     nextEnv.NODE_OPTIONS = nextNodeOptions;
   }
-  delete nextEnv.npm_config_user_agent;
   return nextEnv;
 }
 

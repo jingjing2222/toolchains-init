@@ -7,7 +7,11 @@
     {
       "id": "check",
       "packageManagers": {
-        "npm": ["npx", "@arethetypeswrong/cli@{version}"]
+        "npm": ["npx", "@arethetypeswrong/cli@{version}"],
+        "pnpm": ["pnpm", "dlx", "@arethetypeswrong/cli@{version}"],
+        "yarn": ["yarn", "dlx", "@arethetypeswrong/cli@{version}"],
+        "bun": ["bunx", "@arethetypeswrong/cli@{version}"],
+        "deno": ["deno", "x", "-A", "npm:@arethetypeswrong/cli@{version}"]
       },
       "flags": {
         "version": {
@@ -116,8 +120,7 @@
           "cliName": "--help",
           "supported": true
         }
-      },
-      "interactive": false
+      }
     }
   ],
   "sources": [
@@ -140,21 +143,18 @@
       "checks": [
         {
           "found": true,
-          "text": "attw --pack ."
+          "text": "attw"
         }
       ],
       "review": {
-        "reason": "Adapter exposes the documented npm-only attw in-place package check through a package script.",
+        "reason": "Adapter executes the general attw CLI unchanged.",
         "files": [
           "src/stacks/are-the-types-wrong/adapter.ts",
           "src/stacks/are-the-types-wrong/init.test.ts"
         ],
         "sections": ["Usage"],
-        "mustContain": ["attw --pack ."],
-        "checks": [
-          "Confirm attw --pack . remains the supported in-place package analysis command.",
-          "Confirm upstream still limits --pack to npm projects."
-        ]
+        "mustContain": ["attw"],
+        "checks": ["Confirm the bare attw command remains the general CLI entry point."]
       }
     }
   ]

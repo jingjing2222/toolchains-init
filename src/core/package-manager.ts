@@ -1,5 +1,3 @@
-import { runCommand } from "./run-command";
-
 export type PackageManager = "npm" | "pnpm" | "yarn" | "bun" | "deno";
 
 export function detectPackageManager(env: NodeJS.ProcessEnv = process.env): PackageManager {
@@ -8,10 +6,6 @@ export function detectPackageManager(env: NodeJS.ProcessEnv = process.env): Pack
     getPackageManagerFromExecPath(env.npm_execpath) ??
     "npm"
   );
-}
-
-export async function runInstall(packageManager: string, cwd: string) {
-  await runCommand(cwd, packageManager, ["install"]);
 }
 
 function getPackageManagerFromUserAgent(userAgent?: string): PackageManager | null {

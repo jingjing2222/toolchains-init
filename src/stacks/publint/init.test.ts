@@ -1,38 +1,33 @@
-import { describe, expect, it } from "vitest";
-import { runExternalToolchains, runPostInstallToolchains } from "../../core/external-toolchains";
-import { writeToolchain } from "../../core/files";
-import { publintCliManifest } from "./index";
-import {
-  adapterInitTimeout,
-  createFreshViteProject,
-  options,
-  readPackageJson,
-} from "../init-test-utils";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { resolveCliCommand } from "../../core/cli-command-manifest";
+import { runExternalToolchains } from "../../core/external-toolchains";
+import { publint, publintCliManifest } from "./index";
+import { options } from "../init-test-utils";
+
+const mocks = vi.hoisted(() => ({
+  runCommand: vi.fn(async () => {}),
+}));
+
+vi.mock("../../core/run-command", () => ({
+  runCommand: mocks.runCommand,
+}));
 
 describe("publint adapter init", () => {
-  it(
-    "adds the package script in lifecycle order",
-    async () => {
-      const cwd = await createFreshViteProject();
-      const packageJson = await readPackageJson(cwd);
-      const toolchainOptions = options(["publint"]);
+  beforeEach(() => {
+    mocks.runCommand.mockClear();
+  });
 
-      await runExternalToolchains(cwd, "npm", toolchainOptions, true);
-      expect((await readPackageJson(cwd)).scripts?.["lint:package"]).toBeUndefined();
+  it("executes the bare publint CLI with inherited stdin", async () => {
+    expect(publint.managedCli).toBe(true);
+    const command = resolveCliCommand(publintCliManifest, "check", "npm");
+    expect(command).toEqual({
+      bin: "npx",
+      args: [`publint@${publintCliManifest.version}`],
+    });
 
-      await writeToolchain(cwd, packageJson, toolchainOptions);
-      expect((await readPackageJson(cwd)).scripts?.["lint:package"]).toBe(
-        `npx publint@${publintCliManifest.version}`,
-      );
+    await runExternalToolchains(".", "npm", options(["publint"]));
 
-      await runPostInstallToolchains(cwd, "npm", toolchainOptions, true);
-      const finalPackageJson = await readPackageJson(cwd);
-      expect(finalPackageJson.scripts?.["lint:package"]).toBe(
-        `npx publint@${publintCliManifest.version}`,
-      );
-      expect(finalPackageJson.dependencies?.publint).toBeUndefined();
-      expect(finalPackageJson.devDependencies?.publint).toBeUndefined();
-    },
-    adapterInitTimeout,
-  );
+    expect(mocks.runCommand).toHaveBeenCalledTimes(1);
+    expect(mocks.runCommand).toHaveBeenCalledWith(".", command.bin, command.args);
+  });
 });

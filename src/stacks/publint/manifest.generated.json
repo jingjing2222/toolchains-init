@@ -10,7 +10,8 @@
         "npm": ["npx", "publint@{version}"],
         "pnpm": ["pnpm", "dlx", "publint@{version}"],
         "yarn": ["yarn", "dlx", "publint@{version}"],
-        "bun": ["bunx", "publint@{version}"]
+        "bun": ["bunx", "publint@{version}"],
+        "deno": ["deno", "x", "-A", "npm:publint@{version}"]
       },
       "flags": {
         "level": {
@@ -40,8 +41,7 @@
           "cliName": "--help",
           "supported": true
         }
-      },
-      "interactive": false
+      }
     }
   ],
   "sources": [
@@ -68,13 +68,11 @@
         }
       ],
       "review": {
-        "reason": "Adapter exposes the documented zero-config publint CLI through a package script.",
+        "reason": "Adapter executes the bare publint CLI unchanged.",
         "files": ["src/stacks/publint/adapter.ts", "src/stacks/publint/init.test.ts"],
         "sections": ["Usage"],
         "mustContain": ["npx publint"],
-        "checks": [
-          "Confirm publint remains runnable against the current package without local configuration."
-        ]
+        "checks": ["Confirm the bare publint command remains the general package check."]
       }
     }
   ]

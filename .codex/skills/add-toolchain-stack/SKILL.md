@@ -7,16 +7,17 @@ description: Add or maintain a CLI-backed toolchain stack in the toolchains-init
 
 ## Ownership Contract
 
-Keep maintenance boundaries strict:
+`toolchains-init` is a command runner, not a second implementation of an upstream CLI.
 
-- Handwritten adapters declare stable product policy and lifecycle behavior.
-- Core owns selection, package-manager orchestration, project detection, and conditional CLI policy.
-- `manifest.generated.json` owns upstream version data, package-manager command templates, and the public managed-argument names, types, and enum values.
-- Core derives `--<manifest.tool>` groups and `--<tool>.<generated-flag>[=value]` options from that manifest. Never add an individual upstream flag to the handwritten parser.
-- Routine cron changes to versions, templates, or additive generated flags do not require handwritten adapter edits.
-- Reopen adapter policy only for a consumed or required flag contract, a removed or type-changed public flag, a docs marker, a focused smoke failure, or an initializer that no longer executes.
+- The wrapper may prepare a prerequisite before the origin command only when official documentation or an executable test proves that the command needs it to start.
+- The origin command is the terminal project mutation. After it returns, the wrapper must not edit files, package metadata, dependencies, or configuration for that tool.
+- Preserve the origin CLI's stdin, prompts, exit status, and argument semantics. Wrapper `--yes` is never forwarded and never changes the origin process's stdin.
+- Do not infer missing upstream choices, inject convenience presets, reinterpret an option, or policy-filter raw upstream tokens because the wrapper considers them unsafe or unnecessary.
+- Handwritten adapters declare only stable command identity, proven prerequisites, and review evidence.
+- `manifest.generated.json` owns the pinned upstream version, package-manager command templates, and discovered typed flags.
 
-Do not turn a generated-only refresh into a broad adapter cleanup.
+Core derives `--<manifest.tool>` selectors and typed `--<tool>.<flag>[=value]` options from the
+manifest. Never add an individual upstream flag to a handwritten parser.
 
 ## Start Here
 
@@ -25,15 +26,16 @@ Do not turn a generated-only refresh into a broad adapter cleanup.
 3. Read:
    - `src/core/toolchain-adapter.ts`
    - `src/core/cli-command-manifest.ts`
+   - `src/core/managed-cli.ts`
    - `src/core/external-toolchains.ts`
    - `scripts/update-cli-manifests.ts`
    - the nearest adapter and `init.test.ts`
-4. Verify the current official initializer using official docs and package help. Test a clean representative project when unattended behavior matters.
-5. Prefer the official initializer. Use built-in setup only when no official setup exists or it cannot be represented safely; document that decision in code, tests, and user-facing docs.
+4. Verify the exact origin command in official documentation and current package help.
+5. Run that exact command in a clean representative project when practical. Observe its behavior; do not replace its choices with wrapper policy.
 
-## Scaffold Without Interaction
+## Scaffold the Exact Command
 
-Agents should pass every required decision in one command instead of entering the prompt UI. Start from `yarn new --help`, then include all applicable optional overrides.
+Pass every known scaffold decision in one command instead of entering the scaffold prompt UI:
 
 ```bash
 yarn new example \
@@ -44,113 +46,115 @@ yarn new example \
   --catalog quality \
   --docs-url https://example.com/docs/cli \
   --docs-confidence high \
-  --docs-reason "The adapter runs the documented initializer command." \
+  --docs-reason "The adapter runs the documented origin command unchanged." \
   --docs-section "CLI setup" \
   --docs-must-contain "create-example init" \
-  --docs-check "Confirm the complete initializer still finishes without stdin." \
-  --supports-non-interactive
+  --docs-check "Confirm this remains the complete origin command."
 ```
 
-Replace the final capability switch with `--interactive-only-reason "<specific remaining prompt>"` when full unattended execution is not possible. Never pass both switches.
+The generated adapter declares `managedCli: true`. The normal `command: "init"` form already puts
+`init` in runtime templates, so do not repeat it in `commandArgs`.
 
-The scaffold is a starting point. Replace generated TODO assertions with tool-specific evidence before merge.
-
-An executable CLI scaffold declares `managedCli: { phase: "run" }`. Its manifest tool becomes the
-public selector and argument namespace automatically:
+Use `commandArgs` only for documented static tokens that are part of command identity. For a
+flag-shaped initializer, for example:
 
 ```bash
-toolchains-init --example --example.template=react --yes
-toolchains-init --example --help
+yarn new example \
+  --package example-cli \
+  --command init \
+  --subcommand none \
+  --command-arg=--init \
+  --docs-url https://example.com/docs/cli \
+  --docs-must-contain "example-cli --init"
 ```
 
-Do not add `template` to the adapter or core parser. It is accepted only when the generated manifest
-declares it.
+Order matters. Generated package-manager templates append `commandArgs` after the inferred
+subcommand, including custom runner templates.
 
-## Classify Interaction Correctly
+## Preserve the Upstream Argument Surface
 
-Judge the complete initializer, not its first command or advertised `--yes` flag. From a clean project, account for dependency installation, provider selection, authentication, credentials, follow-up configuration, and post-install hooks.
+Manifest flags provide the convenient typed namespace:
 
-For a fully unattended initializer:
-
-- Pass `--supports-non-interactive` when scaffolding.
-- Leave `adapter.nonInteractive` absent. Supported behavior has no positive adapter marker.
-- Keep an enabled, non-skipped lifecycle smoke test that runs with `yes: true` and asserts meaningful files, dependencies, or configuration.
-
-For an initializer that still needs stdin or project-specific choices:
-
-- Pass a precise `--interactive-only-reason`.
-- Store only the negative exception:
-
-```ts
-nonInteractive: {
-  supported: false,
-  reason: "provider credentials require project-specific choices",
-},
+```bash
+toolchains-init --example --example.template=react --example.force
 ```
 
-- Keep the default test deterministic: mock command execution, resolve the generated command, exercise the shared core lifecycle with `yes: false`, and assert the exact `runCommand` call.
-- Put real interactive coverage behind an explicit opt-in E2E environment variable when it adds value.
+- Boolean flags use presence syntax.
+- String flags accept a value.
+- Enum values remain exact and case-sensitive.
+- Routine upstream flag additions become available after `yarn manifests:update`; they do not require adapter edits.
 
-If the unattended assertion has not been proven end to end, classify the adapter as interactive-only.
+Typed discovery cannot represent every CLI grammar. Users can repeat
+`--<tool>.raw.arg=<token>` for positional arguments, repeated flags, or complete token-by-token
+passthrough:
+
+```bash
+toolchains-init \
+  --example \
+  --example.raw.arg=./packages/app \
+  --example.raw.arg=--tag \
+  --example.raw.arg=one \
+  --example.raw.arg=--tag \
+  --example.raw.arg=two
+```
+
+Raw tokens retain their order and reach only the selected origin CLI. They are the escape hatch for
+upstream syntax, not adapter-owned policy.
 
 ## Keep the Adapter Thin
 
 For every CLI-backed adapter:
 
-- Declare CLI metadata and at least one official `docs` source with review metadata.
+- Declare CLI metadata and at least one official `docs` source with actionable review metadata.
+- Use `managedCli: true`; it is a marker that the manifest command executes.
+- Put only origin-command identity in `command`, `subcommand`, and `commandArgs`.
+- Let core resolve the pinned package-manager template and merge typed and raw user arguments.
+- Add prerequisite preparation only before command execution and only with evidence tied to the adapter and its focused test.
+- Leave the files and package state produced by the CLI untouched after execution.
+- Keep selection on generated `--<manifest.tool>` groups; do not add aliases or per-tool parser cases.
 
-When the initializer executes through the shared managed runner, declare its stable command
-consumer once through `managedCli`:
+If a generated command is wrong, update CLI metadata or the generator and run
+`yarn manifests:update`. Never patch generated JSON by hand.
 
-- `phase` selects the shared lifecycle phase, such as `run` or `afterInstall`.
-- `defaults` are stable values users may override.
-- `locked` are required adapter invariants and reject conflicting user values.
-- `blocked` excludes upstream options that violate the adapter's product boundary.
-- `positionals` contains only stable adapter-owned positional arguments the manifest cannot represent; core inserts them before generated flags.
-- `setup` declares rare wrapper-owned choices under the collision-proof `--<tool>.setup.<name>` namespace and binds each one to a typed `ToolchainOptions` field without a per-tool parser case.
-- `execute` is reserved for commands that need stable work before or after the shared runner.
+## Test the Boundary
 
-For managed CLI adapters:
+The focused adapter test must mock command execution and assert the exact call:
 
-- Let core merge and validate manifest-derived user arguments. Do not enumerate every discovered flag in the adapter or add per-tool parser cases.
-- Use manifest logical keys only for stable `defaults`, `locked`, or `blocked` policy. Never duplicate CLI spellings, types, enum values, versions, or package-manager templates.
-- Keep `positionals` docs-backed. Do not use them as an escape hatch for representable flags.
-- Use core lifecycle hooks for package-json mutations and install phases; do not embed package-manager switch logic in the adapter.
-- Use `packageJson` passed by core and shared dependency helpers. Do not reread project state ad hoc.
-- Keep selection on generated `--<manifest.tool>` groups; do not add parallel global selectors or per-tool aliases.
+- correct working directory;
+- exact package-manager binary and pinned origin arguments;
+- static `commandArgs` in their documented order;
+- typed and raw user tokens forwarded without reinterpretation;
+- the core runner's unconditional inherited stdio, including when wrapper `yes` is true;
+- exactly one origin-command execution and no wrapper mutation afterward.
 
-If a generated command is wrong, update CLI metadata or the generator and run `yarn manifests:update`. Never patch generated JSON by hand.
+Use a real clean-project smoke test only as additional evidence. Assertions about files produced by
+the origin CLI may prove that the command ran, but they do not authorize the wrapper to reproduce or
+amend those files.
 
-For user-facing verification, use the manifest tool group:
+## Make Command Identity Docs-Backed
 
-```bash
-toolchains-init --playwright --playwright.browser=chromium --yes
-toolchains-init --tanstack-router --help
-```
+Every handwritten prerequisite and static command token needs an official source and review metadata:
 
-## Make Policy Docs-Backed
-
-Every handwritten adapter choice, including the interaction classification, needs an official source and actionable review metadata:
-
-- `reason` explains the exact policy tied to the source.
+- `reason` explains the exact dependency on the source.
 - `files` names the adapter and focused test.
-- `mustContain` uses short, stable strings that prove the relevant upstream section still exists.
-- `checks` asks what a maintainer must verify when a marker changes.
+- `mustContain` proves the relevant command still exists.
+- `checks` asks a maintainer to verify the complete invocation and the no-after-mutation boundary.
 - `sections` identifies the relevant human-facing area when useful.
 
-Prefer official setup docs, then official package docs, then the upstream raw README or source. Do not weaken a failed marker merely to make automation green; determine whether the adapter contract changed.
+Prefer official setup docs, then official package docs, then the upstream raw README or source. Do
+not weaken a failed marker merely to make automation green; determine whether the origin command
+changed.
 
-After metadata changes, run `yarn manifests:update` and inspect generated diffs. Accept unrelated routine metadata only when it belongs in the requested change.
+After metadata changes, run `yarn manifests:update` and inspect generated diffs. Accept unrelated
+routine metadata only when it belongs in the requested change.
 
 ## Review an Automated Manifest PR
 
-Use the PR body and diff to decide scope:
-
 1. Confirm changes are restricted to generated manifests and the automation changeset.
-2. For version, command-template, or additive-flag drift, run manifest validation and focused tests without editing the adapter. A new flag should appear in its generated public group automatically.
-3. Explicitly review removed or type-changed public flags, even when the adapter did not consume them.
-4. Review the named policy files only when a consumed/default/locked contract changes, a docs marker changes, a focused smoke fails, or the upstream CLI no longer runs.
-5. Change handwritten adapter code only when evidence shows its stable policy must change.
+2. For version, command-template, or additive-flag drift, run manifest validation and focused tests without editing the adapter.
+3. Review removed or type-changed public flags, while keeping raw passthrough available for all upstream tokens.
+4. Review handwritten files only when a static command token, prerequisite, docs marker, or exact-command test changed.
+5. Confirm the wrapper still makes no project mutation after each origin command returns.
 
 An existing stable adapter should otherwise remain untouched after its initial addition.
 
@@ -167,7 +171,7 @@ A new CLI-backed stack normally includes:
 - user-facing docs when support is visible
 - a changeset
 
-Change core lifecycle code only when the tool cannot use an existing phase.
+Change core command execution only when the exact origin invocation cannot use the existing runner.
 
 ## Validate and Review
 
@@ -186,4 +190,6 @@ Then run:
 yarn verify
 ```
 
-Review the final diff for generated-file ownership, manifest-derived public arguments, complete unattended behavior, meaningful tests, and docs-backed exceptions. Verify that adding a synthetic manifest flag changes help and parsing without changing adapter or parser source. Repeat independent review and fixes until no P1 or P2 findings remain. Report any opt-in E2E that was not run and why.
+Review the final diff for generated-file ownership, exact origin-command identity, ordered raw
+passthrough, proven prerequisites, inherited stdin, and absence of mutation after the command.
+Repeat independent review and fixes until no P1 or P2 findings remain.

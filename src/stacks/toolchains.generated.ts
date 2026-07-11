@@ -72,22 +72,7 @@ export type BuiltInFeature =
 export const ALL_FEATURES = toolchains.map((toolchain) => toolchain.feature);
 
 export function getSelectedToolchains(features: readonly string[]) {
-  return toolchains.filter((toolchain) => features.includes(toolchain.feature));
-}
-
-export async function getAvailableToolchains(
-  context: Parameters<NonNullable<(typeof toolchains)[number]["isAvailable"]>>[0],
-) {
-  const available = await Promise.all(
-    toolchains.map(async (toolchain) => {
-      const supportsPackageManager =
-        toolchain.cli?.packageManagers?.includes(context.packageManager) ?? true;
-      return {
-        toolchain,
-        isAvailable: supportsPackageManager && ((await toolchain.isAvailable?.(context)) ?? true),
-      };
-    }),
+  return features.flatMap((feature) =>
+    toolchains.filter((toolchain) => toolchain.feature === feature),
   );
-
-  return available.filter(({ isAvailable }) => isAvailable).map(({ toolchain }) => toolchain);
 }

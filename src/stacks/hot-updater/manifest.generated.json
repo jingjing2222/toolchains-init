@@ -10,7 +10,8 @@
         "npm": ["npx", "hot-updater@{version}", "init"],
         "pnpm": ["pnpm", "dlx", "hot-updater@{version}", "init"],
         "yarn": ["yarn", "dlx", "hot-updater@{version}", "init"],
-        "bun": ["bunx", "hot-updater@{version}", "init"]
+        "bun": ["bunx", "hot-updater@{version}", "init"],
+        "deno": ["deno", "x", "-A", "npm:hot-updater@{version}", "init"]
       },
       "flags": {
         "provider": {
@@ -30,8 +31,7 @@
           "cliName": "--help",
           "supported": true
         }
-      },
-      "interactive": true
+      }
     }
   ],
   "sources": [
@@ -55,21 +55,14 @@
         {
           "found": true,
           "text": "npx hot-updater init"
-        },
-        {
-          "found": true,
-          "text": "Provider Selection"
         }
       ],
       "review": {
-        "reason": "Adapter blocks `--yes` because Hot Updater init requires interactive provider setup.",
+        "reason": "Adapter executes the documented hot-updater init command unchanged.",
         "files": ["src/stacks/hot-updater/adapter.ts", "src/stacks/hot-updater/init.test.ts"],
         "sections": ["Basic Usage", "Initialize Hot Updater"],
-        "mustContain": ["npx hot-updater init", "Provider Selection"],
-        "checks": [
-          "Confirm `hot-updater init` still requires interactive provider configuration.",
-          "Confirm React Native availability remains the right gating condition."
-        ]
+        "mustContain": ["npx hot-updater init"],
+        "checks": ["Confirm hot-updater init remains the official initialization command."]
       }
     }
   ]

@@ -1,41 +1,17 @@
 import { describe, expect, it } from "vitest";
-import {
-  parseCliOptions,
-  renderHelp,
-  validateNonInteractiveToolchains,
-} from "../src/core/cli-options";
+import { parseCliOptions, renderHelp } from "../src/core/cli-options";
 import { resolveManagedCliPlans } from "../src/core/managed-cli";
-import { DEFAULT_ROUTER_MODE } from "../src/core/types";
-import { getSelectedToolchains } from "../src/stacks/index";
+import { getSelectedToolchains } from "../src/stacks";
 
 describe("CLI options", () => {
-  it("parses a fully specified non-interactive plan", () => {
+  it("parses direct selectors and generated namespaced flags", () => {
     const options = parseCliOptions([
-      "--tanstack-router",
-      "--playwright",
-      "--oxlint",
-      "--package-manager",
-      "pnpm",
-      "--tanstack-router.setup.router-mode=file",
-      "--yes",
-    ]);
-
-    expect(options).toMatchObject({
-      packageManager: "pnpm",
-      toolchainOptions: { routerMode: "file" },
-      selectedFeatures: ["router", "playwright", "oxlint"],
-      yes: true,
-    });
-  });
-
-  it("parses direct selectors and manifest-generated namespaced flags", () => {
-    const options = parseCliOptions([
-      "--tanstack-router",
-      "--tanstack-router.setup.router-mode=file",
       "--playwright",
       "--playwright.lang",
       "TypeScript",
       "--playwright.quiet",
+      "--package-manager",
+      "pnpm",
       "--yes",
     ]);
 
@@ -43,52 +19,91 @@ describe("CLI options", () => {
       managedCliFlags: {
         playwright: { lang: "TypeScript", quiet: true },
       },
-      toolchainOptions: { routerMode: "file" },
-      selectedFeatures: ["router", "playwright"],
+      managedCliRawArgs: {},
+      packageManager: "pnpm",
+      selectedFeatures: ["playwright"],
       yes: true,
     });
   });
 
-  it("carries parsed generated flags into the real adapter command plan", () => {
+  it("preserves direct selector order for origin command execution", () => {
+    const parsed = parseCliOptions(["--yarn-sdks", "--cspell"]);
+
+    expect(parsed.selectedFeatures).toEqual(["yarnSdks", "cspell"]);
+    expect(
+      getSelectedToolchains(parsed.selectedFeatures ?? []).map((toolchain) => toolchain.feature),
+    ).toEqual(["yarnSdks", "cspell"]);
+  });
+
+  it("parses repeatable raw arguments without interpreting their contents", () => {
+    const options = parseCliOptions([
+      "--prisma",
+      "--prisma.raw.arg",
+      "--preview-feature",
+      "--prisma.raw.arg=one",
+      "--prisma.raw.arg",
+      "--",
+      "--prisma.raw.arg=file.ts",
+    ]);
+
+    expect(options.managedCliRawArgs).toEqual({
+      prisma: ["--preview-feature", "one", "--", "file.ts"],
+    });
+  });
+
+  it("carries typed and raw arguments into the exact origin command plan", () => {
     const parsed = parseCliOptions([
       "--playwright",
       "--playwright.browser=chromium",
-      "--playwright.lang=js",
+      "--playwright.help",
+      "--playwright.raw.arg=--version",
       "--yes",
     ]);
     const selectedToolchains = getSelectedToolchains(parsed.selectedFeatures ?? []);
-    const plans = resolveManagedCliPlans({
-      options: {
-        features: selectedToolchains.map((toolchain) => toolchain.feature),
-        routerMode: parsed.toolchainOptions.routerMode ?? DEFAULT_ROUTER_MODE,
-      },
+    const plan = resolveManagedCliPlans({
       packageManager: "npm",
       selectedToolchains,
       userFlags: parsed.managedCliFlags,
-      yes: parsed.yes,
-    });
+      userRawArgs: parsed.managedCliRawArgs,
+    }).get("playwright");
 
-    expect(plans.get("playwright")?.command.args).toEqual(
-      expect.arrayContaining(["--browser", "chromium", "--lang", "js"]),
+    expect(plan?.command.args).toEqual(
+      expect.arrayContaining(["--browser", "chromium", "--help", "--version"]),
     );
   });
 
-  it("removes legacy selectors and requires explicit groups for --yes", () => {
+  it("keeps wrapper --yes out of origin arguments", () => {
+    const withoutYes = parseCliOptions(["--cspell"]);
+    const withYes = parseCliOptions(["--cspell", "--yes"]);
+    const selectedToolchains = getSelectedToolchains(["cspell"]);
+
+    const resolve = (parsed: typeof withoutYes) =>
+      resolveManagedCliPlans({
+        packageManager: "npm",
+        selectedToolchains,
+        userFlags: parsed.managedCliFlags,
+        userRawArgs: parsed.managedCliRawArgs,
+      }).get("cspell")?.command;
+
+    expect(resolve(withYes)).toEqual(resolve(withoutYes));
+  });
+
+  it("requires explicit selectors for wrapper --yes", () => {
     expect(() => parseCliOptions(["--toolchains", "all"])).toThrow(/unknown option/i);
     expect(() => parseCliOptions(["--router", "file"])).toThrow(/unknown option/i);
     expect(() => parseCliOptions(["--yes"])).toThrow("requires at least one direct");
   });
 
-  it("validates closed option values", () => {
+  it("validates wrapper and generated enum values", () => {
     expect(() => parseCliOptions(["--package-manager", "pip"])).toThrow(
       "Expected one of: npm, pnpm, yarn, bun, deno",
     );
-    expect(() =>
-      parseCliOptions(["--tanstack-router", "--tanstack-router.setup.router-mode=pages"]),
-    ).toThrow("Expected one of: file, code");
+    expect(() => parseCliOptions(["--playwright", "--playwright.lang=rust"])).toThrow(
+      "Expected one of: js, TypeScript",
+    );
   });
 
-  it("rejects duplicate singleton options", () => {
+  it("rejects duplicate singleton options but accepts repeated raw args", () => {
     expect(() => parseCliOptions(["--target", "apps/a", "--target", "apps/b"])).toThrow(
       "Duplicate option: --target",
     );
@@ -98,24 +113,22 @@ describe("CLI options", () => {
     expect(() =>
       parseCliOptions(["--playwright", "--playwright.lang=js", "--playwright.lang=TypeScript"]),
     ).toThrow("Duplicate option: --playwright.lang");
+    expect(
+      parseCliOptions(["--playwright", "--playwright.raw.arg=first", "--playwright.raw.arg=second"])
+        .managedCliRawArgs,
+    ).toEqual({ playwright: ["first", "second"] });
   });
 
-  it("rejects ambiguous, unselected, invalid, or unused managed arguments", () => {
+  it("requires the matching selector for typed and raw origin arguments", () => {
     expect(() => parseCliOptions(["--playwright.lang=js"])).toThrow(
       "requires the --playwright tool selector",
     );
-    expect(() => parseCliOptions(["--tanstack-router.setup.router-mode=file"])).toThrow(
-      "requires the --tanstack-router tool selector",
-    );
-    expect(() => parseCliOptions(["--playwright", "--playwright.lang=rust"])).toThrow(
-      "Expected one of: js, TypeScript",
-    );
-    expect(() => parseCliOptions(["--playwright", "--playwright.lang=js", "--no-install"])).toThrow(
-      "cannot be combined with --no-install",
+    expect(() => parseCliOptions(["--playwright.raw.arg=file.ts"])).toThrow(
+      "requires the --playwright tool selector",
     );
   });
 
-  it("lets informational flags bypass semantic option validation", () => {
+  it("lets wrapper help and version bypass unrelated semantic validation", () => {
     expect(parseCliOptions(["--package-manager", "pip", "--help"]).help).toBe(true);
     expect(parseCliOptions(["--package-manager", "pip", "--version"]).version).toBe(true);
     expect(parseCliOptions(["--playwright", "--playwright.lang=rust", "--help"])).toMatchObject({
@@ -124,41 +137,18 @@ describe("CLI options", () => {
     });
   });
 
-  it("reports interactive-only toolchains for unattended runs", () => {
-    const selected = getSelectedToolchains(["hotUpdater", "eslint"]);
-    const errors = validateNonInteractiveToolchains(selected, true);
-
-    expect(errors.join("\n")).toContain("hot-updater");
-    expect(errors.join("\n")).toContain("eslint");
-  });
-
-  it("renders registry-derived interactive capabilities in help", () => {
+  it("renders transparent origin argument help without wrapper policy", () => {
     const help = renderHelp("1.2.3");
+    const focused = renderHelp("1.2.3", "playwright");
 
-    expect(help).toContain("provider setup requires project-specific interactive choices");
-    expect(help).toContain("@eslint/create-config still prompts for dependency installation");
-    expect(help).toContain("Yarn SDKs — Generates Yarn PnP editor SDKs for VSCode");
-    expect(help).toContain("[package managers: yarn]");
-    expect(help).toContain("--tanstack-router");
-    expect(help).toContain("--playwright --help");
-  });
-
-  it("renders focused manifest-derived flag help", () => {
-    const help = renderHelp("1.2.3", "playwright");
-
-    expect(help).toContain("Tool: --playwright");
-    expect(help).toContain("--playwright.browser <value>");
-    expect(help).toContain("--playwright.lang <js|TypeScript>");
-    expect(help).toContain("--playwright.help");
-    expect(help).toContain("[blocked:");
-  });
-
-  it("renders adapter-owned setup separately from generated flags", () => {
-    const help = renderHelp("1.2.3", "tanstack-router");
-
-    expect(help).toContain("Tool setup options:");
-    expect(help).toContain("--tanstack-router.setup.router-mode <file|code>");
-    expect(help).toContain("Generated upstream flags:");
-    expect(help).toContain("--tanstack-router.router-only");
+    expect(help).toContain("--<tool>.raw.arg <value>");
+    expect(help).not.toContain("interactive-only");
+    expect(help).not.toContain("--no-install");
+    expect(focused).toContain("--playwright.help");
+    expect(focused).not.toContain("--playwright.version  forwards");
+    expect(focused).toContain("--playwright.raw.arg=--version");
+    expect(focused).toContain("--playwright.raw.arg");
+    expect(focused).not.toContain("[blocked:");
+    expect(focused).not.toContain("[locked");
   });
 });

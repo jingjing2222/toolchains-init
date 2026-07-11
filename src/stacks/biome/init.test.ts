@@ -1,35 +1,33 @@
-import { describe, expect, it } from "vitest";
-import { runExternalToolchains, runPostInstallToolchains } from "../../core/external-toolchains";
-import { writeToolchain } from "../../core/files";
-import { biomeCliManifest } from "./index";
-import {
-  adapterInitTimeout,
-  createFreshViteProject,
-  expectFileToExist,
-  expectFileNotToExist,
-  options,
-  readPackageJson,
-} from "../init-test-utils";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { resolveCliCommand } from "../../core/cli-command-manifest";
+import { runExternalToolchains } from "../../core/external-toolchains";
+import { biome, biomeCliManifest } from "./index";
+import { options } from "../init-test-utils";
+
+const mocks = vi.hoisted(() => ({
+  runCommand: vi.fn(async () => {}),
+}));
+
+vi.mock("../../core/run-command", () => ({
+  runCommand: mocks.runCommand,
+}));
 
 describe("Biome adapter init", () => {
-  it(
-    "pins the package and scaffolds Biome config in lifecycle order",
-    async () => {
-      const cwd = await createFreshViteProject();
-      const packageJson = await readPackageJson(cwd);
-      const toolchainOptions = options(["biome"]);
+  beforeEach(() => {
+    mocks.runCommand.mockClear();
+  });
 
-      await runExternalToolchains(cwd, "npm", toolchainOptions, true);
-      await expectFileNotToExist(cwd, "biome.json");
+  it("executes biome init with inherited stdin", async () => {
+    expect(biome.managedCli).toBe(true);
+    const command = resolveCliCommand(biomeCliManifest, "init", "npm");
+    expect(command).toEqual({
+      bin: "npx",
+      args: [`@biomejs/biome@${biomeCliManifest.version}`, "init"],
+    });
 
-      await writeToolchain(cwd, packageJson, toolchainOptions);
-      expect((await readPackageJson(cwd)).devDependencies?.["@biomejs/biome"]).toBe(
-        biomeCliManifest.version,
-      );
+    await runExternalToolchains(".", "npm", options(["biome"]));
 
-      await runPostInstallToolchains(cwd, "npm", toolchainOptions, true);
-      await expectFileToExist(cwd, "biome.json");
-    },
-    adapterInitTimeout,
-  );
+    expect(mocks.runCommand).toHaveBeenCalledTimes(1);
+    expect(mocks.runCommand).toHaveBeenCalledWith(".", command.bin, command.args);
+  });
 });

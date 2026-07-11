@@ -2,9 +2,11 @@
 
 [![NPM](https://img.shields.io/npm/v/toolchains-init)](https://www.npmjs.com/package/toolchains-init)
 
-Set up the toolchains you usually add after creating a new app or package.
+Run the origin CLIs for the toolchains you usually add after creating a new app or package.
 
-`toolchains-init` runs the official initializers for the tools you choose, then applies the small workspace setup those tools expect: editor settings, package scripts, router files, test config, API mocking, and release tooling.
+For a CLI-backed tool, `toolchains-init` may prepare a documented prerequisite, then runs the exact
+origin command as that tool's final project mutation. It never edits the project afterward, guesses
+the CLI's choices, or restricts the CLI's argument surface.
 
 ## Quick Start
 
@@ -16,55 +18,54 @@ yarn dlx toolchains-init
 pnpm dlx toolchains-init
 ```
 
-Then choose what you want to add from the interactive prompt.
+Then choose the origin commands you want to run from the prompt.
 
 ## Key Features
 
-- **Official setup commands**: runs each tool's own initializer instead of copying a template.
+- **Origin commands preserved**: runs each tool's own command with its stdin and argument semantics intact.
 - **Pick only what you need**: routing, API mocking, E2E, formatting, linting, dead-code checks, release tooling, or editor SDKs.
 - **Cataloged prompt**: toolchains are grouped by app foundation, quality, release, and editor setup.
-- **Automation friendly**: select toolchains and pass their generated CLI arguments in one non-interactive command.
+- **Automation friendly**: select toolchains and pass typed or raw origin CLI arguments in one command.
 - **Fresh project friendly**: designed for newly scaffolded apps and packages.
 - **Monorepo support**: initialize an app package from the workspace root with `--target`.
 - **Package-manager aware**: works with npm, yarn, pnpm, Bun, and Deno.
-- **Overwrite warnings**: shows files that may be replaced before continuing.
 
-## What It Can Add
+## Supported Origin CLIs
 
-| Toolchain            | What You Get                                        | Setup Source   |
-| -------------------- | --------------------------------------------------- | -------------- |
-| TanStack Router      | File-Based Routing or Code-Based Routing setup      | Official CLI   |
-| Hot Updater          | React Native OTA update initializer                 | Official CLI   |
-| Supabase             | Local Supabase project configuration                | Official CLI   |
-| Prisma               | Prisma schema and project configuration             | Official CLI   |
-| shadcn               | shadcn project initializer                          | Official CLI   |
-| Playwright           | Browser E2E test setup                              | Official CLI   |
-| Storybook            | React Vite component workshop setup                 | Official CLI   |
-| MSW                  | Browser API mocking worker setup                    | Official CLI   |
-| CSpell               | Spell-checker configuration                         | Official CLI   |
-| Secretlint           | Secret-scanning configuration                       | Official CLI   |
-| oxfmt                | Oxc formatter setup and editor integration          | Official CLI   |
-| Prettier             | Prettier formatter setup and editor integration     | Built-in setup |
-| oxlint               | Oxc linter setup and editor integration             | Official CLI   |
-| ESLint               | ESLint config initializer and editor integration    | Official CLI   |
-| Biome                | Biome formatter/linter setup and editor integration | Official CLI   |
-| Knip                 | `knip` package script                               | Built-in setup |
-| React Doctor         | `react-doctor` package script                       | Built-in setup |
-| publint              | npm package compatibility check script              | Built-in setup |
-| Are the Types Wrong? | TypeScript package compatibility check script       | Built-in setup |
-| Changesets           | Changeset release workflow                          | Official CLI   |
-| Yarn SDKs            | Yarn PnP editor SDKs for VS Code                    | Official CLI   |
+| Toolchain            | Origin CLI Action                              | Source       |
+| -------------------- | ---------------------------------------------- | ------------ |
+| TanStack Router      | File-Based Routing or Code-Based Routing setup | Official CLI |
+| Hot Updater          | React Native OTA update initializer            | Official CLI |
+| Supabase             | Local Supabase project configuration           | Official CLI |
+| Prisma               | Prisma schema and project configuration        | Official CLI |
+| shadcn               | shadcn project initializer                     | Official CLI |
+| Playwright           | Browser E2E test setup                         | Official CLI |
+| Storybook            | React Vite component workshop setup            | Official CLI |
+| MSW                  | Browser API mocking worker setup               | Official CLI |
+| CSpell               | Spell-checker configuration                    | Official CLI |
+| Secretlint           | Secret-scanning configuration                  | Official CLI |
+| oxfmt                | Oxc formatter initializer                      | Official CLI |
+| Prettier             | Prettier project formatting check              | Official CLI |
+| oxlint               | Oxc linter initializer                         | Official CLI |
+| ESLint               | ESLint configuration initializer               | Official CLI |
+| Biome                | Biome formatter/linter initializer             | Official CLI |
+| Knip                 | Knip project analysis                          | Official CLI |
+| React Doctor         | React project diagnostics                      | Official CLI |
+| publint              | npm package compatibility validation           | Official CLI |
+| Are the Types Wrong? | TypeScript package compatibility validation    | Official CLI |
+| Changesets           | Changeset release workflow                     | Official CLI |
+| Yarn SDKs            | Yarn PnP editor SDKs for VS Code               | Official CLI |
 
 ## Usage
 
-Run the interactive flow:
+Run the prompt-based flow:
 
 ```bash
 toolchains-init
 ```
 
-Each managed CLI-backed toolchain has a manifest-generated argument group. Select it with
-`--<tool>` and forward an upstream option with `--<tool>.<flag>[=value]`:
+Each CLI-backed toolchain has a manifest-generated argument group. Select it with `--<tool>` and
+forward a discovered upstream option with `--<tool>.<flag>[=value]`:
 
 ```bash
 toolchains-init \
@@ -76,9 +77,23 @@ toolchains-init \
   --yes
 ```
 
-Group names come from the generated CLI manifests, so TanStack Router uses
-`--tanstack-router`. Boolean flags need no value; string and enum flags accept `=<value>`. The
-group selects the toolchain and the namespaced options are forwarded without shell parsing.
+Group names come from generated CLI manifests, so TanStack Router uses `--tanstack-router`.
+Boolean flags need no value, string flags accept a value, and enum values are exact and
+case-sensitive. Namespacing keeps flags from different origin CLIs separate; it does not change
+their meaning.
+
+For positionals, repeated flags, or syntax that typed discovery cannot represent, repeat
+`--<tool>.raw.arg=<token>`. Tokens retain their order and are forwarded only to that origin CLI:
+
+```bash
+toolchains-init \
+  --msw \
+  --msw.raw.arg=./public \
+  --msw.raw.arg=--save
+```
+
+Raw arguments also provide complete token-by-token passthrough, so a newly added upstream option
+does not have to wait for a manifest refresh.
 
 Run focused help to see every currently generated option, type, and enum value for one tool:
 
@@ -87,53 +102,25 @@ toolchains-init --playwright --help
 toolchains-init --tanstack-router --help
 ```
 
-Generated manifests own this public argument surface. When upstream adds a supported flag, the
-next manifest refresh makes it appear in help and parsing without a handwritten parser or adapter
-mapping. Adapter-owned locked or blocked values can still reject an incompatible override before
-setup begins.
+Generated manifests own the typed argument surface. When upstream adds a discovered flag, the next
+manifest refresh makes it appear in help and parsing without a handwritten parser or adapter
+mapping. Typed names and values are validated against that manifest; anything outside its grammar
+belongs in the raw namespace, where tokens are not inferred, rewritten, or policy-filtered.
 
-Rare wrapper-owned choices use the separate `--<tool>.setup.<name>` namespace shown in focused
-help. This namespace cannot collide with generated upstream flags; for example, Router mode is
-`--tanstack-router.setup.router-mode=file`.
-
-Non-interactive runs require explicit `--<tool>` selectors. This keeps an automated command stable
+Automated runs require explicit `--<tool>` selectors. This keeps the command stable
 when another adapter is added to the registry; `--yes` never expands silently to every tool.
+
+`--yes` belongs only to `toolchains-init`: it is never forwarded to an origin CLI and never changes
+that process's stdin. Any prompt or default owned by the origin CLI therefore behaves exactly as it
+does when the command is run directly.
 
 Choose the package manager explicitly when environment-based detection is not enough:
 
 ```bash
-toolchains-init --package-manager pnpm --tanstack-router --tanstack-router.setup.router-mode=file --msw --yes
+toolchains-init --package-manager pnpm --tanstack-router --msw --yes
 ```
 
 Supported values are `npm`, `pnpm`, `yarn`, `bun`, and `deno`.
-Are the Types Wrong? is available only for npm projects because its upstream in-place `--pack`
-mode runs `npm pack`.
-
-Hot Updater, shadcn, and ESLint are marked interactive-only because their official initializers
-still require project-specific prompts after the documented CLI arguments are supplied. Their
-generated groups remain usable, but run them without `--yes` instead of relying on brittle prompt
-automation:
-
-```bash
-toolchains-init --hot-updater
-toolchains-init --shadcn
-toolchains-init --eslint
-```
-
-Choose a router mode:
-
-```bash
-toolchains-init --tanstack-router --tanstack-router.setup.router-mode=file --yes
-toolchains-init --tanstack-router --tanstack-router.setup.router-mode=code
-```
-
-Code-Based Routing still uses TanStack Router's interactive CLI, so it cannot be combined with `--yes`.
-
-Run without installing dependencies or official initializers:
-
-```bash
-toolchains-init --no-install
-```
 
 ## Monorepos
 
@@ -145,9 +132,9 @@ yarn dlx toolchains-init --target apps/web
 pnpm dlx toolchains-init --target apps/web
 ```
 
-All files, installs, and setup commands run inside the target directory.
+Each origin command uses the target directory as its working directory.
 
-For a non-interactive monorepo setup, combine the target with generated tool groups:
+For an automated monorepo setup, combine the target with generated tool groups:
 
 ```bash
 npx toolchains-init \
@@ -157,14 +144,11 @@ npx toolchains-init \
   --msw \
   --playwright \
   --playwright.browser=chromium \
-  --tanstack-router.setup.router-mode=file \
   --yes
 ```
 
 ## Notes
 
-Run this in a freshly scaffolded app. Some selected toolchains can overwrite files such as router files, Playwright config, formatter config, linter config, or editor settings.
-
-For fully non-interactive use, select explicit generated groups that exclude help-listed
-interactive-only initializers and add `--yes`. Invalid, unavailable, blocked, or unsupported
-arguments fail before setup begins.
+Run this in a freshly scaffolded app. Origin CLIs may overwrite files such as router files,
+Playwright config, formatter config, linter config, or editor settings. `toolchains-init` leaves the
+state returned by each origin command untouched.

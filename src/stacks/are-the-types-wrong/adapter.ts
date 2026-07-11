@@ -1,5 +1,3 @@
-import { formatCliCommand, resolveCliCommand } from "../../core/cli-command-manifest";
-import { setScript } from "../../core/package-json-utils";
 import { defineToolchain } from "../../core/toolchain-adapter";
 
 export const areTheTypesWrong = defineToolchain({
@@ -14,32 +12,21 @@ export const areTheTypesWrong = defineToolchain({
       url: "https://raw.githubusercontent.com/arethetypeswrong/arethetypeswrong.github.io/main/packages/cli/README.md",
       confidence: "high",
       review: {
-        reason:
-          "Adapter exposes the documented npm-only attw in-place package check through a package script.",
+        reason: "Adapter executes the general attw CLI unchanged.",
         files: [
           "src/stacks/are-the-types-wrong/adapter.ts",
           "src/stacks/are-the-types-wrong/init.test.ts",
         ],
         sections: ["Usage"],
-        mustContain: ["attw --pack ."],
-        checks: [
-          "Confirm attw --pack . remains the supported in-place package analysis command.",
-          "Confirm upstream still limits --pack to npm projects.",
-        ],
+        mustContain: ["attw"],
+        checks: ["Confirm the bare attw command remains the general CLI entry point."],
       },
     },
   ],
   hint: "Check published TypeScript package compatibility",
   exportName: "attwCliManifest",
   stackDir: "are-the-types-wrong",
-  packageManagers: ["npm"],
   subcommand: null,
   tool: "attw",
-  updatePackageJson({ cliManifest, packageJson }) {
-    if (cliManifest == null) {
-      throw new Error("Missing Are the Types Wrong? CLI manifest");
-    }
-    const command = resolveCliCommand(cliManifest, "check", "npm", { pack: true });
-    setScript(packageJson, "attw", formatCliCommand({ ...command, args: [...command.args, "."] }));
-  },
+  managedCli: true,
 });

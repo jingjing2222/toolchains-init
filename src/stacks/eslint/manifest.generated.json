@@ -12,8 +12,7 @@
         "yarn": ["yarn", "dlx", "@eslint/create-config@{version}"],
         "bun": ["bunx", "@eslint/create-config@{version}"],
         "deno": ["deno", "x", "-A", "npm:@eslint/create-config@{version}"]
-      },
-      "interactive": true
+      }
     }
   ],
   "sources": [
@@ -32,46 +31,14 @@
         {
           "found": true,
           "text": "npm init @eslint/config@latest"
-        },
-        {
-          "found": true,
-          "text": "eslint.config.js"
         }
       ],
       "review": {
-        "reason": "Adapter runs the official initializer and assumes ESLint flat config output names.",
+        "reason": "Adapter executes the official ESLint configuration CLI unchanged.",
         "files": ["src/stacks/eslint/adapter.ts", "src/stacks/eslint/init.test.ts"],
-        "sections": ["Getting Started", "Configuration"],
-        "mustContain": ["npm init @eslint/config@latest", "eslint.config.js"],
-        "checks": [
-          "Confirm `@eslint/create-config` remains the documented initializer.",
-          "Confirm generated config filenames still match adapter target files."
-        ]
-      }
-    },
-    {
-      "kind": "docs",
-      "url": "https://raw.githubusercontent.com/eslint/create-config/main/lib/config-generator.js",
-      "confidence": "high",
-      "checks": [
-        {
-          "found": true,
-          "text": "installationQuestions"
-        },
-        {
-          "found": true,
-          "text": "enquirer.prompt"
-        }
-      ],
-      "review": {
-        "reason": "Adapter marks the initializer interactive-only because its output phase always asks installation questions.",
-        "files": ["src/stacks/eslint/adapter.ts", "src/stacks/eslint/init.test.ts"],
-        "sections": ["ConfigGenerator.output"],
-        "mustContain": ["installationQuestions", "enquirer.prompt"],
-        "checks": [
-          "Confirm the output phase still prompts for dependency installation.",
-          "If a stable full-argument path bypasses every prompt, remove the interactive-only marker and add an enabled `yes: true` smoke test."
-        ]
+        "sections": ["Getting Started"],
+        "mustContain": ["npm init @eslint/config@latest"],
+        "checks": ["Confirm @eslint/create-config remains the official configuration CLI."]
       }
     }
   ]

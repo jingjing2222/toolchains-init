@@ -1,45 +1,33 @@
-import { describe, expect, it } from "vitest";
-import { runExternalToolchains, runPostInstallToolchains } from "../../core/external-toolchains";
-import { writeToolchain } from "../../core/files";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { resolveCliCommand } from "../../core/cli-command-manifest";
+import { runExternalToolchains } from "../../core/external-toolchains";
 import { areTheTypesWrong, attwCliManifest } from "./index";
-import {
-  adapterInitTimeout,
-  createFreshViteProject,
-  options,
-  readPackageJson,
-} from "../init-test-utils";
+import { options } from "../init-test-utils";
+
+const mocks = vi.hoisted(() => ({
+  runCommand: vi.fn(async () => {}),
+}));
+
+vi.mock("../../core/run-command", () => ({
+  runCommand: mocks.runCommand,
+}));
 
 describe("Are the Types Wrong? adapter init", () => {
-  it("limits in-place packing to npm, as required by the upstream CLI", () => {
-    expect(areTheTypesWrong.cli?.packageManagers).toEqual(["npm"]);
-    expect(attwCliManifest.commands[0]?.packageManagers).toEqual({
-      npm: ["npx", "@arethetypeswrong/cli@{version}"],
-    });
+  beforeEach(() => {
+    mocks.runCommand.mockClear();
   });
 
-  it(
-    "adds the current-package script in lifecycle order",
-    async () => {
-      const cwd = await createFreshViteProject();
-      const packageJson = await readPackageJson(cwd);
-      const toolchainOptions = options(["areTheTypesWrong"]);
+  it("executes the general attw CLI with inherited stdin", async () => {
+    expect(areTheTypesWrong.managedCli).toBe(true);
+    const command = resolveCliCommand(attwCliManifest, "check", "npm");
+    expect(command).toEqual({
+      bin: "npx",
+      args: [`@arethetypeswrong/cli@${attwCliManifest.version}`],
+    });
 
-      await runExternalToolchains(cwd, "npm", toolchainOptions, true);
-      expect((await readPackageJson(cwd)).scripts?.attw).toBeUndefined();
+    await runExternalToolchains(".", "npm", options(["areTheTypesWrong"]));
 
-      await writeToolchain(cwd, packageJson, toolchainOptions);
-      expect((await readPackageJson(cwd)).scripts?.attw).toBe(
-        `npx @arethetypeswrong/cli@${attwCliManifest.version} --pack .`,
-      );
-
-      await runPostInstallToolchains(cwd, "npm", toolchainOptions, true);
-      const finalPackageJson = await readPackageJson(cwd);
-      expect(finalPackageJson.scripts?.attw).toBe(
-        `npx @arethetypeswrong/cli@${attwCliManifest.version} --pack .`,
-      );
-      expect(finalPackageJson.dependencies?.["@arethetypeswrong/cli"]).toBeUndefined();
-      expect(finalPackageJson.devDependencies?.["@arethetypeswrong/cli"]).toBeUndefined();
-    },
-    adapterInitTimeout,
-  );
+    expect(mocks.runCommand).toHaveBeenCalledTimes(1);
+    expect(mocks.runCommand).toHaveBeenCalledWith(".", command.bin, command.args);
+  });
 });

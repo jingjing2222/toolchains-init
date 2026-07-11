@@ -249,8 +249,7 @@
           "cliName": "--trace-file",
           "supported": true
         }
-      },
-      "interactive": false
+      }
     }
   ],
   "sources": [
@@ -274,21 +273,14 @@
         {
           "found": true,
           "text": "knip"
-        },
-        {
-          "found": true,
-          "text": "--production"
         }
       ],
       "review": {
-        "reason": "Adapter writes a package script that runs Knip through the manifest-backed npm command.",
+        "reason": "Adapter executes the bare Knip CLI unchanged.",
         "files": ["src/stacks/knip/adapter.ts", "src/stacks/knip/init.test.ts"],
         "sections": ["CLI Arguments"],
-        "mustContain": ["knip", "--production"],
-        "checks": [
-          "Confirm the default Knip CLI invocation remains suitable for project checks.",
-          "Confirm script-based usage still does not require installing Knip as a project dependency."
-        ]
+        "mustContain": ["knip"],
+        "checks": ["Confirm the bare knip command remains the general project check."]
       }
     }
   ]

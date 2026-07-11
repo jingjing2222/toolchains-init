@@ -1,33 +1,33 @@
-import { describe, expect, it } from "vitest";
-import { runExternalToolchains, runPostInstallToolchains } from "../../core/external-toolchains";
-import { writeToolchain } from "../../core/files";
-import {
-  adapterInitTimeout,
-  createFreshViteProject,
-  expectFileToExist,
-  options,
-  readJson,
-  readPackageJson,
-} from "../init-test-utils";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { resolveCliCommand } from "../../core/cli-command-manifest";
+import { runExternalToolchains } from "../../core/external-toolchains";
+import { oxfmt, oxfmtCliManifest } from "./index";
+import { options } from "../init-test-utils";
+
+const mocks = vi.hoisted(() => ({
+  runCommand: vi.fn(async () => {}),
+}));
+
+vi.mock("../../core/run-command", () => ({
+  runCommand: mocks.runCommand,
+}));
 
 describe("oxfmt adapter init", () => {
-  it(
-    "scaffolds formatter config and editor settings in lifecycle order",
-    async () => {
-      const cwd = await createFreshViteProject();
-      const packageJson = await readPackageJson(cwd);
-      const toolchainOptions = options(["oxfmt"]);
+  beforeEach(() => {
+    mocks.runCommand.mockClear();
+  });
 
-      await runExternalToolchains(cwd, "npm", toolchainOptions, true);
-      await expectFileToExist(cwd, ".oxfmtrc.json");
+  it("executes oxfmt --init with inherited stdin", async () => {
+    expect(oxfmt.managedCli).toBe(true);
+    const command = resolveCliCommand(oxfmtCliManifest, "init", "npm");
+    expect(command).toEqual({
+      bin: "npx",
+      args: [`oxfmt@${oxfmtCliManifest.version}`, "--init"],
+    });
 
-      await writeToolchain(cwd, packageJson, toolchainOptions);
-      const settings = await readJson(`${cwd}/.vscode/settings.json`);
-      expect(settings["oxc.fmt.configPath"]).toBe(".oxfmtrc.json");
+    await runExternalToolchains(".", "npm", options(["oxfmt"]));
 
-      await runPostInstallToolchains(cwd, "npm", toolchainOptions, true);
-      await expectFileToExist(cwd, ".oxfmtrc.json");
-    },
-    adapterInitTimeout,
-  );
+    expect(mocks.runCommand).toHaveBeenCalledTimes(1);
+    expect(mocks.runCommand).toHaveBeenCalledWith(".", command.bin, command.args);
+  });
 });

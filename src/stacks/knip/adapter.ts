@@ -1,11 +1,9 @@
-import { formatCliCommand, resolveCliCommand } from "../../core/cli-command-manifest";
-import { ensureTypecheckScript, setScript } from "../../core/package-json-utils";
 import { defineToolchain } from "../../core/toolchain-adapter";
 
 export const knip = defineToolchain({
   feature: "knip",
   label: "Knip",
-  hint: "Runs Knip through npx without installing it",
+  hint: "Run Knip project checks",
   catalog: "quality",
   order: 60,
   package: "knip",
@@ -15,28 +13,14 @@ export const knip = defineToolchain({
       url: "https://knip.dev/reference/cli",
       confidence: "high",
       review: {
-        reason:
-          "Adapter writes a package script that runs Knip through the manifest-backed npm command.",
+        reason: "Adapter executes the bare Knip CLI unchanged.",
         files: ["src/stacks/knip/adapter.ts", "src/stacks/knip/init.test.ts"],
         sections: ["CLI Arguments"],
-        mustContain: ["knip", "--production"],
-        checks: [
-          "Confirm the default Knip CLI invocation remains suitable for project checks.",
-          "Confirm script-based usage still does not require installing Knip as a project dependency.",
-        ],
+        mustContain: ["knip"],
+        checks: ["Confirm the bare knip command remains the general project check."],
       },
     },
   ],
   subcommand: null,
-  updatePackageJson({ cliManifest, packageJson }) {
-    if (cliManifest == null) {
-      throw new Error("Missing Knip CLI manifest");
-    }
-    ensureTypecheckScript(packageJson);
-    setScript(
-      packageJson,
-      "knip",
-      formatCliCommand(resolveCliCommand(cliManifest, "check", "npm")),
-    );
-  },
+  managedCli: true,
 });

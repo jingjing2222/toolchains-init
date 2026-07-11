@@ -10,9 +10,9 @@
         "npm": ["npx", "prisma@{version}", "init"],
         "pnpm": ["pnpm", "dlx", "prisma@{version}", "init"],
         "yarn": ["yarn", "dlx", "prisma@{version}", "init"],
-        "bun": ["bunx", "prisma@{version}", "init"]
-      },
-      "interactive": false
+        "bun": ["bunx", "prisma@{version}", "init"],
+        "deno": ["deno", "x", "-A", "npm:prisma@{version}", "init"]
+      }
     }
   ],
   "sources": [
@@ -34,14 +34,11 @@
         }
       ],
       "review": {
-        "reason": "Adapter runs prisma init, tracks its generated files, and leaves database, client, and driver choices to the user.",
+        "reason": "Adapter executes the documented prisma init command unchanged.",
         "files": ["src/stacks/prisma/adapter.ts", "src/stacks/prisma/init.test.ts"],
         "sections": ["Usage"],
         "mustContain": ["prisma init [options]"],
-        "checks": [
-          "Confirm the default prisma init command still completes without stdin and creates Prisma configuration.",
-          "Confirm prisma init still creates or updates .gitignore alongside its schema, config, and environment files."
-        ]
+        "checks": ["Confirm prisma init remains the official initialization command."]
       }
     }
   ]

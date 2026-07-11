@@ -1,5 +1,3 @@
-import { formatCliCommand, resolveCliCommand } from "../../core/cli-command-manifest";
-import { setScript } from "../../core/package-json-utils";
 import { defineToolchain } from "../../core/toolchain-adapter";
 
 export const publint = defineToolchain({
@@ -14,27 +12,15 @@ export const publint = defineToolchain({
       url: "https://publint.dev/docs/",
       confidence: "high",
       review: {
-        reason: "Adapter exposes the documented zero-config publint CLI through a package script.",
+        reason: "Adapter executes the bare publint CLI unchanged.",
         files: ["src/stacks/publint/adapter.ts", "src/stacks/publint/init.test.ts"],
         sections: ["Usage"],
         mustContain: ["npx publint"],
-        checks: [
-          "Confirm publint remains runnable against the current package without local configuration.",
-        ],
+        checks: ["Confirm the bare publint command remains the general package check."],
       },
     },
   ],
   hint: "Validate npm package publishing compatibility",
-  packageManagers: ["npm", "pnpm", "yarn", "bun"],
   subcommand: null,
-  updatePackageJson({ cliManifest, packageJson }) {
-    if (cliManifest == null) {
-      throw new Error("Missing publint CLI manifest");
-    }
-    setScript(
-      packageJson,
-      "lint:package",
-      formatCliCommand(resolveCliCommand(cliManifest, "check", "npm")),
-    );
-  },
+  managedCli: true,
 });

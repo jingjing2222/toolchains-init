@@ -70,7 +70,6 @@ const cliCommandContractSchema = v.object({
   id: v.string(),
   packageManagers: packageManagerCommandsSchema,
   flags: v.optional(v.record(v.string(), cliFlagContractSchema)),
-  interactive: v.boolean(),
 });
 
 export const cliCommandManifestSchema = v.object({
@@ -125,10 +124,6 @@ export function resolveCliCommand(
   return { bin, args };
 }
 
-export function formatCliCommand(command: { bin: string; args: readonly string[] }) {
-  return [command.bin, ...command.args].map(formatShellToken).join(" ");
-}
-
 function serializeCliFlags(command: CliCommandContract, values: Record<string, boolean | string>) {
   const result: string[] = [];
   const flags = command.flags ?? {};
@@ -164,10 +159,6 @@ function serializeCliFlags(command: CliCommandContract, values: Record<string, b
   }
 
   return result;
-}
-
-function formatShellToken(token: string) {
-  return /^[A-Za-z0-9_./:@=-]+$/.test(token) ? token : JSON.stringify(token);
 }
 
 function validateManifestIdentities(manifest: CliCommandManifest) {

@@ -7,11 +7,11 @@
     {
       "id": "create-router",
       "packageManagers": {
-        "npm": ["npx", "@tanstack/cli@{version}", "create"],
-        "pnpm": ["pnpm", "dlx", "@tanstack/cli@{version}", "create"],
-        "yarn": ["yarn", "dlx", "@tanstack/cli@{version}", "create"],
-        "bun": ["bunx", "@tanstack/cli@{version}", "create"],
-        "deno": ["deno", "x", "-A", "npm:@tanstack/cli@{version}", "create"]
+        "npm": ["npx", "@tanstack/cli@{version}", "create", "--router-only"],
+        "pnpm": ["pnpm", "dlx", "@tanstack/cli@{version}", "create", "--router-only"],
+        "yarn": ["yarn", "dlx", "@tanstack/cli@{version}", "create", "--router-only"],
+        "bun": ["bunx", "@tanstack/cli@{version}", "create", "--router-only"],
+        "deno": ["deno", "x", "-A", "npm:@tanstack/cli@{version}", "create", "--router-only"]
       },
       "flags": {
         "framework": {
@@ -173,8 +173,7 @@
           "cliName": "--help",
           "supported": true
         }
-      },
-      "interactive": false
+      }
     }
   ],
   "sources": [
@@ -205,18 +204,14 @@
         }
       ],
       "review": {
-        "reason": "Adapter uses TanStack CLI router-only creation flags and restores unrelated package.json changes.",
+        "reason": "Adapter executes @tanstack/cli create --router-only unchanged.",
         "files": [
           "src/stacks/tanstack-router/adapter.ts",
           "src/stacks/tanstack-router/init.test.ts"
         ],
         "sections": ["Quick Start"],
         "mustContain": ["@tanstack/cli", "--router-only"],
-        "checks": [
-          "Confirm router-only creation remains supported by `@tanstack/cli create`.",
-          "Confirm package manager, install, git, examples, and toolchain flags still preserve this adapter flow.",
-          "Confirm restoring package.json while keeping dependency additions is still necessary."
-        ]
+        "checks": ["Confirm @tanstack/cli create --router-only remains supported."]
       }
     }
   ]

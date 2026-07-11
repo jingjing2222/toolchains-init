@@ -93,12 +93,12 @@ export type DiscoveredToolchain = {
 };
 
 type ManifestInput = {
+  commandArgs: readonly string[];
   commandId: string;
   docs: NonNullable<NonNullable<ToolchainAdapter["cli"]>["docs"]>;
   distTag: string;
   exportName: string;
   help: false | undefined;
-  interactive: boolean;
   packageManagers: readonly PackageManager[];
   packageName: string;
   runner: NonNullable<NonNullable<ToolchainAdapter["cli"]>["runner"]>;
@@ -114,18 +114,25 @@ function createManifestInput(toolchain: ToolchainAdapter): ManifestInput {
   }
 
   const tool = cli.tool ?? kebabCase(toolchain.feature);
+  const runner = cli.runner ?? "auto";
+  const resolvedRunner = runner === "auto" ? inferRunner(cli.package) : runner;
   return {
+    commandArgs: cli.commandArgs ?? [],
     commandId: cli.commandId ?? cli.command,
     distTag: cli.distTag ?? "latest",
     docs: cli.docs ?? [],
     exportName: cli.exportName ?? `${toolchain.feature}CliManifest`,
     help: cli.help,
-    interactive: toolchain.nonInteractive?.supported === false,
     packageManagers: cli.packageManagers ?? ["npm", "pnpm", "yarn", "bun", "deno"],
     packageName: cli.package,
-    runner: cli.runner ?? "auto",
+    runner,
     stackDir: cli.stackDir ?? tool,
-    subcommand: cli.subcommand === undefined ? cli.command : cli.subcommand,
+    subcommand:
+      cli.subcommand === undefined
+        ? resolvedRunner === "create"
+          ? null
+          : cli.command
+        : cli.subcommand,
     tool,
   };
 }
@@ -386,7 +393,6 @@ async function createManifest(input: ManifestInput): Promise<CliCommandManifest>
       {
         id: input.commandId,
         packageManagers: resolvePackageManagerCommands(input, version),
-        interactive: input.interactive,
       },
     ],
     sources: [
@@ -875,7 +881,9 @@ function parseHelpFlagLine(line: string): ParsedHelpFlag[] {
   if (cliName == null) {
     return [];
   }
-  const valueHint = findValueHint(line.slice(optionMatch[0].length));
+  const suffix = line.slice(optionMatch[0].length);
+  const valueHint = findValueHint(suffix);
+  const trailingType = findTrailingTypeAnnotation(suffix);
 
   const values = parseEnumValues(valueHint, line);
   if (values.length > 0) {
@@ -884,11 +892,23 @@ function parseHelpFlagLine(line: string): ParsedHelpFlag[] {
 
   return [
     {
-      type: valueHint == null ? "boolean" : "string",
+      type: inferHelpFlagType(valueHint, trailingType),
       cliName,
       supported: true,
     },
   ];
+}
+
+function inferHelpFlagType(
+  valueHint: string | undefined,
+  trailingType: "boolean" | "string" | undefined,
+) {
+  if (valueHint != null) {
+    return valueHint.replace(/^[<[]|[>\]]$/g, "").toLowerCase() === "boolean"
+      ? ("boolean" as const)
+      : ("string" as const);
+  }
+  return trailingType ?? "boolean";
 }
 
 function findValueHint(suffix: string) {
@@ -896,6 +916,13 @@ function findValueHint(suffix: string) {
   return /^\s*(?:=\s*)?(<[^>]+>|\[[^\]]+\]|(?:choice|dir|directory|file|int|integer|name|number|path|string|strings|value)\b|[A-Z][A-Z0-9_-]*\b)/.exec(
     withoutShortAlias,
   )?.[1];
+}
+
+function findTrailingTypeAnnotation(suffix: string) {
+  return /\[(string|boolean)\]\s*$/i.exec(suffix)?.[1]?.toLowerCase() as
+    | "boolean"
+    | "string"
+    | undefined;
 }
 
 function parseEnumValues(valueHint: string | undefined, line: string) {
@@ -972,7 +999,15 @@ export function resolvePackageManagerCommands(
         const template = runner[packageManager];
         return template == null
           ? []
-          : [[packageManager, template.map((token) => token.replaceAll(version, "{version}"))]];
+          : [
+              [
+                packageManager,
+                [
+                  ...template.map((token) => token.replaceAll(version, "{version}")),
+                  ...input.commandArgs,
+                ],
+              ],
+            ];
       }),
     );
   }
@@ -980,21 +1015,28 @@ export function resolvePackageManagerCommands(
   if (runner === "create") {
     const initializer = getCreateInitializerName(input.packageName);
     return pickPackageManagers(input.packageManagers, {
-      npm: ["npm", "init", `${initializer}@{version}`, "--"],
-      pnpm: ["pnpm", "create", `${initializer}@{version}`],
-      yarn: ["yarn", "create", `${initializer}@{version}`],
-      bun: ["bun", "create", `${initializer}@{version}`],
-      deno: ["deno", "x", "-A", `npm:${input.packageName}@{version}`],
+      npm: ["npm", "init", `${initializer}@{version}`, "--", ...input.commandArgs],
+      pnpm: ["pnpm", "create", `${initializer}@{version}`, ...input.commandArgs],
+      yarn: ["yarn", "create", `${initializer}@{version}`, ...input.commandArgs],
+      bun: ["bun", "create", `${initializer}@{version}`, ...input.commandArgs],
+      deno: ["deno", "x", "-A", `npm:${input.packageName}@{version}`, ...input.commandArgs],
     });
   }
 
   const subcommand = input.subcommand == null ? [] : [input.subcommand];
   return pickPackageManagers(input.packageManagers, {
-    npm: ["npx", `${input.packageName}@{version}`, ...subcommand],
-    pnpm: ["pnpm", "dlx", `${input.packageName}@{version}`, ...subcommand],
-    yarn: ["yarn", "dlx", `${input.packageName}@{version}`, ...subcommand],
-    bun: ["bunx", `${input.packageName}@{version}`, ...subcommand],
-    deno: ["deno", "x", "-A", `npm:${input.packageName}@{version}`, ...subcommand],
+    npm: ["npx", `${input.packageName}@{version}`, ...subcommand, ...input.commandArgs],
+    pnpm: ["pnpm", "dlx", `${input.packageName}@{version}`, ...subcommand, ...input.commandArgs],
+    yarn: ["yarn", "dlx", `${input.packageName}@{version}`, ...subcommand, ...input.commandArgs],
+    bun: ["bunx", `${input.packageName}@{version}`, ...subcommand, ...input.commandArgs],
+    deno: [
+      "deno",
+      "x",
+      "-A",
+      `npm:${input.packageName}@{version}`,
+      ...subcommand,
+      ...input.commandArgs,
+    ],
   });
 }
 
@@ -1098,25 +1140,9 @@ ${featureUnion};
 export const ALL_FEATURES = toolchains.map((toolchain) => toolchain.feature);
 
 export function getSelectedToolchains(features: readonly string[]) {
-  return toolchains.filter((toolchain) => features.includes(toolchain.feature));
-}
-
-export async function getAvailableToolchains(
-  context: Parameters<NonNullable<(typeof toolchains)[number]["isAvailable"]>>[0],
-) {
-  const available = await Promise.all(
-    toolchains.map(async (toolchain) => {
-      const supportsPackageManager =
-        toolchain.cli?.packageManagers?.includes(context.packageManager) ?? true;
-      return {
-        toolchain,
-        isAvailable:
-          supportsPackageManager && ((await toolchain.isAvailable?.(context)) ?? true),
-      };
-    }),
+  return features.flatMap((feature) =>
+    toolchains.filter((toolchain) => toolchain.feature === feature),
   );
-
-  return available.filter(({ isAvailable }) => isAvailable).map(({ toolchain }) => toolchain);
 }
 `,
   };

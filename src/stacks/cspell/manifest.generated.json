@@ -10,7 +10,8 @@
         "npm": ["npx", "cspell@{version}", "init"],
         "pnpm": ["pnpm", "dlx", "cspell@{version}", "init"],
         "yarn": ["yarn", "dlx", "cspell@{version}", "init"],
-        "bun": ["bunx", "cspell@{version}", "init"]
+        "bun": ["bunx", "cspell@{version}", "init"],
+        "deno": ["deno", "x", "-A", "npm:cspell@{version}", "init"]
       },
       "flags": {
         "config": {
@@ -69,8 +70,7 @@
           "cliName": "--help",
           "supported": true
         }
-      },
-      "interactive": false
+      }
     }
   ],
   "sources": [
@@ -97,15 +97,11 @@
         }
       ],
       "review": {
-        "reason": "Adapter runs the official CSpell config initializer, tracks each built-in format, and leaves dictionary and locale choices to the user.",
+        "reason": "Adapter executes the documented cspell init command unchanged.",
         "files": ["src/stacks/cspell/adapter.ts", "src/stacks/cspell/init.test.ts"],
         "sections": ["commandInit"],
         "mustContain": ["Initialize a CSpell configuration file."],
-        "checks": [
-          "Confirm cspell init still creates a configuration file without stdin.",
-          "Confirm yaml, yml, json, and jsonc still map to the declared target filenames.",
-          "Confirm --stdout exits without creating a configuration file."
-        ]
+        "checks": ["Confirm cspell init remains the configuration initializer."]
       }
     }
   ]

@@ -7,11 +7,11 @@
     {
       "id": "init",
       "packageManagers": {
-        "npm": ["npx", "oxlint@{version}"],
-        "pnpm": ["pnpm", "dlx", "oxlint@{version}"],
-        "yarn": ["yarn", "dlx", "oxlint@{version}"],
-        "bun": ["bunx", "oxlint@{version}"],
-        "deno": ["deno", "x", "-A", "npm:oxlint@{version}"]
+        "npm": ["npx", "oxlint@{version}", "--init"],
+        "pnpm": ["pnpm", "dlx", "oxlint@{version}", "--init"],
+        "yarn": ["yarn", "dlx", "oxlint@{version}", "--init"],
+        "bun": ["bunx", "oxlint@{version}", "--init"],
+        "deno": ["deno", "x", "-A", "npm:oxlint@{version}", "--init"]
       },
       "flags": {
         "config": {
@@ -234,8 +234,7 @@
           "cliName": "--version",
           "supported": true
         }
-      },
-      "interactive": false
+      }
     }
   ],
   "sources": [
@@ -253,32 +252,20 @@
     },
     {
       "kind": "docs",
-      "url": "https://oxc.rs/docs/guide/usage/linter",
+      "url": "https://oxc.rs/docs/guide/usage/linter/config",
       "confidence": "high",
       "checks": [
         {
           "found": true,
-          "text": "oxlint"
-        },
-        {
-          "found": true,
-          "text": "linter"
-        },
-        {
-          "found": true,
-          "text": "Editor setup"
+          "text": "oxlint --init"
         }
       ],
       "review": {
-        "reason": "Adapter runs `oxlint --init`, normalizes Yarn PnP schema paths, and writes editor LSP settings.",
+        "reason": "Adapter executes the documented oxlint --init command unchanged.",
         "files": ["src/stacks/oxlint/adapter.ts", "src/stacks/oxlint/init.test.ts"],
-        "sections": ["Oxlint", "Configuration", "Editor setup"],
-        "mustContain": ["oxlint", "linter", "Editor setup"],
-        "checks": [
-          "Confirm `oxlint --init` remains the right config initializer.",
-          "Confirm editor setup still uses the Oxc extension and compatible LSP settings.",
-          "Confirm Yarn PnP still needs schema path normalization."
-        ]
+        "sections": ["Oxlint", "Configuration"],
+        "mustContain": ["oxlint --init"],
+        "checks": ["Confirm oxlint --init remains the configuration initializer."]
       }
     }
   ]

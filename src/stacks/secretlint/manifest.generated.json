@@ -7,10 +7,11 @@
     {
       "id": "init",
       "packageManagers": {
-        "npm": ["npx", "secretlint@{version}"],
-        "pnpm": ["pnpm", "dlx", "secretlint@{version}"],
-        "yarn": ["yarn", "dlx", "secretlint@{version}"],
-        "bun": ["bunx", "secretlint@{version}"]
+        "npm": ["npx", "secretlint@{version}", "--init"],
+        "pnpm": ["pnpm", "dlx", "secretlint@{version}", "--init"],
+        "yarn": ["yarn", "dlx", "secretlint@{version}", "--init"],
+        "bun": ["bunx", "secretlint@{version}", "--init"],
+        "deno": ["deno", "x", "-A", "npm:secretlint@{version}", "--init"]
       },
       "flags": {
         "init": {
@@ -83,8 +84,7 @@
           "cliName": "--locale",
           "supported": true
         }
-      },
-      "interactive": false
+      }
     }
   ],
   "sources": [
@@ -111,11 +111,11 @@
         }
       ],
       "review": {
-        "reason": "Adapter runs the official Secretlint config initializer without selecting or installing rule presets.",
+        "reason": "Adapter executes the documented secretlint --init command unchanged.",
         "files": ["src/stacks/secretlint/adapter.ts", "src/stacks/secretlint/init.test.ts"],
         "sections": ["Using Node.js"],
         "mustContain": ["npx secretlint --init"],
-        "checks": ["Confirm secretlint --init still creates .secretlintrc.json without stdin."]
+        "checks": ["Confirm secretlint --init remains the configuration initializer."]
       }
     }
   ]

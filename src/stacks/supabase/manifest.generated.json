@@ -10,7 +10,8 @@
         "npm": ["npx", "supabase@{version}", "init"],
         "pnpm": ["pnpm", "dlx", "supabase@{version}", "init"],
         "yarn": ["yarn", "dlx", "supabase@{version}", "init"],
-        "bun": ["bunx", "supabase@{version}", "init"]
+        "bun": ["bunx", "supabase@{version}", "init"],
+        "deno": ["deno", "x", "-A", "npm:supabase@{version}", "init"]
       },
       "flags": {
         "interactive": {
@@ -109,8 +110,7 @@
           "values": ["auto", "yes", "no"],
           "supported": true
         }
-      },
-      "interactive": false
+      }
     }
   ],
   "sources": [
@@ -137,15 +137,11 @@
         }
       ],
       "review": {
-        "reason": "Adapter runs the official Supabase local-project initializer in the selected target and blocks completion-only output.",
+        "reason": "Adapter executes the official supabase init command unchanged.",
         "files": ["src/stacks/supabase/adapter.ts", "src/stacks/supabase/init.test.ts"],
         "sections": ["supabase init"],
         "mustContain": ["supabase init [flags]"],
-        "checks": [
-          "Confirm supabase init still creates supabase/config.toml without stdin.",
-          "Confirm --completions exits without initializing and --workdir redirects initialization outside the selected target.",
-          "Confirm --interactive is allowed only when stdin is inherited."
-        ]
+        "checks": ["Confirm supabase init remains the official local-project initializer."]
       }
     }
   ]

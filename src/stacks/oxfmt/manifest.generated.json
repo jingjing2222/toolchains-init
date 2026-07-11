@@ -7,11 +7,11 @@
     {
       "id": "init",
       "packageManagers": {
-        "npm": ["npx", "oxfmt@{version}"],
-        "pnpm": ["pnpm", "dlx", "oxfmt@{version}"],
-        "yarn": ["yarn", "dlx", "oxfmt@{version}"],
-        "bun": ["bunx", "oxfmt@{version}"],
-        "deno": ["deno", "x", "-A", "npm:oxfmt@{version}"]
+        "npm": ["npx", "oxfmt@{version}", "--init"],
+        "pnpm": ["pnpm", "dlx", "oxfmt@{version}", "--init"],
+        "yarn": ["yarn", "dlx", "oxfmt@{version}", "--init"],
+        "bun": ["bunx", "oxfmt@{version}", "--init"],
+        "deno": ["deno", "x", "-A", "npm:oxfmt@{version}", "--init"]
       },
       "flags": {
         "init": {
@@ -89,8 +89,7 @@
           "cliName": "--version",
           "supported": true
         }
-      },
-      "interactive": false
+      }
     }
   ],
   "sources": [
@@ -108,32 +107,20 @@
     },
     {
       "kind": "docs",
-      "url": "https://oxc.rs/docs/guide/usage/formatter",
+      "url": "https://oxc.rs/docs/guide/usage/formatter/quickstart",
       "confidence": "high",
       "checks": [
         {
           "found": true,
-          "text": "oxfmt"
-        },
-        {
-          "found": true,
-          "text": "formatter"
-        },
-        {
-          "found": true,
-          "text": "Editor setup"
+          "text": "oxfmt --init"
         }
       ],
       "review": {
-        "reason": "Adapter runs `oxfmt --init` and writes editor formatter settings.",
+        "reason": "Adapter executes the documented oxfmt --init command unchanged.",
         "files": ["src/stacks/oxfmt/adapter.ts", "src/stacks/oxfmt/init.test.ts"],
-        "sections": ["Oxfmt", "Configuration", "Editor setup"],
-        "mustContain": ["oxfmt", "formatter", "Editor setup"],
-        "checks": [
-          "Confirm `oxfmt --init` remains the right config initializer.",
-          "Confirm `.oxfmtrc.json` remains the right formatter config path.",
-          "Confirm editor setup still uses compatible Oxc formatter settings."
-        ]
+        "sections": ["Oxfmt", "Configuration"],
+        "mustContain": ["oxfmt --init"],
+        "checks": ["Confirm oxfmt --init remains the configuration initializer."]
       }
     }
   ]

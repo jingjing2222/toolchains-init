@@ -10,7 +10,8 @@
         "npm": ["npx", "msw@{version}", "init"],
         "pnpm": ["pnpm", "dlx", "msw@{version}", "init"],
         "yarn": ["yarn", "dlx", "msw@{version}", "init"],
-        "bun": ["bunx", "msw@{version}", "init"]
+        "bun": ["bunx", "msw@{version}", "init"],
+        "deno": ["deno", "x", "-A", "npm:msw@{version}", "init"]
       },
       "flags": {
         "version": {
@@ -29,12 +30,11 @@
           "supported": true
         },
         "cwd": {
-          "type": "boolean",
+          "type": "string",
           "cliName": "--cwd",
           "supported": true
         }
-      },
-      "interactive": false
+      }
     }
   ],
   "sources": [
@@ -58,46 +58,14 @@
         {
           "found": true,
           "text": "npx msw init"
-        },
-        {
-          "found": true,
-          "text": "--save"
         }
       ],
       "review": {
-        "reason": "Adapter appends `./public --save` to `msw init`.",
+        "reason": "Adapter executes the bare msw init command unchanged.",
         "files": ["src/stacks/msw/adapter.ts", "src/stacks/msw/init.test.ts"],
         "sections": ["init", "Usage"],
-        "mustContain": ["npx msw init", "--save"],
-        "checks": [
-          "Confirm `msw init <workerDirectory> --save` remains supported.",
-          "Confirm generated worker filename still matches `public/mockServiceWorker.js`."
-        ]
-      }
-    },
-    {
-      "kind": "docs",
-      "url": "https://mswjs.io/docs/best-practices/managing-the-worker/",
-      "confidence": "high",
-      "checks": [
-        {
-          "found": true,
-          "text": "workerDirectory"
-        },
-        {
-          "found": true,
-          "text": "mockServiceWorker.js"
-        }
-      ],
-      "review": {
-        "reason": "Adapter writes `package.json` MSW workerDirectory metadata.",
-        "files": ["src/stacks/msw/adapter.ts", "src/stacks/msw/init.test.ts"],
-        "sections": ["Managing the worker"],
-        "mustContain": ["workerDirectory", "mockServiceWorker.js"],
-        "checks": [
-          "Confirm `package.json` `msw.workerDirectory` remains the documented way to persist worker paths.",
-          "Confirm merging existing worker directories is still correct."
-        ]
+        "mustContain": ["npx msw init"],
+        "checks": ["Confirm msw init remains the official worker initialization command."]
       }
     }
   ]
