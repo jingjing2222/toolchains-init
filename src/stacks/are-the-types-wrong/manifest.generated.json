@@ -1,0 +1,161 @@
+{
+  "schemaVersion": "toolchains-init/cli-command-manifest/v1",
+  "tool": "attw",
+  "package": "@arethetypeswrong/cli",
+  "version": "0.18.5",
+  "commands": [
+    {
+      "id": "check",
+      "packageManagers": {
+        "npm": ["npx", "@arethetypeswrong/cli@{version}"]
+      },
+      "flags": {
+        "version": {
+          "type": "boolean",
+          "cliName": "--version",
+          "supported": true
+        },
+        "pack": {
+          "type": "boolean",
+          "cliName": "--pack",
+          "supported": true
+        },
+        "fromNpm": {
+          "type": "boolean",
+          "cliName": "--from-npm",
+          "supported": true
+        },
+        "definitelyTyped": {
+          "type": "string",
+          "cliName": "--definitely-typed",
+          "supported": true
+        },
+        "noDefinitelyTyped": {
+          "type": "boolean",
+          "cliName": "--no-definitely-typed",
+          "supported": true
+        },
+        "format": {
+          "type": "enum",
+          "cliName": "--format",
+          "values": ["auto", "json", "ascii", "table", "table-flipped"],
+          "supported": true
+        },
+        "quiet": {
+          "type": "boolean",
+          "cliName": "--quiet",
+          "supported": true
+        },
+        "entrypoints": {
+          "type": "string",
+          "cliName": "--entrypoints",
+          "supported": true
+        },
+        "includeEntrypoints": {
+          "type": "string",
+          "cliName": "--include-entrypoints",
+          "supported": true
+        },
+        "excludeEntrypoints": {
+          "type": "string",
+          "cliName": "--exclude-entrypoints",
+          "supported": true
+        },
+        "entrypointsLegacy": {
+          "type": "boolean",
+          "cliName": "--entrypoints-legacy",
+          "supported": true
+        },
+        "ignoreRules": {
+          "type": "enum",
+          "cliName": "--ignore-rules",
+          "values": [
+            "no-resolution",
+            "untyped-resolution",
+            "false-cjs",
+            "false-esm",
+            "cjs-resolves-to-esm",
+            "fallback-condition",
+            "cjs-only-exports-default",
+            "named-exports",
+            "false-export-default",
+            "missing-export-equals",
+            "unexpected-module-syntax",
+            "internal-resolution-error"
+          ],
+          "supported": true
+        },
+        "profile": {
+          "type": "enum",
+          "cliName": "--profile",
+          "values": ["strict", "node16", "esm-only"],
+          "supported": true
+        },
+        "summary": {
+          "type": "boolean",
+          "cliName": "--summary",
+          "supported": true
+        },
+        "emoji": {
+          "type": "boolean",
+          "cliName": "--emoji",
+          "supported": true
+        },
+        "color": {
+          "type": "boolean",
+          "cliName": "--color",
+          "supported": true
+        },
+        "configPath": {
+          "type": "string",
+          "cliName": "--config-path",
+          "supported": true
+        },
+        "help": {
+          "type": "boolean",
+          "cliName": "--help",
+          "supported": true
+        }
+      },
+      "interactive": false
+    }
+  ],
+  "sources": [
+    {
+      "kind": "npm",
+      "package": "@arethetypeswrong/cli",
+      "version": "0.18.5",
+      "distTag": "latest",
+      "resolvedAt": "2026-07-09T22:24:30.256Z"
+    },
+    {
+      "kind": "cli-help",
+      "command": ["npx", "--yes", "@arethetypeswrong/cli@0.18.5", "--help"],
+      "commandId": "check"
+    },
+    {
+      "kind": "docs",
+      "url": "https://raw.githubusercontent.com/arethetypeswrong/arethetypeswrong.github.io/main/packages/cli/README.md",
+      "confidence": "high",
+      "checks": [
+        {
+          "found": true,
+          "text": "attw --pack ."
+        }
+      ],
+      "review": {
+        "reason": "Adapter exposes the documented npm-only attw in-place package check through a package script.",
+        "files": [
+          "src/stacks/are-the-types-wrong/adapter.ts",
+          "src/stacks/are-the-types-wrong/init.test.ts"
+        ],
+        "sections": ["Usage"],
+        "mustContain": ["attw --pack ."],
+        "checks": [
+          "Confirm attw --pack . remains the supported in-place package analysis command.",
+          "Confirm upstream still limits --pack to npm projects."
+        ]
+      }
+    }
+  ]
+}

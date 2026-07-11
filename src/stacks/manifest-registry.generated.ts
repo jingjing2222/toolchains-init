@@ -5,6 +5,9 @@ import {
   tanStackRouterCliManifestData,
 } from "./tanstack-router/manifest";
 import { hotUpdaterCliManifest, hotUpdaterCliManifestData } from "./hot-updater/manifest";
+import { prismaCliManifest, prismaCliManifestData } from "./prisma/manifest";
+import { shadcnCliManifest, shadcnCliManifestData } from "./shadcn/manifest";
+import { supabaseCliManifest, supabaseCliManifestData } from "./supabase/manifest";
 import { playwrightCliManifest, playwrightCliManifestData } from "./playwright/manifest";
 import { storybookCliManifest, storybookCliManifestData } from "./storybook/manifest";
 import { mswCliManifest, mswCliManifestData } from "./msw/manifest";
@@ -16,11 +19,18 @@ import { biomeCliManifest, biomeCliManifestData } from "./biome/manifest";
 import { knipCliManifest, knipCliManifestData } from "./knip/manifest";
 import { reactDoctorCliManifest, reactDoctorCliManifestData } from "./react-doctor/manifest";
 import { changesetsCliManifest, changesetsCliManifestData } from "./changesets/manifest";
+import { cspellCliManifest, cspellCliManifestData } from "./cspell/manifest";
+import { publintCliManifest, publintCliManifestData } from "./publint/manifest";
+import { attwCliManifest, attwCliManifestData } from "./are-the-types-wrong/manifest";
+import { secretlintCliManifest, secretlintCliManifestData } from "./secretlint/manifest";
 import { yarnSdksCliManifest, yarnSdksCliManifestData } from "./yarn-sdks/manifest";
 
 export const cliCommandManifests = [
   tanStackRouterCliManifest,
   hotUpdaterCliManifest,
+  prismaCliManifest,
+  shadcnCliManifest,
+  supabaseCliManifest,
   playwrightCliManifest,
   storybookCliManifest,
   mswCliManifest,
@@ -32,12 +42,19 @@ export const cliCommandManifests = [
   knipCliManifest,
   reactDoctorCliManifest,
   changesetsCliManifest,
+  cspellCliManifest,
+  publintCliManifest,
+  attwCliManifest,
+  secretlintCliManifest,
   yarnSdksCliManifest,
 ] satisfies readonly CliCommandManifest[];
 
 export const cliCommandManifestData = [
   tanStackRouterCliManifestData,
   hotUpdaterCliManifestData,
+  prismaCliManifestData,
+  shadcnCliManifestData,
+  supabaseCliManifestData,
   playwrightCliManifestData,
   storybookCliManifestData,
   mswCliManifestData,
@@ -49,6 +66,10 @@ export const cliCommandManifestData = [
   knipCliManifestData,
   reactDoctorCliManifestData,
   changesetsCliManifestData,
+  cspellCliManifestData,
+  publintCliManifestData,
+  attwCliManifestData,
+  secretlintCliManifestData,
   yarnSdksCliManifestData,
 ];
 

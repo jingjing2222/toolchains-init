@@ -25,6 +25,19 @@ const docsProbeTimeoutMs = 30_000;
 const helpProbeTimeoutMs = 120_000;
 const formatTimeoutMs = 60_000;
 const packageManagerNames = ["npm", "pnpm", "yarn", "bun", "deno"] as const;
+const genericValueHints = new Set([
+  "boolean",
+  "dir",
+  "directory",
+  "file",
+  "name",
+  "null",
+  "number",
+  "package",
+  "path",
+  "string",
+  "value",
+]);
 
 if (isMainModule()) {
   try {
@@ -768,20 +781,19 @@ async function deriveFlagsForCommand(manifest: CliCommandManifest, commandId: st
   const helpSources = manifest.sources.filter((source): source is CliHelpSource =>
     isCliHelpForCommand(source, commandId, manifest.commands.length),
   );
-  const flags = Object.fromEntries(
-    (
-      await Promise.all(
-        helpSources.map(async (source) => parseHelpFlags(await runHelpCommand(source.command))),
-      )
+  const flags: Record<string, ParsedHelpFlag> = {};
+  for (const flag of (
+    await Promise.all(
+      helpSources.map(async (source) => parseHelpFlags(await runHelpCommand(source.command))),
     )
-      .flat()
-      .map((flag) => [toFlagKey(flag.cliName), flag]),
-  );
+  ).flat()) {
+    flags[toFlagKey(flag.cliName)] ??= flag;
+  }
 
   return Object.keys(flags).length > 0 ? flags : undefined;
 }
 
-type ParsedHelpFlag =
+export type ParsedHelpFlag =
   | {
       type: "boolean";
       cliName: string;
@@ -799,11 +811,54 @@ type ParsedHelpFlag =
       supported: true;
     };
 
-function parseHelpFlags(helpOutput: string): ParsedHelpFlag[] {
-  return helpOutput
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .flatMap((line) => parseHelpFlagLine(line));
+export function parseHelpFlags(helpOutput: string): ParsedHelpFlag[] {
+  const flags: ParsedHelpFlag[] = [];
+  const seen = new Set<string>();
+
+  for (const line of collectHelpFlagLines(helpOutput)) {
+    for (const flag of parseHelpFlagLine(line)) {
+      if (seen.has(flag.cliName)) {
+        continue;
+      }
+      seen.add(flag.cliName);
+      flags.push(flag);
+    }
+  }
+
+  return flags;
+}
+
+function collectHelpFlagLines(helpOutput: string) {
+  const lines: string[] = [];
+  let current: string | undefined;
+
+  const flush = () => {
+    if (current != null) {
+      lines.push(current);
+      current = undefined;
+    }
+  };
+
+  for (const rawLine of helpOutput.split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (line.length === 0) {
+      flush();
+      continue;
+    }
+
+    if (/^(?:-[A-Za-z0-9](?:,\s*|\s+))?--[A-Za-z0-9][A-Za-z0-9-]*(?=[=,\s]|$)/.test(line)) {
+      flush();
+      current = line;
+      continue;
+    }
+
+    if (current != null) {
+      current += ` ${line}`;
+    }
+  }
+  flush();
+
+  return lines;
 }
 
 function parseHelpFlagLine(line: string): ParsedHelpFlag[] {
@@ -811,19 +866,16 @@ function parseHelpFlagLine(line: string): ParsedHelpFlag[] {
     return [];
   }
 
-  const [optionSpec = ""] = line.split(/\s{2,}/);
-  const optionMatch =
-    /(?:^|,\s*|-[A-Za-z0-9],?\s+)(--[A-Za-z0-9][A-Za-z0-9-]*)(?:[=\s]+(<[^>]+>|\[[^\]]+\]|[A-Z][A-Z0-9_-]*))?/.exec(
-      optionSpec,
-    );
+  const optionMatch = /^(?:-[A-Za-z0-9](?:,\s*|\s+))?(--[A-Za-z0-9][A-Za-z0-9-]*)/.exec(line);
   if (optionMatch == null) {
     return [];
   }
 
-  const [, cliName, valueHint] = optionMatch;
+  const [, cliName] = optionMatch;
   if (cliName == null) {
     return [];
   }
+  const valueHint = findValueHint(line.slice(optionMatch[0].length));
 
   const values = parseEnumValues(valueHint, line);
   if (values.length > 0) {
@@ -839,19 +891,56 @@ function parseHelpFlagLine(line: string): ParsedHelpFlag[] {
   ];
 }
 
+function findValueHint(suffix: string) {
+  const withoutShortAlias = suffix.replace(/^,\s*-[A-Za-z0-9](?=\s|$)/, "");
+  return /^\s*(?:=\s*)?(<[^>]+>|\[[^\]]+\]|(?:choice|dir|directory|file|int|integer|name|number|path|string|strings|value)\b|[A-Z][A-Z0-9_-]*\b)/.exec(
+    withoutShortAlias,
+  )?.[1];
+}
+
 function parseEnumValues(valueHint: string | undefined, line: string) {
-  const fromHint = valueHint?.match(/[<[]([^>\]]*\|[^>\]]*)[>\]]/)?.[1]?.split("|") ?? [];
-  if (fromHint.length > 0) {
-    return fromHint.map((value) => value.trim()).filter(Boolean);
+  const fromHint = normalizeEnumValues(valueHint?.match(/[<[]([^>\]]*\|[^>\]]*)[>\]]/)?.[1]);
+  if (
+    fromHint.length > 0 &&
+    !fromHint.every((value) => genericValueHints.has(value.toLowerCase()))
+  ) {
+    return fromHint;
   }
 
-  const parenthesized = line.match(/\(([^)]*,[^)]*)\)/)?.[1];
-  if (parenthesized == null || /default/i.test(parenthesized)) {
+  for (const match of line.matchAll(/\(([^)]+)\)/g)) {
+    const candidate = match[1];
+    if (
+      candidate == null ||
+      (match.index != null && line[match.index - 1] === ".") ||
+      (!candidate.includes(",") && !candidate.includes("|"))
+    ) {
+      continue;
+    }
+    const values = normalizeEnumValues(candidate);
+    if (values.length > 0 && !values.every((value) => genericValueHints.has(value.toLowerCase()))) {
+      return values;
+    }
+  }
+
+  return [];
+}
+
+function normalizeEnumValues(value: string | undefined) {
+  if (value == null) {
     return [];
   }
 
-  const values = parenthesized.split(",").map((value) => value.trim());
-  return values.every((value) => /^[A-Za-z0-9_-]+$/.test(value)) ? values : [];
+  const withoutDefault = value
+    .replace(/^choices?:\s*/i, "")
+    .replace(/(?:^|,|\|)\s*default(?:s to)?\s*:?.*$/i, "");
+  const values = withoutDefault
+    .split(withoutDefault.includes("|") ? "|" : ",")
+    .map((candidate) => candidate.trim().replace(/^[`'"]|[`'"]$/g, ""))
+    .filter(Boolean);
+
+  return values.length > 1 && values.every((candidate) => /^[A-Za-z0-9_-]+$/.test(candidate))
+    ? values
+    : [];
 }
 
 function toFlagKey(cliName: string) {

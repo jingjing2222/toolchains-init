@@ -1,0 +1,157 @@
+{
+  "schemaVersion": "toolchains-init/cli-command-manifest/v1",
+  "tool": "shadcn",
+  "package": "shadcn",
+  "version": "4.13.0",
+  "commands": [
+    {
+      "id": "init",
+      "packageManagers": {
+        "npm": ["npx", "shadcn@{version}", "init"],
+        "pnpm": ["pnpm", "dlx", "shadcn@{version}", "init"],
+        "yarn": ["yarn", "dlx", "shadcn@{version}", "init"],
+        "bun": ["bunx", "shadcn@{version}", "init"]
+      },
+      "flags": {
+        "template": {
+          "type": "enum",
+          "cliName": "--template",
+          "values": ["next", "start", "vite", "react-router", "laravel", "astro"],
+          "supported": true
+        },
+        "base": {
+          "type": "enum",
+          "cliName": "--base",
+          "values": ["base", "radix"],
+          "supported": true
+        },
+        "monorepo": {
+          "type": "boolean",
+          "cliName": "--monorepo",
+          "supported": true
+        },
+        "noMonorepo": {
+          "type": "boolean",
+          "cliName": "--no-monorepo",
+          "supported": true
+        },
+        "preset": {
+          "type": "string",
+          "cliName": "--preset",
+          "supported": true
+        },
+        "yes": {
+          "type": "boolean",
+          "cliName": "--yes",
+          "supported": true
+        },
+        "defaults": {
+          "type": "boolean",
+          "cliName": "--defaults",
+          "supported": true
+        },
+        "force": {
+          "type": "boolean",
+          "cliName": "--force",
+          "supported": true
+        },
+        "cwd": {
+          "type": "string",
+          "cliName": "--cwd",
+          "supported": true
+        },
+        "name": {
+          "type": "string",
+          "cliName": "--name",
+          "supported": true
+        },
+        "silent": {
+          "type": "boolean",
+          "cliName": "--silent",
+          "supported": true
+        },
+        "cssVariables": {
+          "type": "boolean",
+          "cliName": "--css-variables",
+          "supported": true
+        },
+        "noCssVariables": {
+          "type": "boolean",
+          "cliName": "--no-css-variables",
+          "supported": true
+        },
+        "rtl": {
+          "type": "boolean",
+          "cliName": "--rtl",
+          "supported": true
+        },
+        "noRtl": {
+          "type": "boolean",
+          "cliName": "--no-rtl",
+          "supported": true
+        },
+        "pointer": {
+          "type": "boolean",
+          "cliName": "--pointer",
+          "supported": true
+        },
+        "noPointer": {
+          "type": "boolean",
+          "cliName": "--no-pointer",
+          "supported": true
+        },
+        "reinstall": {
+          "type": "boolean",
+          "cliName": "--reinstall",
+          "supported": true
+        },
+        "noReinstall": {
+          "type": "boolean",
+          "cliName": "--no-reinstall",
+          "supported": true
+        },
+        "help": {
+          "type": "boolean",
+          "cliName": "--help",
+          "supported": true
+        }
+      },
+      "interactive": true
+    }
+  ],
+  "sources": [
+    {
+      "kind": "npm",
+      "package": "shadcn",
+      "version": "4.13.0",
+      "distTag": "latest",
+      "resolvedAt": "2026-07-03T12:29:02.707Z"
+    },
+    {
+      "kind": "cli-help",
+      "command": ["npx", "--yes", "shadcn@4.13.0", "init", "--help"],
+      "commandId": "init"
+    },
+    {
+      "kind": "docs",
+      "url": "https://ui.shadcn.com/docs/cli",
+      "confidence": "high",
+      "checks": [
+        {
+          "found": true,
+          "text": "shadcn init [options]"
+        }
+      ],
+      "review": {
+        "reason": "Adapter forwards the official shadcn initializer in the selected target and leaves component-library and preset choices to the user.",
+        "files": ["src/stacks/shadcn/adapter.ts", "src/stacks/shadcn/init.test.ts"],
+        "sections": ["init"],
+        "mustContain": ["shadcn init [options]"],
+        "checks": [
+          "Confirm shadcn init still exposes its project choices through CLI arguments or prompts.",
+          "Confirm --cwd still redirects initialization away from the selected target."
+        ]
+      }
+    }
+  ]
+}

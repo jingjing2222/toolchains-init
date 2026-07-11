@@ -12,6 +12,7 @@ import {
 } from "../src/stacks";
 import {
   findOrphanGeneratedFiles,
+  parseHelpFlags,
   removeOrphanGeneratedFiles,
   resolvePackageManagerCommands,
   runHelpCommand,
@@ -82,6 +83,77 @@ describe("CLI command manifests", () => {
       force: { cliName: "--force", type: "boolean" },
       skipInstall: { cliName: "--skip-install", type: "boolean" },
       yes: { cliName: "--yes", type: "boolean" },
+    });
+  });
+
+  it("parses optional, lowercase, and description-column CLI value hints", () => {
+    expect(
+      Object.fromEntries(
+        parseHelpFlags(`
+  -p, --preset [name]        use a preset configuration
+                             --preset=base-nova (default: false)
+  --workdir string           path to a project directory
+  --format                   [String] formatter name
+  --output, -o choice        output format (choices: json, yaml, table)
+  --import <path|package>    import a config path or package
+  --level                    level ('suggestion' | 'warning' | 'error')
+`).map((flag) => [flag.cliName, flag]),
+      ),
+    ).toMatchObject({
+      "--format": { type: "string" },
+      "--import": { type: "string" },
+      "--level": { type: "enum", values: ["suggestion", "warning", "error"] },
+      "--output": { type: "enum", values: ["json", "yaml", "table"] },
+      "--preset": { type: "string" },
+      "--workdir": { type: "string" },
+    });
+  });
+
+  it("parses wrapped enum choices and long options with adjacent value hints", () => {
+    expect(
+      Object.fromEntries(
+        parseHelpFlags(`
+  --format <format>             file format (choices: "yaml",
+                                "yml", "json", "jsonc", default: "yaml")
+  -t, --template <template>     template (next, start, vite,
+                                react-router, laravel, astro)
+  --secretlintignore [path:String] path to the ignore file
+  --secretlintrcJSON [String] a JSON config string
+  --ignore-rules <rules...>     rules to ignore (choices: "no-resolution",
+                                "cjs-only-exports-default", "named-exports",
+                                default: [])
+`).map((flag) => [flag.cliName, flag]),
+      ),
+    ).toMatchObject({
+      "--format": { type: "enum", values: ["yaml", "yml", "json", "jsonc"] },
+      "--ignore-rules": {
+        type: "enum",
+        values: ["no-resolution", "cjs-only-exports-default", "named-exports"],
+      },
+      "--secretlintignore": { type: "string" },
+      "--secretlintrcJSON": { type: "string" },
+      "--template": {
+        type: "enum",
+        values: ["next", "start", "vite", "react-router", "laravel", "astro"],
+      },
+    });
+  });
+
+  it("parses equals-style values without treating type and file-pattern prose as enums", () => {
+    expect(
+      Object.fromEntries(
+        parseHelpFlags(`
+  --migrate=SOURCE       migrate from a specified source
+  -c, --config=PATH      path to configuration (.json, .jsonc, knip.(js|ts))
+  --file-info <path>     reported fields:
+                        * ignored (boolean)
+                        * inferredParser (string | null)
+`).map((flag) => [flag.cliName, flag]),
+      ),
+    ).toMatchObject({
+      "--config": { type: "string" },
+      "--file-info": { type: "string" },
+      "--migrate": { type: "string" },
     });
   });
 

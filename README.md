@@ -31,22 +31,29 @@ Then choose what you want to add from the interactive prompt.
 
 ## What It Can Add
 
-| Toolchain       | What You Get                                        | Setup Source   |
-| --------------- | --------------------------------------------------- | -------------- |
-| TanStack Router | File-Based Routing or Code-Based Routing setup      | Official CLI   |
-| Hot Updater     | React Native OTA update initializer                 | Official CLI   |
-| Playwright      | Browser E2E test setup                              | Official CLI   |
-| Storybook       | React Vite component workshop setup                 | Official CLI   |
-| MSW             | Browser API mocking worker setup                    | Official CLI   |
-| oxfmt           | Oxc formatter setup and editor integration          | Official CLI   |
-| Prettier        | Prettier formatter setup and editor integration     | Built-in setup |
-| oxlint          | Oxc linter setup and editor integration             | Official CLI   |
-| ESLint          | ESLint config initializer and editor integration    | Official CLI   |
-| Biome           | Biome formatter/linter setup and editor integration | Official CLI   |
-| Knip            | `knip` package script                               | Built-in setup |
-| React Doctor    | `react-doctor` package script                       | Built-in setup |
-| Changesets      | Changeset release workflow                          | Official CLI   |
-| Yarn SDKs       | Yarn PnP editor SDKs for VS Code                    | Official CLI   |
+| Toolchain            | What You Get                                        | Setup Source   |
+| -------------------- | --------------------------------------------------- | -------------- |
+| TanStack Router      | File-Based Routing or Code-Based Routing setup      | Official CLI   |
+| Hot Updater          | React Native OTA update initializer                 | Official CLI   |
+| Supabase             | Local Supabase project configuration                | Official CLI   |
+| Prisma               | Prisma schema and project configuration             | Official CLI   |
+| shadcn               | shadcn project initializer                          | Official CLI   |
+| Playwright           | Browser E2E test setup                              | Official CLI   |
+| Storybook            | React Vite component workshop setup                 | Official CLI   |
+| MSW                  | Browser API mocking worker setup                    | Official CLI   |
+| CSpell               | Spell-checker configuration                         | Official CLI   |
+| Secretlint           | Secret-scanning configuration                       | Official CLI   |
+| oxfmt                | Oxc formatter setup and editor integration          | Official CLI   |
+| Prettier             | Prettier formatter setup and editor integration     | Built-in setup |
+| oxlint               | Oxc linter setup and editor integration             | Official CLI   |
+| ESLint               | ESLint config initializer and editor integration    | Official CLI   |
+| Biome                | Biome formatter/linter setup and editor integration | Official CLI   |
+| Knip                 | `knip` package script                               | Built-in setup |
+| React Doctor         | `react-doctor` package script                       | Built-in setup |
+| publint              | npm package compatibility check script              | Built-in setup |
+| Are the Types Wrong? | TypeScript package compatibility check script       | Built-in setup |
+| Changesets           | Changeset release workflow                          | Official CLI   |
+| Yarn SDKs            | Yarn PnP editor SDKs for VS Code                    | Official CLI   |
 
 ## Usage
 
@@ -99,13 +106,17 @@ toolchains-init --package-manager pnpm --tanstack-router --tanstack-router.setup
 ```
 
 Supported values are `npm`, `pnpm`, `yarn`, `bun`, and `deno`.
+Are the Types Wrong? is available only for npm projects because its upstream in-place `--pack`
+mode runs `npm pack`.
 
-Hot Updater and ESLint are marked interactive-only because their official initializers still
-require project-specific prompts after the documented CLI arguments are supplied. Their generated
-groups remain usable, but run them without `--yes` instead of relying on brittle prompt automation:
+Hot Updater, shadcn, and ESLint are marked interactive-only because their official initializers
+still require project-specific prompts after the documented CLI arguments are supplied. Their
+generated groups remain usable, but run them without `--yes` instead of relying on brittle prompt
+automation:
 
 ```bash
 toolchains-init --hot-updater
+toolchains-init --shadcn
 toolchains-init --eslint
 ```
 

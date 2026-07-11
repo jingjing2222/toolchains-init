@@ -1,0 +1,122 @@
+{
+  "schemaVersion": "toolchains-init/cli-command-manifest/v1",
+  "tool": "secretlint",
+  "package": "secretlint",
+  "version": "13.0.2",
+  "commands": [
+    {
+      "id": "init",
+      "packageManagers": {
+        "npm": ["npx", "secretlint@{version}"],
+        "pnpm": ["pnpm", "dlx", "secretlint@{version}"],
+        "yarn": ["yarn", "dlx", "secretlint@{version}"],
+        "bun": ["bunx", "secretlint@{version}"]
+      },
+      "flags": {
+        "init": {
+          "type": "boolean",
+          "cliName": "--init",
+          "supported": true
+        },
+        "format": {
+          "type": "string",
+          "cliName": "--format",
+          "supported": true
+        },
+        "output": {
+          "type": "string",
+          "cliName": "--output",
+          "supported": true
+        },
+        "secretlintrc": {
+          "type": "string",
+          "cliName": "--secretlintrc",
+          "supported": true
+        },
+        "secretlintignore": {
+          "type": "string",
+          "cliName": "--secretlintignore",
+          "supported": true
+        },
+        "stdinFileName": {
+          "type": "string",
+          "cliName": "--stdinFileName",
+          "supported": true
+        },
+        "noColor": {
+          "type": "boolean",
+          "cliName": "--no-color",
+          "supported": true
+        },
+        "noTerminalLink": {
+          "type": "boolean",
+          "cliName": "--no-terminalLink",
+          "supported": true
+        },
+        "noMaskSecrets": {
+          "type": "boolean",
+          "cliName": "--no-maskSecrets",
+          "supported": true
+        },
+        "noGlob": {
+          "type": "boolean",
+          "cliName": "--no-glob",
+          "supported": true
+        },
+        "noGitignore": {
+          "type": "boolean",
+          "cliName": "--no-gitignore",
+          "supported": true
+        },
+        "profile": {
+          "type": "boolean",
+          "cliName": "--profile",
+          "supported": true
+        },
+        "secretlintrcJSON": {
+          "type": "string",
+          "cliName": "--secretlintrcJSON",
+          "supported": true
+        },
+        "locale": {
+          "type": "string",
+          "cliName": "--locale",
+          "supported": true
+        }
+      },
+      "interactive": false
+    }
+  ],
+  "sources": [
+    {
+      "kind": "npm",
+      "package": "secretlint",
+      "version": "13.0.2",
+      "distTag": "latest",
+      "resolvedAt": "2026-05-15T14:43:43.715Z"
+    },
+    {
+      "kind": "cli-help",
+      "command": ["npx", "--yes", "secretlint@13.0.2", "--help"],
+      "commandId": "init"
+    },
+    {
+      "kind": "docs",
+      "url": "https://raw.githubusercontent.com/secretlint/secretlint/master/README.md",
+      "confidence": "high",
+      "checks": [
+        {
+          "found": true,
+          "text": "npx secretlint --init"
+        }
+      ],
+      "review": {
+        "reason": "Adapter runs the official Secretlint config initializer without selecting or installing rule presets.",
+        "files": ["src/stacks/secretlint/adapter.ts", "src/stacks/secretlint/init.test.ts"],
+        "sections": ["Using Node.js"],
+        "mustContain": ["npx secretlint --init"],
+        "checks": ["Confirm secretlint --init still creates .secretlintrc.json without stdin."]
+      }
+    }
+  ]
+}

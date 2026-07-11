@@ -1,0 +1,112 @@
+{
+  "schemaVersion": "toolchains-init/cli-command-manifest/v1",
+  "tool": "cspell",
+  "package": "cspell",
+  "version": "10.0.1",
+  "commands": [
+    {
+      "id": "init",
+      "packageManagers": {
+        "npm": ["npx", "cspell@{version}", "init"],
+        "pnpm": ["pnpm", "dlx", "cspell@{version}", "init"],
+        "yarn": ["yarn", "dlx", "cspell@{version}", "init"],
+        "bun": ["bunx", "cspell@{version}", "init"]
+      },
+      "flags": {
+        "config": {
+          "type": "string",
+          "cliName": "--config",
+          "supported": true
+        },
+        "output": {
+          "type": "string",
+          "cliName": "--output",
+          "supported": true
+        },
+        "format": {
+          "type": "enum",
+          "cliName": "--format",
+          "values": ["yaml", "yml", "json", "jsonc"],
+          "supported": true
+        },
+        "import": {
+          "type": "string",
+          "cliName": "--import",
+          "supported": true
+        },
+        "locale": {
+          "type": "string",
+          "cliName": "--locale",
+          "supported": true
+        },
+        "dictionary": {
+          "type": "string",
+          "cliName": "--dictionary",
+          "supported": true
+        },
+        "noComments": {
+          "type": "boolean",
+          "cliName": "--no-comments",
+          "supported": true
+        },
+        "removeComments": {
+          "type": "boolean",
+          "cliName": "--remove-comments",
+          "supported": true
+        },
+        "noSchema": {
+          "type": "boolean",
+          "cliName": "--no-schema",
+          "supported": true
+        },
+        "stdout": {
+          "type": "boolean",
+          "cliName": "--stdout",
+          "supported": true
+        },
+        "help": {
+          "type": "boolean",
+          "cliName": "--help",
+          "supported": true
+        }
+      },
+      "interactive": false
+    }
+  ],
+  "sources": [
+    {
+      "kind": "npm",
+      "package": "cspell",
+      "version": "10.0.1",
+      "distTag": "latest",
+      "resolvedAt": "2026-05-31T09:06:53.663Z"
+    },
+    {
+      "kind": "cli-help",
+      "command": ["npx", "--yes", "cspell@10.0.1", "init", "--help"],
+      "commandId": "init"
+    },
+    {
+      "kind": "docs",
+      "url": "https://raw.githubusercontent.com/streetsidesoftware/cspell/main/packages/cspell/src/commandInit.ts",
+      "confidence": "medium",
+      "checks": [
+        {
+          "found": true,
+          "text": "Initialize a CSpell configuration file."
+        }
+      ],
+      "review": {
+        "reason": "Adapter runs the official CSpell config initializer, tracks each built-in format, and leaves dictionary and locale choices to the user.",
+        "files": ["src/stacks/cspell/adapter.ts", "src/stacks/cspell/init.test.ts"],
+        "sections": ["commandInit"],
+        "mustContain": ["Initialize a CSpell configuration file."],
+        "checks": [
+          "Confirm cspell init still creates a configuration file without stdin.",
+          "Confirm yaml, yml, json, and jsonc still map to the declared target filenames.",
+          "Confirm --stdout exits without creating a configuration file."
+        ]
+      }
+    }
+  ]
+}

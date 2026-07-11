@@ -19,8 +19,9 @@
           "supported": true
         },
         "features": {
-          "type": "string",
+          "type": "enum",
           "cliName": "--features",
+          "values": ["docs", "test", "onboarding", "a11y", "ai"],
           "supported": true
         },
         "noFeatures": {
@@ -49,8 +50,9 @@
           "supported": true
         },
         "packageManager": {
-          "type": "string",
+          "type": "enum",
           "cliName": "--package-manager",
+          "values": ["npm", "yarn1", "yarn2", "pnpm", "bun"],
           "supported": true
         },
         "usePnp": {
@@ -59,13 +61,35 @@
           "supported": true
         },
         "parser": {
-          "type": "string",
+          "type": "enum",
           "cliName": "--parser",
+          "values": ["babel", "babylon", "flow", "ts", "tsx"],
           "supported": true
         },
         "type": {
-          "type": "string",
+          "type": "enum",
           "cliName": "--type",
+          "values": [
+            "angular",
+            "ember",
+            "html",
+            "nextjs",
+            "nuxt",
+            "preact",
+            "qwik",
+            "react",
+            "tanstack_react",
+            "react_native",
+            "react_native_and_rnw",
+            "react_native_web",
+            "react_scripts",
+            "server",
+            "solid",
+            "svelte",
+            "sveltekit",
+            "vue3",
+            "web_components"
+          ],
           "supported": true
         },
         "yes": {
@@ -74,8 +98,9 @@
           "supported": true
         },
         "builder": {
-          "type": "string",
+          "type": "enum",
           "cliName": "--builder",
+          "values": ["webpack5", "vite", "rsbuild"],
           "supported": true
         },
         "linkable": {
@@ -109,8 +134,9 @@
           "supported": true
         },
         "loglevel": {
-          "type": "string",
+          "type": "enum",
           "cliName": "--loglevel",
+          "values": ["trace", "debug", "info", "warn", "error", "silent"],
           "supported": true
         },
         "version": {

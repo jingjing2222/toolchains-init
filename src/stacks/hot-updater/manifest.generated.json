@@ -14,13 +14,15 @@
       },
       "flags": {
         "provider": {
-          "type": "string",
+          "type": "enum",
           "cliName": "--provider",
+          "values": ["cloudflare", "aws", "supabase", "firebase"],
           "supported": true
         },
         "build": {
-          "type": "string",
+          "type": "enum",
           "cliName": "--build",
+          "values": ["bare", "rock", "expo"],
           "supported": true
         },
         "help": {

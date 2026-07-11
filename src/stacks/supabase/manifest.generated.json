@@ -1,0 +1,152 @@
+{
+  "schemaVersion": "toolchains-init/cli-command-manifest/v1",
+  "tool": "supabase",
+  "package": "supabase",
+  "version": "2.109.1",
+  "commands": [
+    {
+      "id": "init",
+      "packageManagers": {
+        "npm": ["npx", "supabase@{version}", "init"],
+        "pnpm": ["pnpm", "dlx", "supabase@{version}", "init"],
+        "yarn": ["yarn", "dlx", "supabase@{version}", "init"],
+        "bun": ["bunx", "supabase@{version}", "init"]
+      },
+      "flags": {
+        "interactive": {
+          "type": "boolean",
+          "cliName": "--interactive",
+          "supported": true
+        },
+        "useOrioledb": {
+          "type": "boolean",
+          "cliName": "--use-orioledb",
+          "supported": true
+        },
+        "force": {
+          "type": "boolean",
+          "cliName": "--force",
+          "supported": true
+        },
+        "help": {
+          "type": "boolean",
+          "cliName": "--help",
+          "supported": true
+        },
+        "version": {
+          "type": "boolean",
+          "cliName": "--version",
+          "supported": true
+        },
+        "completions": {
+          "type": "enum",
+          "cliName": "--completions",
+          "values": ["bash", "zsh", "fish", "sh"],
+          "supported": true
+        },
+        "logLevel": {
+          "type": "enum",
+          "cliName": "--log-level",
+          "values": ["all", "trace", "debug", "info", "warn", "warning", "error", "fatal", "none"],
+          "supported": true
+        },
+        "outputFormat": {
+          "type": "enum",
+          "cliName": "--output-format",
+          "values": ["text", "json", "stream-json"],
+          "supported": true
+        },
+        "output": {
+          "type": "enum",
+          "cliName": "--output",
+          "values": ["env", "pretty", "json", "toml", "yaml", "table", "csv"],
+          "supported": true
+        },
+        "profile": {
+          "type": "string",
+          "cliName": "--profile",
+          "supported": true
+        },
+        "debug": {
+          "type": "boolean",
+          "cliName": "--debug",
+          "supported": true
+        },
+        "workdir": {
+          "type": "string",
+          "cliName": "--workdir",
+          "supported": true
+        },
+        "experimental": {
+          "type": "boolean",
+          "cliName": "--experimental",
+          "supported": true
+        },
+        "networkId": {
+          "type": "string",
+          "cliName": "--network-id",
+          "supported": true
+        },
+        "yes": {
+          "type": "boolean",
+          "cliName": "--yes",
+          "supported": true
+        },
+        "dnsResolver": {
+          "type": "enum",
+          "cliName": "--dns-resolver",
+          "values": ["native", "https"],
+          "supported": true
+        },
+        "createTicket": {
+          "type": "boolean",
+          "cliName": "--create-ticket",
+          "supported": true
+        },
+        "agent": {
+          "type": "enum",
+          "cliName": "--agent",
+          "values": ["auto", "yes", "no"],
+          "supported": true
+        }
+      },
+      "interactive": false
+    }
+  ],
+  "sources": [
+    {
+      "kind": "npm",
+      "package": "supabase",
+      "version": "2.109.1",
+      "distTag": "latest",
+      "resolvedAt": "2026-07-07T09:00:02.193Z"
+    },
+    {
+      "kind": "cli-help",
+      "command": ["npx", "--yes", "supabase@2.109.1", "init", "--help"],
+      "commandId": "init"
+    },
+    {
+      "kind": "docs",
+      "url": "https://supabase.com/docs/reference/cli/v0/supabase-init",
+      "confidence": "high",
+      "checks": [
+        {
+          "found": true,
+          "text": "supabase init [flags]"
+        }
+      ],
+      "review": {
+        "reason": "Adapter runs the official Supabase local-project initializer in the selected target and blocks completion-only output.",
+        "files": ["src/stacks/supabase/adapter.ts", "src/stacks/supabase/init.test.ts"],
+        "sections": ["supabase init"],
+        "mustContain": ["supabase init [flags]"],
+        "checks": [
+          "Confirm supabase init still creates supabase/config.toml without stdin.",
+          "Confirm --completions exits without initializing and --workdir redirects initialization outside the selected target.",
+          "Confirm --interactive is allowed only when stdin is inherited."
+        ]
+      }
+    }
+  ]
+}
