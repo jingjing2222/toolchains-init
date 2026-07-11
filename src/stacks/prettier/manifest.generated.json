@@ -15,293 +15,154 @@
       },
       "flags": {
         "check": {
-          "type": "boolean",
-          "cliName": "--check",
-          "supported": true
+          "cliName": "--check"
         },
         "listDifferent": {
-          "type": "boolean",
-          "cliName": "--list-different",
-          "supported": true
+          "cliName": "--list-different"
         },
         "write": {
-          "type": "boolean",
-          "cliName": "--write",
-          "supported": true
+          "cliName": "--write"
         },
         "arrowParens": {
-          "type": "enum",
-          "cliName": "--arrow-parens",
-          "values": ["always", "avoid"],
-          "supported": true
+          "cliName": "--arrow-parens"
         },
         "bracketSameLine": {
-          "type": "boolean",
-          "cliName": "--bracket-same-line",
-          "supported": true
+          "cliName": "--bracket-same-line"
         },
         "noBracketSpacing": {
-          "type": "boolean",
-          "cliName": "--no-bracket-spacing",
-          "supported": true
+          "cliName": "--no-bracket-spacing"
         },
         "embeddedLanguageFormatting": {
-          "type": "enum",
-          "cliName": "--embedded-language-formatting",
-          "values": ["auto", "off"],
-          "supported": true
+          "cliName": "--embedded-language-formatting"
         },
         "endOfLine": {
-          "type": "enum",
-          "cliName": "--end-of-line",
-          "values": ["lf", "crlf", "cr", "auto"],
-          "supported": true
+          "cliName": "--end-of-line"
         },
         "experimentalOperatorPosition": {
-          "type": "enum",
-          "cliName": "--experimental-operator-position",
-          "values": ["start", "end"],
-          "supported": true
+          "cliName": "--experimental-operator-position"
         },
         "noExperimentalTernaries": {
-          "type": "boolean",
-          "cliName": "--no-experimental-ternaries",
-          "supported": true
+          "cliName": "--no-experimental-ternaries"
         },
         "htmlWhitespaceSensitivity": {
-          "type": "enum",
-          "cliName": "--html-whitespace-sensitivity",
-          "values": ["css", "strict", "ignore"],
-          "supported": true
+          "cliName": "--html-whitespace-sensitivity"
         },
         "jsxSingleQuote": {
-          "type": "boolean",
-          "cliName": "--jsx-single-quote",
-          "supported": true
+          "cliName": "--jsx-single-quote"
         },
         "objectWrap": {
-          "type": "enum",
-          "cliName": "--object-wrap",
-          "values": ["preserve", "collapse"],
-          "supported": true
+          "cliName": "--object-wrap"
         },
         "parser": {
-          "type": "enum",
-          "cliName": "--parser",
-          "values": [
-            "flow",
-            "babel",
-            "babel-flow",
-            "babel-ts",
-            "typescript",
-            "acorn",
-            "espree",
-            "meriyah",
-            "css",
-            "less",
-            "scss",
-            "json",
-            "json5",
-            "jsonc",
-            "json-stringify",
-            "graphql",
-            "markdown",
-            "mdx",
-            "vue",
-            "yaml",
-            "glimmer",
-            "html",
-            "angular",
-            "lwc",
-            "mjml"
-          ],
-          "supported": true
+          "cliName": "--parser"
         },
         "printWidth": {
-          "type": "string",
-          "cliName": "--print-width",
-          "supported": true
+          "cliName": "--print-width"
         },
         "proseWrap": {
-          "type": "enum",
-          "cliName": "--prose-wrap",
-          "values": ["always", "never", "preserve"],
-          "supported": true
+          "cliName": "--prose-wrap"
         },
         "quoteProps": {
-          "type": "enum",
-          "cliName": "--quote-props",
-          "values": ["as-needed", "consistent", "preserve"],
-          "supported": true
+          "cliName": "--quote-props"
         },
         "noSemi": {
-          "type": "boolean",
-          "cliName": "--no-semi",
-          "supported": true
+          "cliName": "--no-semi"
         },
         "singleAttributePerLine": {
-          "type": "boolean",
-          "cliName": "--single-attribute-per-line",
-          "supported": true
+          "cliName": "--single-attribute-per-line"
         },
         "singleQuote": {
-          "type": "boolean",
-          "cliName": "--single-quote",
-          "supported": true
+          "cliName": "--single-quote"
         },
         "tabWidth": {
-          "type": "string",
-          "cliName": "--tab-width",
-          "supported": true
+          "cliName": "--tab-width"
         },
         "trailingComma": {
-          "type": "enum",
-          "cliName": "--trailing-comma",
-          "values": ["all", "es5", "none"],
-          "supported": true
+          "cliName": "--trailing-comma"
         },
         "useTabs": {
-          "type": "boolean",
-          "cliName": "--use-tabs",
-          "supported": true
+          "cliName": "--use-tabs"
         },
         "vueIndentScriptAndStyle": {
-          "type": "boolean",
-          "cliName": "--vue-indent-script-and-style",
-          "supported": true
+          "cliName": "--vue-indent-script-and-style"
         },
         "config": {
-          "type": "string",
-          "cliName": "--config",
-          "supported": true
+          "cliName": "--config"
         },
         "noConfig": {
-          "type": "boolean",
-          "cliName": "--no-config",
-          "supported": true
+          "cliName": "--no-config"
         },
         "configPrecedence": {
-          "type": "enum",
-          "cliName": "--config-precedence",
-          "values": ["cli-override", "file-override", "prefer-file"],
-          "supported": true
+          "cliName": "--config-precedence"
         },
         "noEditorconfig": {
-          "type": "boolean",
-          "cliName": "--no-editorconfig",
-          "supported": true
+          "cliName": "--no-editorconfig"
         },
         "findConfigPath": {
-          "type": "string",
-          "cliName": "--find-config-path",
-          "supported": true
+          "cliName": "--find-config-path"
         },
         "ignorePath": {
-          "type": "string",
-          "cliName": "--ignore-path",
-          "supported": true
+          "cliName": "--ignore-path"
         },
         "plugin": {
-          "type": "string",
-          "cliName": "--plugin",
-          "supported": true
+          "cliName": "--plugin"
         },
         "withNodeModules": {
-          "type": "boolean",
-          "cliName": "--with-node-modules",
-          "supported": true
+          "cliName": "--with-node-modules"
         },
         "cursorOffset": {
-          "type": "string",
-          "cliName": "--cursor-offset",
-          "supported": true
+          "cliName": "--cursor-offset"
         },
         "rangeEnd": {
-          "type": "string",
-          "cliName": "--range-end",
-          "supported": true
+          "cliName": "--range-end"
         },
         "rangeStart": {
-          "type": "string",
-          "cliName": "--range-start",
-          "supported": true
+          "cliName": "--range-start"
         },
         "cache": {
-          "type": "boolean",
-          "cliName": "--cache",
-          "supported": true
+          "cliName": "--cache"
         },
         "cacheLocation": {
-          "type": "string",
-          "cliName": "--cache-location",
-          "supported": true
+          "cliName": "--cache-location"
         },
         "cacheStrategy": {
-          "type": "enum",
-          "cliName": "--cache-strategy",
-          "values": ["metadata", "content"],
-          "supported": true
+          "cliName": "--cache-strategy"
         },
         "checkIgnorePragma": {
-          "type": "boolean",
-          "cliName": "--check-ignore-pragma",
-          "supported": true
+          "cliName": "--check-ignore-pragma"
         },
         "noColor": {
-          "type": "boolean",
-          "cliName": "--no-color",
-          "supported": true
+          "cliName": "--no-color"
         },
         "noErrorOnUnmatchedPattern": {
-          "type": "boolean",
-          "cliName": "--no-error-on-unmatched-pattern",
-          "supported": true
+          "cliName": "--no-error-on-unmatched-pattern"
         },
         "fileInfo": {
-          "type": "string",
-          "cliName": "--file-info",
-          "supported": true
+          "cliName": "--file-info"
         },
         "help": {
-          "type": "string",
-          "cliName": "--help",
-          "supported": true
+          "cliName": "--help"
         },
         "ignoreUnknown": {
-          "type": "boolean",
-          "cliName": "--ignore-unknown",
-          "supported": true
+          "cliName": "--ignore-unknown"
         },
         "insertPragma": {
-          "type": "boolean",
-          "cliName": "--insert-pragma",
-          "supported": true
+          "cliName": "--insert-pragma"
         },
         "logLevel": {
-          "type": "enum",
-          "cliName": "--log-level",
-          "values": ["silent", "error", "warn", "log", "debug"],
-          "supported": true
+          "cliName": "--log-level"
         },
         "requirePragma": {
-          "type": "boolean",
-          "cliName": "--require-pragma",
-          "supported": true
+          "cliName": "--require-pragma"
         },
         "stdinFilepath": {
-          "type": "string",
-          "cliName": "--stdin-filepath",
-          "supported": true
+          "cliName": "--stdin-filepath"
         },
         "supportInfo": {
-          "type": "boolean",
-          "cliName": "--support-info",
-          "supported": true
+          "cliName": "--support-info"
         },
         "version": {
-          "type": "boolean",
-          "cliName": "--version",
-          "supported": true
+          "cliName": "--version"
         }
       }
     }

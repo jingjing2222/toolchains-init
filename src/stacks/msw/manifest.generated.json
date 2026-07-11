@@ -15,24 +15,16 @@
       },
       "flags": {
         "version": {
-          "type": "boolean",
-          "cliName": "--version",
-          "supported": true
+          "cliName": "--version"
         },
         "help": {
-          "type": "boolean",
-          "cliName": "--help",
-          "supported": true
+          "cliName": "--help"
         },
         "save": {
-          "type": "boolean",
-          "cliName": "--save",
-          "supported": true
+          "cliName": "--save"
         },
         "cwd": {
-          "type": "string",
-          "cliName": "--cwd",
-          "supported": true
+          "cliName": "--cwd"
         }
       }
     }

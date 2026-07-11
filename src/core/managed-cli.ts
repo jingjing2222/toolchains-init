@@ -1,11 +1,7 @@
-import type {
-  CliCommandContract,
-  CliCommandManifest,
-  CliFlagContract,
-} from "./cli-command-manifest";
+import type { CliCommandContract, CliCommandManifest } from "./cli-command-manifest";
 import { resolveCliCommand } from "./cli-command-manifest";
 import type { PackageManager } from "./package-manager";
-import type { ManagedCliFlagValues, ToolchainAdapter } from "./toolchain-adapter";
+import type { ToolchainAdapter } from "./toolchain-adapter";
 import { getToolchainCliTool, getToolchainId } from "./toolchain-adapter";
 import { cliCommandManifests, toolchains } from "../stacks/index";
 
@@ -19,8 +15,6 @@ export const reservedDirectSelectors = new Set([
 
 export type ManagedCliSurfaceFlag = {
   cliName: string;
-  contract: CliFlagContract;
-  logicalName: string;
   optionName: string;
 };
 
@@ -34,15 +28,11 @@ export type ManagedCliGroup = {
 };
 
 export type ManagedCliSurface = {
-  byOptionName: ReadonlyMap<string, ManagedCliSurfaceFlag & { group: ManagedCliGroup }>;
-  byRawArgOptionName: ReadonlyMap<string, ManagedCliGroup>;
   bySelector: ReadonlyMap<string, ManagedCliGroup>;
   groups: readonly ManagedCliGroup[];
 };
 
-export type ManagedCliUserFlags = Readonly<Record<string, ManagedCliFlagValues | undefined>>;
-
-export type ManagedCliUserRawArgs = Readonly<Record<string, readonly string[] | undefined>>;
+export type ManagedCliUserArgs = Readonly<Record<string, readonly string[] | undefined>>;
 
 export type ManagedCliPlan = {
   command: {
@@ -61,8 +51,6 @@ export function createManagedCliSurface(
 ): ManagedCliSurface {
   const groups: ManagedCliGroup[] = [];
   const bySelector = new Map<string, ManagedCliGroup>();
-  const byOptionName = new Map<string, ManagedCliSurfaceFlag & { group: ManagedCliGroup }>();
-  const byRawArgOptionName = new Map<string, ManagedCliGroup>();
   const manifestsByTool = new Map<string, CliCommandManifest>();
   for (const manifest of manifests) {
     if (manifestsByTool.has(manifest.tool)) {
@@ -102,16 +90,13 @@ export function createManagedCliSurface(
       }
 
       const seenCliNames = new Set<string>();
-      for (const [logicalName, contract] of Object.entries(command.flags ?? {})) {
+      for (const contract of Object.values(command.flags ?? {})) {
         if (seenCliNames.has(contract.cliName)) {
           throw new Error(
             `Duplicate CLI flag name in ${selector}/${command.id}: ${contract.cliName}`,
           );
         }
         seenCliNames.add(contract.cliName);
-        if (!contract.supported) {
-          continue;
-        }
         if (!/^--[A-Za-z0-9][A-Za-z0-9-]*$/.test(contract.cliName)) {
           throw new Error(
             `Managed CLI flag must use a long option in ${selector}/${command.id}: ${contract.cliName}`,
@@ -120,8 +105,6 @@ export function createManagedCliSurface(
         const optionName = `${selector}.${contract.cliName.slice(2)}`;
         flags.push({
           cliName: contract.cliName,
-          contract,
-          logicalName,
           optionName,
         });
       }
@@ -138,44 +121,31 @@ export function createManagedCliSurface(
     };
     groups.push(group);
     bySelector.set(selector, group);
-    for (const flag of flags) {
-      if (byOptionName.has(flag.optionName)) {
-        throw new Error(`Duplicate managed CLI option: --${flag.optionName}`);
-      }
-      byOptionName.set(flag.optionName, { ...flag, group });
-    }
-    if (rawArgOptionName != null) {
-      byRawArgOptionName.set(rawArgOptionName, group);
-    }
   }
 
-  return { byOptionName, byRawArgOptionName, bySelector, groups };
+  return { bySelector, groups };
 }
 
 export function resolveManagedCliPlans({
   manifests = cliCommandManifests,
   packageManager,
   selectedToolchains,
-  userFlags = {},
-  userRawArgs = {},
+  userArgs = {},
 }: {
   manifests?: readonly CliCommandManifest[];
   packageManager: PackageManager;
   selectedToolchains: readonly ToolchainAdapter[];
-  userFlags?: ManagedCliUserFlags;
-  userRawArgs?: ManagedCliUserRawArgs;
+  userArgs?: ManagedCliUserArgs;
 }): ManagedCliPlans {
   const selectedFeatures = new Set(selectedToolchains.map((toolchain) => toolchain.feature));
-  validateSelectedInputKeys(selectedFeatures, userFlags, "arguments");
-  validateSelectedInputKeys(selectedFeatures, userRawArgs, "raw arguments");
+  validateSelectedInputKeys(selectedFeatures, userArgs, "arguments");
 
   const surface = createManagedCliSurface(selectedToolchains, manifests);
   const plans = new Map<ToolchainAdapter["feature"], ManagedCliPlan>();
   for (const group of surface.groups) {
-    const requested = userFlags[group.toolchain.feature] ?? {};
-    const rawArgs = userRawArgs[group.toolchain.feature] ?? [];
+    const requested = userArgs[group.toolchain.feature] ?? [];
     if (group.toolchain.managedCli !== true) {
-      if (Object.keys(requested).length > 0 || rawArgs.length > 0) {
+      if (requested.length > 0) {
         throw new Error(`Toolchain --${group.selector} does not run a managed CLI command.`);
       }
       continue;
@@ -184,15 +154,9 @@ export function resolveManagedCliPlans({
       throw new Error(`Managed CLI adapter ${group.selector} is missing its command contract.`);
     }
 
-    for (const logicalName of Object.keys(requested)) {
-      if (!group.flags.some((flag) => flag.logicalName === logicalName)) {
-        throw new Error(`Unknown managed CLI flag for --${group.selector}: ${logicalName}`);
-      }
-    }
-
     const resolved = resolveCliCommand(group.manifest, group.command.id, packageManager, requested);
     plans.set(group.toolchain.feature, {
-      command: { ...resolved, args: [...resolved.args, ...rawArgs] },
+      command: resolved,
       feature: group.toolchain.feature,
       selector: group.selector,
     });

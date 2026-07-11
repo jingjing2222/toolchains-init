@@ -15,224 +15,136 @@
       },
       "flags": {
         "config": {
-          "type": "string",
-          "cliName": "--config",
-          "supported": true
+          "cliName": "--config"
         },
         "tsconfig": {
-          "type": "string",
-          "cliName": "--tsconfig",
-          "supported": true
+          "cliName": "--tsconfig"
         },
         "init": {
-          "type": "boolean",
-          "cliName": "--init",
-          "supported": true
+          "cliName": "--init"
         },
         "allow": {
-          "type": "string",
-          "cliName": "--allow",
-          "supported": true
+          "cliName": "--allow"
         },
         "warn": {
-          "type": "string",
-          "cliName": "--warn",
-          "supported": true
+          "cliName": "--warn"
         },
         "deny": {
-          "type": "string",
-          "cliName": "--deny",
-          "supported": true
+          "cliName": "--deny"
         },
         "disableUnicornPlugin": {
-          "type": "boolean",
-          "cliName": "--disable-unicorn-plugin",
-          "supported": true
+          "cliName": "--disable-unicorn-plugin"
         },
         "disableOxcPlugin": {
-          "type": "boolean",
-          "cliName": "--disable-oxc-plugin",
-          "supported": true
+          "cliName": "--disable-oxc-plugin"
         },
         "disableTypescriptPlugin": {
-          "type": "boolean",
-          "cliName": "--disable-typescript-plugin",
-          "supported": true
+          "cliName": "--disable-typescript-plugin"
         },
         "importPlugin": {
-          "type": "boolean",
-          "cliName": "--import-plugin",
-          "supported": true
+          "cliName": "--import-plugin"
         },
         "reactPlugin": {
-          "type": "boolean",
-          "cliName": "--react-plugin",
-          "supported": true
+          "cliName": "--react-plugin"
         },
         "jsdocPlugin": {
-          "type": "boolean",
-          "cliName": "--jsdoc-plugin",
-          "supported": true
+          "cliName": "--jsdoc-plugin"
         },
         "jestPlugin": {
-          "type": "boolean",
-          "cliName": "--jest-plugin",
-          "supported": true
+          "cliName": "--jest-plugin"
         },
         "vitestPlugin": {
-          "type": "boolean",
-          "cliName": "--vitest-plugin",
-          "supported": true
+          "cliName": "--vitest-plugin"
         },
         "jsxA11yPlugin": {
-          "type": "boolean",
-          "cliName": "--jsx-a11y-plugin",
-          "supported": true
+          "cliName": "--jsx-a11y-plugin"
         },
         "nextjsPlugin": {
-          "type": "boolean",
-          "cliName": "--nextjs-plugin",
-          "supported": true
+          "cliName": "--nextjs-plugin"
         },
         "reactPerfPlugin": {
-          "type": "boolean",
-          "cliName": "--react-perf-plugin",
-          "supported": true
+          "cliName": "--react-perf-plugin"
         },
         "promisePlugin": {
-          "type": "boolean",
-          "cliName": "--promise-plugin",
-          "supported": true
+          "cliName": "--promise-plugin"
         },
         "nodePlugin": {
-          "type": "boolean",
-          "cliName": "--node-plugin",
-          "supported": true
+          "cliName": "--node-plugin"
         },
         "vuePlugin": {
-          "type": "boolean",
-          "cliName": "--vue-plugin",
-          "supported": true
+          "cliName": "--vue-plugin"
         },
         "fix": {
-          "type": "boolean",
-          "cliName": "--fix",
-          "supported": true
+          "cliName": "--fix"
         },
         "fixSuggestions": {
-          "type": "boolean",
-          "cliName": "--fix-suggestions",
-          "supported": true
+          "cliName": "--fix-suggestions"
         },
         "fixDangerously": {
-          "type": "boolean",
-          "cliName": "--fix-dangerously",
-          "supported": true
+          "cliName": "--fix-dangerously"
         },
         "ignorePath": {
-          "type": "string",
-          "cliName": "--ignore-path",
-          "supported": true
+          "cliName": "--ignore-path"
         },
         "ignorePattern": {
-          "type": "string",
-          "cliName": "--ignore-pattern",
-          "supported": true
+          "cliName": "--ignore-pattern"
         },
         "noIgnore": {
-          "type": "boolean",
-          "cliName": "--no-ignore",
-          "supported": true
+          "cliName": "--no-ignore"
         },
         "quiet": {
-          "type": "boolean",
-          "cliName": "--quiet",
-          "supported": true
+          "cliName": "--quiet"
         },
         "denyWarnings": {
-          "type": "boolean",
-          "cliName": "--deny-warnings",
-          "supported": true
+          "cliName": "--deny-warnings"
         },
         "maxWarnings": {
-          "type": "string",
-          "cliName": "--max-warnings",
-          "supported": true
+          "cliName": "--max-warnings"
         },
         "format": {
-          "type": "string",
-          "cliName": "--format",
-          "supported": true
+          "cliName": "--format"
         },
         "debug": {
-          "type": "string",
-          "cliName": "--debug",
-          "supported": true
+          "cliName": "--debug"
         },
         "silent": {
-          "type": "boolean",
-          "cliName": "--silent",
-          "supported": true
+          "cliName": "--silent"
         },
         "noErrorOnUnmatchedPattern": {
-          "type": "boolean",
-          "cliName": "--no-error-on-unmatched-pattern",
-          "supported": true
+          "cliName": "--no-error-on-unmatched-pattern"
         },
         "threads": {
-          "type": "string",
-          "cliName": "--threads",
-          "supported": true
+          "cliName": "--threads"
         },
         "printConfig": {
-          "type": "boolean",
-          "cliName": "--print-config",
-          "supported": true
+          "cliName": "--print-config"
         },
         "reportUnusedDisableDirectives": {
-          "type": "boolean",
-          "cliName": "--report-unused-disable-directives",
-          "supported": true
+          "cliName": "--report-unused-disable-directives"
         },
         "reportUnusedDisableDirectivesSeverity": {
-          "type": "string",
-          "cliName": "--report-unused-disable-directives-severity",
-          "supported": true
+          "cliName": "--report-unused-disable-directives-severity"
         },
         "rules": {
-          "type": "boolean",
-          "cliName": "--rules",
-          "supported": true
+          "cliName": "--rules"
         },
         "lsp": {
-          "type": "boolean",
-          "cliName": "--lsp",
-          "supported": true
+          "cliName": "--lsp"
         },
         "disableNestedConfig": {
-          "type": "boolean",
-          "cliName": "--disable-nested-config",
-          "supported": true
+          "cliName": "--disable-nested-config"
         },
         "typeAware": {
-          "type": "boolean",
-          "cliName": "--type-aware",
-          "supported": true
+          "cliName": "--type-aware"
         },
         "typeCheck": {
-          "type": "boolean",
-          "cliName": "--type-check",
-          "supported": true
+          "cliName": "--type-check"
         },
         "help": {
-          "type": "boolean",
-          "cliName": "--help",
-          "supported": true
+          "cliName": "--help"
         },
         "version": {
-          "type": "boolean",
-          "cliName": "--version",
-          "supported": true
+          "cliName": "--version"
         }
       }
     }

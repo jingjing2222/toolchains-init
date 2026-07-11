@@ -25,7 +25,7 @@ Then choose the origin commands you want to run from the prompt.
 - **Origin commands preserved**: runs each tool's own command with its stdin and argument semantics intact.
 - **Pick only what you need**: routing, API mocking, E2E, formatting, linting, dead-code checks, release tooling, or editor SDKs.
 - **Cataloged prompt**: toolchains are grouped by app foundation, quality, release, and editor setup.
-- **Automation friendly**: select toolchains and pass typed or raw origin CLI arguments in one command.
+- **Automation friendly**: select toolchains and pass namespaced origin CLI arguments in one command.
 - **Fresh project friendly**: designed for newly scaffolded apps and packages.
 - **Monorepo support**: initialize an app package from the workspace root with `--target`.
 - **Package-manager aware**: works with npm, yarn, pnpm, Bun, and Deno.
@@ -78,11 +78,11 @@ toolchains-init \
 ```
 
 Group names come from generated CLI manifests, so TanStack Router uses `--tanstack-router`.
-Boolean flags need no value, string flags accept a value, and enum values are exact and
-case-sensitive. Namespacing keeps flags from different origin CLIs separate; it does not change
-their meaning.
+Namespacing keeps flags from different origin CLIs separate; the wrapper removes that namespace
+and otherwise preserves each token. It does not validate option names, value types, enum values, or
+repetitions. The origin CLI owns all of those decisions.
 
-For positionals, repeated flags, or syntax that typed discovery cannot represent, repeat
+For positionals, dash-prefixed values, `--`, or any other arbitrary token, repeat
 `--<tool>.raw.arg=<token>`. Tokens retain their order and are forwarded only to that origin CLI:
 
 ```bash
@@ -92,20 +92,20 @@ toolchains-init \
   --msw.raw.arg=--save
 ```
 
-Raw arguments also provide complete token-by-token passthrough, so a newly added upstream option
-does not have to wait for a manifest refresh.
+Newly added upstream options do not have to wait for a manifest refresh. Namespaced options are
+accepted without inspecting their names; discovered manifest names exist only to populate focused
+help.
 
-Run focused help to see every currently generated option, type, and enum value for one tool:
+Run focused help to see the option names currently discovered for one tool:
 
 ```bash
 toolchains-init --playwright --help
 toolchains-init --tanstack-router --help
 ```
 
-Generated manifests own the typed argument surface. When upstream adds a discovered flag, the next
-manifest refresh makes it appear in help and parsing without a handwritten parser or adapter
-mapping. Typed names and values are validated against that manifest; anything outside its grammar
-belongs in the raw namespace, where tokens are not inferred, rewritten, or policy-filtered.
+Generated manifests own discovered flag names for help. A manifest refresh updates that list
+without handwritten parser or adapter mapping. Parsing remains opaque: after removing the tool
+namespace, tokens are not inferred, rewritten, deduplicated, or policy-filtered.
 
 Automated runs require explicit `--<tool>` selectors. This keeps the command stable
 when another adapter is added to the registry; `--yes` never expands silently to every tool.

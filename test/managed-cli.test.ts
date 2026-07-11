@@ -2,23 +2,17 @@ import { describe, expect, it } from "vitest";
 import { defineCliCommandManifest, resolveCliCommand } from "../src/core/cli-command-manifest";
 import type { CliCommandManifest, CliFlagContract } from "../src/core/cli-command-manifest";
 import { createManagedCliSurface, resolveManagedCliPlans } from "../src/core/managed-cli";
-import type { ManagedCliUserFlags, ManagedCliUserRawArgs } from "../src/core/managed-cli";
+import type { ManagedCliUserArgs } from "../src/core/managed-cli";
 import { defineToolchain } from "../src/core/toolchain-adapter";
 import type { ToolchainAdapter } from "../src/core/toolchain-adapter";
 import { toolchains } from "../src/stacks";
 
 const defaultFlags = {
-  cwd: { cliName: "--cwd", supported: true, type: "string" },
-  help: { cliName: "--help", supported: true, type: "boolean" },
-  mode: {
-    cliName: "--mode",
-    supported: true,
-    type: "enum",
-    values: ["safe", "full"],
-  },
-  stdout: { cliName: "--stdout", supported: true, type: "boolean" },
-  unsupported: { cliName: "--unsupported", supported: false, type: "boolean" },
-  version: { cliName: "--version", supported: true, type: "boolean" },
+  cwd: { cliName: "--cwd" },
+  help: { cliName: "--help" },
+  mode: { cliName: "--mode" },
+  stdout: { cliName: "--stdout" },
+  version: { cliName: "--version" },
 } satisfies Record<string, CliFlagContract>;
 
 function createManifest(
@@ -66,20 +60,18 @@ function createAdapter({
 function resolve(
   adapter: ToolchainAdapter,
   manifest: CliCommandManifest,
-  userFlags: ManagedCliUserFlags = {},
-  userRawArgs: ManagedCliUserRawArgs = {},
+  userArgs: ManagedCliUserArgs = {},
 ) {
   return resolveManagedCliPlans({
     manifests: [manifest],
     packageManager: "npm",
     selectedToolchains: [adapter],
-    userFlags,
-    userRawArgs,
+    userArgs,
   });
 }
 
 describe("managed CLI surface", () => {
-  it("derives every supported flag and a collision-proof raw argument option", () => {
+  it("derives discovered flag names and a collision-proof raw argument option", () => {
     const surface = createManagedCliSurface([createAdapter()], [createManifest()]);
     const group = surface.bySelector.get("widget");
 
@@ -91,8 +83,6 @@ describe("managed CLI surface", () => {
       "widget.version",
     ]);
     expect(group?.rawArgOptionName).toBe("widget.raw.arg");
-    expect(surface.byRawArgOptionName.get("widget.raw.arg")).toBe(group);
-    expect(surface.byOptionName.has("widget.unsupported")).toBe(false);
   });
 
   it("keeps unmanaged selectors without exposing origin arguments", () => {
@@ -134,58 +124,35 @@ describe("managed CLI plan resolution", () => {
     );
   });
 
-  it("forwards help, version, cwd, stdout, and enums without wrapper policy", () => {
-    const plan = resolve(createAdapter(), createManifest(), {
-      widget: {
-        cwd: "../elsewhere",
-        help: true,
-        mode: "full",
-        stdout: true,
-        version: true,
-      },
-    }).get("widget");
-
-    expect(plan?.command.args).toEqual([
-      "create-widget@1.2.3",
-      "init",
-      "--cwd",
-      "../elsewhere",
+  it("forwards origin arguments exactly without wrapper policy", () => {
+    const args = [
+      "--cwd=../elsewhere",
       "--help",
       "--mode",
-      "full",
+      "unknown",
       "--stdout",
       "--version",
-    ]);
+      "--new-upstream-flag",
+    ];
+    const plan = resolve(createAdapter(), createManifest(), { widget: args }).get("widget");
+
+    expect(plan?.command.args).toEqual(["create-widget@1.2.3", "init", ...args]);
   });
 
   it("appends raw positionals, repeated flags, and the option terminator exactly", () => {
     const rawArgs = ["--preview-feature", "one", "--preview-feature", "two", "--", "file.ts"];
-    const plan = resolve(createAdapter(), createManifest(), {}, { widget: rawArgs }).get("widget");
+    const plan = resolve(createAdapter(), createManifest(), { widget: rawArgs }).get("widget");
 
     expect(plan?.command.args.slice(-rawArgs.length)).toEqual(rawArgs);
   });
 
-  it("delegates typed value validation to the generated manifest", () => {
-    expect(() =>
-      resolve(createAdapter(), createManifest(), { widget: { mode: "unknown" } }),
-    ).toThrow("Invalid CLI flag value for init: mode=unknown");
-    expect(() => resolve(createAdapter(), createManifest(), { widget: { cwd: true } })).toThrow(
-      "Invalid CLI flag value for init: cwd=true",
-    );
-  });
-
-  it("rejects unknown, unselected, and unmanaged argument groups", () => {
+  it("rejects unselected and unmanaged argument groups", () => {
     const adapter = createAdapter();
     const manifest = createManifest();
 
-    expect(() => resolve(adapter, manifest, { widget: { missing: true } })).toThrow(
-      "Unknown managed CLI flag",
-    );
-    expect(() => resolve(adapter, manifest, { other: { help: true } })).toThrow(
-      "unselected toolchain",
-    );
+    expect(() => resolve(adapter, manifest, { other: ["--help"] })).toThrow("unselected toolchain");
     expect(() =>
-      resolve(createAdapter({ managedCli: null }), manifest, {}, { widget: ["file"] }),
+      resolve(createAdapter({ managedCli: null }), manifest, { widget: ["file"] }),
     ).toThrow("does not run a managed CLI command");
   });
 

@@ -54,30 +54,26 @@ describe("CLI command manifests", () => {
 
   it("derives CLI flags from help output, not a hand-written subset", () => {
     expect(playwrightCliManifest.commands[0]?.flags).toMatchObject({
-      browser: { cliName: "--browser", type: "string" },
-      noBrowsers: { cliName: "--no-browsers", type: "boolean" },
-      lang: { cliName: "--lang", type: "enum", values: ["js", "TypeScript"] },
+      browser: { cliName: "--browser" },
+      noBrowsers: { cliName: "--no-browsers" },
+      lang: { cliName: "--lang" },
     });
 
     const tanStackCliManifest = getCliCommandManifest("tanstack-router");
     expect(tanStackCliManifest?.commands[0]?.flags).toMatchObject({
-      deployment: {
-        cliName: "--deployment",
-        type: "enum",
-        values: ["cloudflare", "netlify", "nitro", "railway"],
-      },
-      routerOnly: { cliName: "--router-only", type: "boolean" },
+      deployment: { cliName: "--deployment" },
+      routerOnly: { cliName: "--router-only" },
     });
 
     const storybookCliManifest = getCliCommandManifest("storybook");
     expect(storybookCliManifest?.commands[0]?.flags).toMatchObject({
-      force: { cliName: "--force", type: "boolean" },
-      skipInstall: { cliName: "--skip-install", type: "boolean" },
-      yes: { cliName: "--yes", type: "boolean" },
+      force: { cliName: "--force" },
+      skipInstall: { cliName: "--skip-install" },
+      yes: { cliName: "--yes" },
     });
   });
 
-  it("parses optional, lowercase, and description-column CLI value hints", () => {
+  it("extracts long flag names without interpreting their value syntax", () => {
     expect(
       Object.fromEntries(
         parseHelpFlags(`
@@ -90,24 +86,6 @@ describe("CLI command manifests", () => {
   --level                    level ('suggestion' | 'warning' | 'error')
   --cwd                      Custom current worker directory             [string]
   --save                     Save the worker directory                   [boolean]
-`).map((flag) => [flag.cliName, flag]),
-      ),
-    ).toMatchObject({
-      "--format": { type: "string" },
-      "--import": { type: "string" },
-      "--level": { type: "enum", values: ["suggestion", "warning", "error"] },
-      "--output": { type: "enum", values: ["json", "yaml", "table"] },
-      "--preset": { type: "string" },
-      "--cwd": { type: "string" },
-      "--save": { type: "boolean" },
-      "--workdir": { type: "string" },
-    });
-  });
-
-  it("parses wrapped enum choices and long options with adjacent value hints", () => {
-    expect(
-      Object.fromEntries(
-        parseHelpFlags(`
   --format <format>             file format (choices: "yaml",
                                 "yml", "json", "jsonc", default: "yaml")
   -t, --template <template>     template (next, start, vite,
@@ -117,48 +95,44 @@ describe("CLI command manifests", () => {
   --ignore-rules <rules...>     rules to ignore (choices: "no-resolution",
                                 "cjs-only-exports-default", "named-exports",
                                 default: [])
+  --migrate=SOURCE              migrate from a specified source
+  -c, --config=PATH             path to configuration (.json, .jsonc, knip.(js|ts))
 `).map((flag) => [flag.cliName, flag]),
       ),
-    ).toMatchObject({
-      "--format": { type: "enum", values: ["yaml", "yml", "json", "jsonc"] },
-      "--ignore-rules": {
-        type: "enum",
-        values: ["no-resolution", "cjs-only-exports-default", "named-exports"],
-      },
-      "--secretlintignore": { type: "string" },
-      "--secretlintrcJSON": { type: "string" },
-      "--template": {
-        type: "enum",
-        values: ["next", "start", "vite", "react-router", "laravel", "astro"],
-      },
+    ).toEqual({
+      "--config": { cliName: "--config" },
+      "--cwd": { cliName: "--cwd" },
+      "--format": { cliName: "--format" },
+      "--ignore-rules": { cliName: "--ignore-rules" },
+      "--import": { cliName: "--import" },
+      "--level": { cliName: "--level" },
+      "--migrate": { cliName: "--migrate" },
+      "--output": { cliName: "--output" },
+      "--preset": { cliName: "--preset" },
+      "--save": { cliName: "--save" },
+      "--secretlintignore": { cliName: "--secretlintignore" },
+      "--secretlintrcJSON": { cliName: "--secretlintrcJSON" },
+      "--template": { cliName: "--template" },
+      "--workdir": { cliName: "--workdir" },
     });
   });
 
-  it("parses equals-style values without treating type and file-pattern prose as enums", () => {
+  it("keeps wrapped descriptions from creating extra flag names", () => {
     expect(
-      Object.fromEntries(
-        parseHelpFlags(`
-  --migrate=SOURCE       migrate from a specified source
-  -c, --config=PATH      path to configuration (.json, .jsonc, knip.(js|ts))
-  --file-info <path>     reported fields:
-                        * ignored (boolean)
-                        * inferredParser (string | null)
-`).map((flag) => [flag.cliName, flag]),
-      ),
-    ).toMatchObject({
-      "--config": { type: "string" },
-      "--file-info": { type: "string" },
-      "--migrate": { type: "string" },
-    });
+      parseHelpFlags(`
+  --format <format>             file format (choices: "yaml",
+                                "yml", "json", "jsonc", default: "yaml")
+`).map((flag) => flag.cliName),
+    ).toEqual(["--format"]);
   });
 
-  it("rejects ambiguous generated flag identities and invalid enum contracts", () => {
+  it("rejects ambiguous generated flag identities", () => {
     const manifest = {
       commands: [
         {
           flags: {
-            first: { cliName: "--same", supported: true, type: "boolean" },
-            second: { cliName: "--same", supported: true, type: "string" },
+            first: { cliName: "--same" },
+            second: { cliName: "--same" },
           },
           id: "init",
           packageManagers: { npm: ["npx", "example@{version}"] },
@@ -172,19 +146,6 @@ describe("CLI command manifests", () => {
     };
 
     expect(() => defineCliCommandManifest(manifest)).toThrow("Duplicate CLI flag name");
-    expect(() =>
-      defineCliCommandManifest({
-        ...manifest,
-        commands: [
-          {
-            ...manifest.commands[0],
-            flags: {
-              mode: { cliName: "--mode", supported: true, type: "enum", values: [] },
-            },
-          },
-        ],
-      }),
-    ).toThrow("Invalid enum values");
   });
 
   it("keeps docs-backed adapter review metadata in generated manifests", () => {
@@ -741,13 +702,14 @@ describe("CLI command manifests", () => {
     });
   });
 
-  it("serializes manifest-backed Playwright quiet flags", () => {
+  it("appends Playwright arguments without interpreting them", () => {
     expect(
-      resolveCliCommand(playwrightCliManifest, "init", "npm", {
-        quiet: true,
-        lang: "TypeScript",
-        noBrowsers: true,
-      }),
+      resolveCliCommand(playwrightCliManifest, "init", "npm", [
+        "--quiet",
+        "--lang=Rust",
+        "--no-browsers",
+        "--future-flag",
+      ]),
     ).toEqual({
       bin: "npm",
       args: [
@@ -755,18 +717,10 @@ describe("CLI command manifests", () => {
         `playwright@${playwrightCliManifest.version}`,
         "--",
         "--quiet",
-        "--lang",
-        "TypeScript",
+        "--lang=Rust",
         "--no-browsers",
+        "--future-flag",
       ],
     });
-  });
-
-  it("rejects flags not declared by the command contract", () => {
-    expect(() =>
-      resolveCliCommand(playwrightCliManifest, "init", "npm", {
-        framework: "react",
-      }),
-    ).toThrow("Unsupported CLI flag");
   });
 });

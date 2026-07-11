@@ -15,60 +15,37 @@
       },
       "flags": {
         "browser": {
-          "type": "string",
-          "cliName": "--browser",
-          "supported": true
+          "cliName": "--browser"
         },
         "noBrowsers": {
-          "type": "boolean",
-          "cliName": "--no-browsers",
-          "supported": true
+          "cliName": "--no-browsers"
         },
         "noExamples": {
-          "type": "boolean",
-          "cliName": "--no-examples",
-          "supported": true
+          "cliName": "--no-examples"
         },
         "installDeps": {
-          "type": "boolean",
-          "cliName": "--install-deps",
-          "supported": true
+          "cliName": "--install-deps"
         },
         "next": {
-          "type": "boolean",
-          "cliName": "--next",
-          "supported": true
+          "cliName": "--next"
         },
         "beta": {
-          "type": "boolean",
-          "cliName": "--beta",
-          "supported": true
+          "cliName": "--beta"
         },
         "ct": {
-          "type": "boolean",
-          "cliName": "--ct",
-          "supported": true
+          "cliName": "--ct"
         },
         "quiet": {
-          "type": "boolean",
-          "cliName": "--quiet",
-          "supported": true
+          "cliName": "--quiet"
         },
         "gha": {
-          "type": "boolean",
-          "cliName": "--gha",
-          "supported": true
+          "cliName": "--gha"
         },
         "lang": {
-          "type": "enum",
-          "cliName": "--lang",
-          "values": ["js", "TypeScript"],
-          "supported": true
+          "cliName": "--lang"
         },
         "help": {
-          "type": "boolean",
-          "cliName": "--help",
-          "supported": true
+          "cliName": "--help"
         }
       }
     }

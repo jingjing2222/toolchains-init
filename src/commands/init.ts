@@ -19,7 +19,7 @@ const toolchainCatalogs = [
 ] as const satisfies readonly (readonly [ToolchainCatalog, string])[];
 
 export async function runInit(cliOptions: InitCliOptions) {
-  const { managedCliFlags, managedCliRawArgs, selectedFeatures, yes } = cliOptions;
+  const { managedCliArgs, selectedFeatures, yes } = cliOptions;
   const cwd = path.resolve(process.cwd(), cliOptions.target ?? ".");
   const packageManager = cliOptions.packageManager ?? detectPackageManager();
 
@@ -63,8 +63,7 @@ export async function runInit(cliOptions: InitCliOptions) {
   const managedCliPlans = resolveManagedCliPlans({
     packageManager,
     selectedToolchains,
-    userFlags: managedCliFlags,
-    userRawArgs: managedCliRawArgs,
+    userArgs: managedCliArgs,
   });
 
   outro(

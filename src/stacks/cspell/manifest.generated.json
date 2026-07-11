@@ -15,60 +15,37 @@
       },
       "flags": {
         "config": {
-          "type": "string",
-          "cliName": "--config",
-          "supported": true
+          "cliName": "--config"
         },
         "output": {
-          "type": "string",
-          "cliName": "--output",
-          "supported": true
+          "cliName": "--output"
         },
         "format": {
-          "type": "enum",
-          "cliName": "--format",
-          "values": ["yaml", "yml", "json", "jsonc"],
-          "supported": true
+          "cliName": "--format"
         },
         "import": {
-          "type": "string",
-          "cliName": "--import",
-          "supported": true
+          "cliName": "--import"
         },
         "locale": {
-          "type": "string",
-          "cliName": "--locale",
-          "supported": true
+          "cliName": "--locale"
         },
         "dictionary": {
-          "type": "string",
-          "cliName": "--dictionary",
-          "supported": true
+          "cliName": "--dictionary"
         },
         "noComments": {
-          "type": "boolean",
-          "cliName": "--no-comments",
-          "supported": true
+          "cliName": "--no-comments"
         },
         "removeComments": {
-          "type": "boolean",
-          "cliName": "--remove-comments",
-          "supported": true
+          "cliName": "--remove-comments"
         },
         "noSchema": {
-          "type": "boolean",
-          "cliName": "--no-schema",
-          "supported": true
+          "cliName": "--no-schema"
         },
         "stdout": {
-          "type": "boolean",
-          "cliName": "--stdout",
-          "supported": true
+          "cliName": "--stdout"
         },
         "help": {
-          "type": "boolean",
-          "cliName": "--help",
-          "supported": true
+          "cliName": "--help"
         }
       }
     }

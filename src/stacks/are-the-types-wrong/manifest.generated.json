@@ -15,110 +15,58 @@
       },
       "flags": {
         "version": {
-          "type": "boolean",
-          "cliName": "--version",
-          "supported": true
+          "cliName": "--version"
         },
         "pack": {
-          "type": "boolean",
-          "cliName": "--pack",
-          "supported": true
+          "cliName": "--pack"
         },
         "fromNpm": {
-          "type": "boolean",
-          "cliName": "--from-npm",
-          "supported": true
+          "cliName": "--from-npm"
         },
         "definitelyTyped": {
-          "type": "string",
-          "cliName": "--definitely-typed",
-          "supported": true
+          "cliName": "--definitely-typed"
         },
         "noDefinitelyTyped": {
-          "type": "boolean",
-          "cliName": "--no-definitely-typed",
-          "supported": true
+          "cliName": "--no-definitely-typed"
         },
         "format": {
-          "type": "enum",
-          "cliName": "--format",
-          "values": ["auto", "json", "ascii", "table", "table-flipped"],
-          "supported": true
+          "cliName": "--format"
         },
         "quiet": {
-          "type": "boolean",
-          "cliName": "--quiet",
-          "supported": true
+          "cliName": "--quiet"
         },
         "entrypoints": {
-          "type": "string",
-          "cliName": "--entrypoints",
-          "supported": true
+          "cliName": "--entrypoints"
         },
         "includeEntrypoints": {
-          "type": "string",
-          "cliName": "--include-entrypoints",
-          "supported": true
+          "cliName": "--include-entrypoints"
         },
         "excludeEntrypoints": {
-          "type": "string",
-          "cliName": "--exclude-entrypoints",
-          "supported": true
+          "cliName": "--exclude-entrypoints"
         },
         "entrypointsLegacy": {
-          "type": "boolean",
-          "cliName": "--entrypoints-legacy",
-          "supported": true
+          "cliName": "--entrypoints-legacy"
         },
         "ignoreRules": {
-          "type": "enum",
-          "cliName": "--ignore-rules",
-          "values": [
-            "no-resolution",
-            "untyped-resolution",
-            "false-cjs",
-            "false-esm",
-            "cjs-resolves-to-esm",
-            "fallback-condition",
-            "cjs-only-exports-default",
-            "named-exports",
-            "false-export-default",
-            "missing-export-equals",
-            "unexpected-module-syntax",
-            "internal-resolution-error"
-          ],
-          "supported": true
+          "cliName": "--ignore-rules"
         },
         "profile": {
-          "type": "enum",
-          "cliName": "--profile",
-          "values": ["strict", "node16", "esm-only"],
-          "supported": true
+          "cliName": "--profile"
         },
         "summary": {
-          "type": "boolean",
-          "cliName": "--summary",
-          "supported": true
+          "cliName": "--summary"
         },
         "emoji": {
-          "type": "boolean",
-          "cliName": "--emoji",
-          "supported": true
+          "cliName": "--emoji"
         },
         "color": {
-          "type": "boolean",
-          "cliName": "--color",
-          "supported": true
+          "cliName": "--color"
         },
         "configPath": {
-          "type": "string",
-          "cliName": "--config-path",
-          "supported": true
+          "cliName": "--config-path"
         },
         "help": {
-          "type": "boolean",
-          "cliName": "--help",
-          "supported": true
+          "cliName": "--help"
         }
       }
     }

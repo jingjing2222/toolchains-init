@@ -14,10 +14,10 @@ description: Add or maintain a CLI-backed toolchain stack in the toolchains-init
 - Preserve the origin CLI's stdin, prompts, exit status, and argument semantics. Wrapper `--yes` is never forwarded and never changes the origin process's stdin.
 - Do not infer missing upstream choices, inject convenience presets, reinterpret an option, or policy-filter raw upstream tokens because the wrapper considers them unsafe or unnecessary.
 - Handwritten adapters declare only stable command identity, proven prerequisites, and review evidence.
-- `manifest.generated.json` owns the pinned upstream version, package-manager command templates, and discovered typed flags.
+- `manifest.generated.json` owns the pinned upstream version, package-manager command templates, and discovered flag names for focused help.
 
-Core derives `--<manifest.tool>` selectors and typed `--<tool>.<flag>[=value]` options from the
-manifest. Never add an individual upstream flag to a handwritten parser.
+Core derives `--<manifest.tool>` selectors and accepts opaque `--<tool>.<flag>[=value]` options.
+Never add an individual upstream flag or its value type to a handwritten parser.
 
 ## Start Here
 
@@ -73,20 +73,18 @@ subcommand, including custom runner templates.
 
 ## Preserve the Upstream Argument Surface
 
-Manifest flags provide the convenient typed namespace:
+Namespaced flags select which origin CLI receives each token:
 
 ```bash
 toolchains-init --example --example.template=react --example.force
 ```
 
-- Boolean flags use presence syntax.
-- String flags accept a value.
-- Enum values remain exact and case-sensitive.
-- Routine upstream flag additions become available after `yarn manifests:update`; they do not require adapter edits.
+- Core removes only the tool namespace and preserves the remaining token syntax and order.
+- Do not validate flag names, value types, enum values, repetitions, or support status in the wrapper.
+- Unknown upstream flags are accepted immediately; manifest discovery controls focused help only.
 
-Typed discovery cannot represent every CLI grammar. Users can repeat
-`--<tool>.raw.arg=<token>` for positional arguments, repeated flags, or complete token-by-token
-passthrough:
+Users can repeat `--<tool>.raw.arg=<token>` for positionals, `--`, dash-prefixed values, or complete
+token-by-token passthrough:
 
 ```bash
 toolchains-init \
@@ -109,7 +107,7 @@ For every CLI-backed adapter:
 - Use `managedCli: true`; it is a marker that the manifest command executes.
 - Put only origin-command identity in `command`, `subcommand`, and `commandArgs`.
 - Do not declare package-manager allowlists for inferred runners. A custom runner's actual template keys are the only supported-manager constraint.
-- Let core resolve the pinned package-manager template and merge typed and raw user arguments.
+- Let core resolve the pinned package-manager template and append ordered opaque user arguments.
 - Add prerequisite preparation only before command execution and only with evidence tied to the adapter and its focused test.
 - Leave the files and package state produced by the CLI untouched after execution.
 - Keep selection on generated `--<manifest.tool>` groups; do not add aliases or per-tool parser cases.
@@ -124,7 +122,7 @@ The focused adapter test must mock command execution and assert the exact call:
 - correct working directory;
 - exact package-manager binary and pinned origin arguments;
 - static `commandArgs` in their documented order;
-- typed and raw user tokens forwarded without reinterpretation;
+- namespaced and raw user tokens forwarded without reinterpretation;
 - the core runner's unconditional inherited stdio, including when wrapper `yes` is true;
 - exactly one origin-command execution and no wrapper mutation afterward.
 
@@ -152,8 +150,8 @@ routine metadata only when it belongs in the requested change.
 ## Review an Automated Manifest PR
 
 1. Confirm changes are restricted to generated manifests and the automation changeset.
-2. For version, command-template, or additive-flag drift, run manifest validation and focused tests without editing the adapter.
-3. Review removed or type-changed public flags, while keeping raw passthrough available for all upstream tokens.
+2. For version, command-template, or discovered-flag drift, run manifest validation and focused tests without editing the adapter.
+3. Review removed or renamed discovered flags as focused-help changes only; parsing accepts unknown upstream names.
 4. Review handwritten files only when a static command token, prerequisite, docs marker, or exact-command test changed.
 5. Confirm the wrapper still makes no project mutation after each origin command returns.
 

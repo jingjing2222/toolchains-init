@@ -2,10 +2,6 @@ import type { CliCommandManifest } from "./cli-command-manifest";
 import type { PackageManager } from "./package-manager";
 import type { ToolchainOptions } from "./types";
 
-export type ManagedCliFlagValue = boolean | string;
-
-export type ManagedCliFlagValues = Readonly<Record<string, ManagedCliFlagValue>>;
-
 export type ToolchainCatalog = "app" | "quality" | "release" | "editor";
 
 export type PackageManagerCommandTemplates = Partial<Record<PackageManager, readonly string[]>>;

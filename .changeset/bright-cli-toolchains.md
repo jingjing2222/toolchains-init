@@ -4,5 +4,6 @@
 
 Add CSpell, Secretlint, Supabase, Prisma, shadcn, publint, and Are the Types Wrong toolchains.
 Run every selected origin CLI as the terminal project operation: preserve stdin and exit codes,
-forward typed or repeatable raw arguments, and remove wrapper-owned postprocessing and guessed CLI
-policies. Improve generated CLI flag types for wrapped help output and equals-style value options.
+forward ordered namespaced or raw arguments without interpreting option types or values, and remove
+wrapper-owned postprocessing and guessed CLI policies. Generated CLI flags are discovery-only help
+metadata; the origin CLI owns argument validation.

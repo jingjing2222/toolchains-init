@@ -5,16 +5,15 @@ import type { ToolchainAdapter } from "./toolchain-adapter";
 import {
   createManagedCliSurface,
   type ManagedCliGroup,
-  type ManagedCliUserFlags,
-  type ManagedCliUserRawArgs,
+  type ManagedCliSurface,
+  type ManagedCliUserArgs,
 } from "./managed-cli";
 import { toolchains } from "../stacks/index";
 
 export type InitCliOptions = {
   help: boolean;
   helpTool: string | null;
-  managedCliFlags: ManagedCliUserFlags;
-  managedCliRawArgs: ManagedCliUserRawArgs;
+  managedCliArgs: ManagedCliUserArgs;
   packageManager: PackageManager | null;
   selectedFeatures: readonly Feature[] | null;
   target: string | null;
@@ -43,19 +42,13 @@ export function parseCliOptions(args: string[]): InitCliOptions {
   };
   for (const group of surface.groups) {
     options[group.selector] = { type: "boolean" };
-    for (const flag of group.flags) {
-      options[flag.optionName] = {
-        type: flag.contract.type === "boolean" ? "boolean" : "string",
-      };
-    }
-    if (group.rawArgOptionName != null) {
-      options[group.rawArgOptionName] = { multiple: true, type: "string" };
-    }
   }
+
+  const preprocessed = preprocessManagedCliArgs(args, surface);
 
   const parsed = parseArgs({
     allowPositionals: true,
-    args: normalizeRawArgTokens(args, surface.byRawArgOptionName),
+    args: preprocessed.wrapperArgs,
     options,
     strict: true,
     tokens: true,
@@ -89,8 +82,7 @@ export function parseCliOptions(args: string[]): InitCliOptions {
     return {
       help,
       helpTool: help && directGroups.length === 1 ? (directGroups[0]?.selector ?? null) : null,
-      managedCliFlags: {},
-      managedCliRawArgs: {},
+      managedCliArgs: {},
       packageManager: null,
       selectedFeatures: null,
       target: null,
@@ -100,50 +92,12 @@ export function parseCliOptions(args: string[]): InitCliOptions {
   }
 
   const selectedSelectors = new Set(directGroups.map((group) => group.selector));
-  const managedCliFlags: Record<string, Record<string, boolean | string>> = {};
-  for (const token of parsed.tokens) {
-    if (token.kind !== "option") {
-      continue;
-    }
-    const optionName = token.name;
-    const entry = surface.byOptionName.get(optionName);
-    if (entry == null) {
-      continue;
-    }
-    const value = values[optionName];
-    if (value == null) {
-      continue;
-    }
-    if (!selectedSelectors.has(entry.group.selector)) {
-      throw new Error(
-        `Option --${optionName} requires the --${entry.group.selector} tool selector.`,
-      );
-    }
-    if (Array.isArray(value)) {
-      throw new Error(`Invalid repeated value for --${optionName}.`);
-    }
-    if (entry.contract.type === "enum" && !entry.contract.values.includes(String(value))) {
-      throw new Error(
-        `Invalid value for --${optionName}: ${String(value)}. Expected one of: ${entry.contract.values.join(", ")}.`,
-      );
-    }
-    const featureFlags = (managedCliFlags[entry.group.toolchain.feature] ??= {});
-    featureFlags[entry.logicalName] = value;
-  }
-
-  const managedCliRawArgs: Record<string, readonly string[]> = {};
-  for (const [optionName, group] of surface.byRawArgOptionName) {
-    const value = values[optionName];
-    if (value == null) {
-      continue;
-    }
+  for (const group of preprocessed.groupsWithArgs) {
     if (!selectedSelectors.has(group.selector)) {
-      throw new Error(`Option --${optionName} requires the --${group.selector} tool selector.`);
+      throw new Error(
+        `Origin arguments for --${group.selector} require the --${group.selector} tool selector.`,
+      );
     }
-    if (!Array.isArray(value)) {
-      throw new Error(`Invalid raw argument for --${group.selector}.`);
-    }
-    managedCliRawArgs[group.toolchain.feature] = value;
   }
 
   if (values.yes === true && directGroups.length === 0) {
@@ -153,8 +107,7 @@ export function parseCliOptions(args: string[]): InitCliOptions {
   return {
     help,
     helpTool: null,
-    managedCliFlags,
-    managedCliRawArgs,
+    managedCliArgs: preprocessed.managedCliArgs,
     packageManager: parsePackageManager(values["package-manager"]),
     selectedFeatures:
       directGroups.length > 0 ? directGroups.map((group) => group.toolchain.feature) : null,
@@ -197,7 +150,7 @@ Usage:
 
 Options:
   --<tool>                 Select an upstream CLI command (see Tool selectors)
-  --<tool>.<flag>          Forward a generated, typed upstream flag
+  --<tool>.<flag>          Forward an upstream flag without validating it
   --<tool>.raw.arg <value> Forward one raw argument; repeat to preserve raw argument order
   --target <path>          Working directory for upstream CLIs (default: current directory)
   --package-manager <name> npm, pnpm, yarn, bun, or deno (default: launcher)
@@ -221,13 +174,12 @@ function renderFocusedHelp(packageVersion: string, group: ManagedCliGroup) {
       ? (group.toolchain.cli?.package ?? "upstream CLI")
       : `${group.manifest.package}@${group.manifest.version}`;
   const rows = group.flags.map((flag) => {
-    const value = formatFlagValue(flag.contract);
-    return `  --${flag.optionName}${value}  forwards ${flag.cliName}`;
+    return `  --${flag.optionName}  forwards ${flag.cliName}`;
   });
   const argumentsSection =
     rows.length > 0
       ? rows.join("\n")
-      : "  No generated typed flags were discovered for this command.";
+      : "  No flag names were discovered from this command's help output.";
   const rawArg = group.rawArgOptionName ?? `${group.selector}.raw.arg`;
 
   return `toolchains-init ${packageVersion}
@@ -244,43 +196,72 @@ ${argumentsSection}
 Raw passthrough:
   --${rawArg} <value>  forwards one argument exactly; repeat for multiple arguments
 
-Generated help and version flags are forwarded like every other upstream argument.
-Use --${rawArg}=--help or --${rawArg}=--version when either flag is not in the generated list.
-Boolean flags use presence-only syntax. Enum values are exact and case-sensitive.
+Discovered names are help only; any --${group.selector}.<flag> name is accepted.
+The wrapper removes only the --${group.selector}. namespace and does not validate names, values, or repetitions.
+Use =value or an adjacent non-option value. Use --${rawArg} for arbitrary tokens such as --, positionals, or dash-prefixed values.
+For example, --${rawArg}=--version forwards --version to the origin CLI.
 `;
 }
 
-function normalizeRawArgTokens(
-  args: readonly string[],
-  rawOptions: ReadonlyMap<string, ManagedCliGroup>,
-) {
-  const normalized: string[] = [];
+function preprocessManagedCliArgs(args: readonly string[], surface: ManagedCliSurface) {
+  const wrapperArgs: string[] = [];
+  const managedCliArgs: Record<string, string[]> = {};
+  const groupsWithArgs = new Set<ManagedCliGroup>();
+
   for (let index = 0; index < args.length; index += 1) {
     const token = args[index] ?? "";
-    const optionName = token.startsWith("--") ? token.slice(2) : "";
-    if (!rawOptions.has(optionName)) {
-      normalized.push(token);
+    const namespaced = matchManagedCliToken(token, surface);
+    if (namespaced == null) {
+      wrapperArgs.push(token);
       continue;
     }
 
-    const value = args[index + 1];
-    if (value == null) {
-      throw new Error(`Option ${token} requires an argument.`);
+    const { group, suffix } = namespaced;
+    const destination = (managedCliArgs[group.toolchain.feature] ??= []);
+    groupsWithArgs.add(group);
+
+    if (suffix === "raw.arg") {
+      const value = args[index + 1];
+      if (value == null) {
+        throw new Error(`Option ${token} requires an argument.`);
+      }
+      destination.push(value);
+      index += 1;
+      continue;
     }
-    normalized.push(`${token}=${value}`);
-    index += 1;
+    if (suffix.startsWith("raw.arg=")) {
+      destination.push(suffix.slice("raw.arg=".length));
+      continue;
+    }
+
+    const separatorIndex = suffix.indexOf("=");
+    destination.push(`--${suffix}`);
+
+    const adjacentValue = args[index + 1];
+    if (separatorIndex === -1 && adjacentValue != null && !adjacentValue.startsWith("-")) {
+      destination.push(adjacentValue);
+      index += 1;
+    }
   }
-  return normalized;
+
+  return { groupsWithArgs, managedCliArgs, wrapperArgs };
 }
 
-function formatFlagValue(contract: ManagedCliGroup["flags"][number]["contract"]) {
-  if (contract.type === "boolean") {
-    return "";
+function matchManagedCliToken(token: string, surface: ManagedCliSurface) {
+  if (!token.startsWith("--")) {
+    return null;
   }
-  if (contract.type === "enum") {
-    return ` <${contract.values.join("|")}>`;
+
+  const body = token.slice(2);
+  const dotIndex = body.indexOf(".");
+  if (dotIndex === -1) {
+    return null;
   }
-  return " <value>";
+  const group = surface.bySelector.get(body.slice(0, dotIndex));
+  if (group?.rawArgOptionName == null) {
+    return null;
+  }
+  return { group, suffix: body.slice(dotIndex + 1) };
 }
 
 function parsePackageManager(value: ParsedValue): PackageManager | null {

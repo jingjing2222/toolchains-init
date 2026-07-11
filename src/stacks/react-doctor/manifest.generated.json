@@ -15,159 +15,97 @@
       },
       "flags": {
         "version": {
-          "type": "boolean",
-          "cliName": "--version",
-          "supported": true
+          "cliName": "--version"
         },
         "lint": {
-          "type": "boolean",
-          "cliName": "--lint",
-          "supported": true
+          "cliName": "--lint"
         },
         "noLint": {
-          "type": "boolean",
-          "cliName": "--no-lint",
-          "supported": true
+          "cliName": "--no-lint"
         },
         "deadCode": {
-          "type": "boolean",
-          "cliName": "--dead-code",
-          "supported": true
+          "cliName": "--dead-code"
         },
         "noDeadCode": {
-          "type": "boolean",
-          "cliName": "--no-dead-code",
-          "supported": true
+          "cliName": "--no-dead-code"
         },
         "supplyChain": {
-          "type": "boolean",
-          "cliName": "--supply-chain",
-          "supported": true
+          "cliName": "--supply-chain"
         },
         "noSupplyChain": {
-          "type": "boolean",
-          "cliName": "--no-supply-chain",
-          "supported": true
+          "cliName": "--no-supply-chain"
         },
         "verbose": {
-          "type": "boolean",
-          "cliName": "--verbose",
-          "supported": true
+          "cliName": "--verbose"
         },
         "debug": {
-          "type": "boolean",
-          "cliName": "--debug",
-          "supported": true
+          "cliName": "--debug"
         },
         "outputDir": {
-          "type": "string",
-          "cliName": "--output-dir",
-          "supported": true
+          "cliName": "--output-dir"
         },
         "score": {
-          "type": "boolean",
-          "cliName": "--score",
-          "supported": true
+          "cliName": "--score"
         },
         "json": {
-          "type": "boolean",
-          "cliName": "--json",
-          "supported": true
+          "cliName": "--json"
         },
         "jsonCompact": {
-          "type": "boolean",
-          "cliName": "--json-compact",
-          "supported": true
+          "cliName": "--json-compact"
         },
         "jsonOut": {
-          "type": "string",
-          "cliName": "--json-out",
-          "supported": true
+          "cliName": "--json-out"
         },
         "yes": {
-          "type": "boolean",
-          "cliName": "--yes",
-          "supported": true
+          "cliName": "--yes"
         },
         "noParallel": {
-          "type": "boolean",
-          "cliName": "--no-parallel",
-          "supported": true
+          "cliName": "--no-parallel"
         },
         "project": {
-          "type": "string",
-          "cliName": "--project",
-          "supported": true
+          "cliName": "--project"
         },
         "scope": {
-          "type": "string",
-          "cliName": "--scope",
-          "supported": true
+          "cliName": "--scope"
         },
         "base": {
-          "type": "string",
-          "cliName": "--base",
-          "supported": true
+          "cliName": "--base"
         },
         "noScore": {
-          "type": "boolean",
-          "cliName": "--no-score",
-          "supported": true
+          "cliName": "--no-score"
         },
         "category": {
-          "type": "string",
-          "cliName": "--category",
-          "supported": true
+          "cliName": "--category"
         },
         "noTelemetry": {
-          "type": "boolean",
-          "cliName": "--no-telemetry",
-          "supported": true
+          "cliName": "--no-telemetry"
         },
         "staged": {
-          "type": "boolean",
-          "cliName": "--staged",
-          "supported": true
+          "cliName": "--staged"
         },
         "maxDuration": {
-          "type": "string",
-          "cliName": "--max-duration",
-          "supported": true
+          "cliName": "--max-duration"
         },
         "blocking": {
-          "type": "string",
-          "cliName": "--blocking",
-          "supported": true
+          "cliName": "--blocking"
         },
         "noRespectInlineDisables": {
-          "type": "boolean",
-          "cliName": "--no-respect-inline-disables",
-          "supported": true
+          "cliName": "--no-respect-inline-disables"
         },
         "warnings": {
-          "type": "boolean",
-          "cliName": "--warnings",
-          "supported": true
+          "cliName": "--warnings"
         },
         "noWarnings": {
-          "type": "boolean",
-          "cliName": "--no-warnings",
-          "supported": true
+          "cliName": "--no-warnings"
         },
         "color": {
-          "type": "boolean",
-          "cliName": "--color",
-          "supported": true
+          "cliName": "--color"
         },
         "noColor": {
-          "type": "boolean",
-          "cliName": "--no-color",
-          "supported": true
+          "cliName": "--no-color"
         },
         "help": {
-          "type": "boolean",
-          "cliName": "--help",
-          "supported": true
+          "cliName": "--help"
         }
       }
     }

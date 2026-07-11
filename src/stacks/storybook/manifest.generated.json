@@ -15,140 +15,70 @@
       },
       "flags": {
         "disableTelemetry": {
-          "type": "boolean",
-          "cliName": "--disable-telemetry",
-          "supported": true
+          "cliName": "--disable-telemetry"
         },
         "features": {
-          "type": "enum",
-          "cliName": "--features",
-          "values": ["docs", "test", "onboarding", "a11y", "ai"],
-          "supported": true
+          "cliName": "--features"
         },
         "noFeatures": {
-          "type": "boolean",
-          "cliName": "--no-features",
-          "supported": true
+          "cliName": "--no-features"
         },
         "debug": {
-          "type": "boolean",
-          "cliName": "--debug",
-          "supported": true
+          "cliName": "--debug"
         },
         "enableCrashReports": {
-          "type": "boolean",
-          "cliName": "--enable-crash-reports",
-          "supported": true
+          "cliName": "--enable-crash-reports"
         },
         "force": {
-          "type": "boolean",
-          "cliName": "--force",
-          "supported": true
+          "cliName": "--force"
         },
         "skipInstall": {
-          "type": "boolean",
-          "cliName": "--skip-install",
-          "supported": true
+          "cliName": "--skip-install"
         },
         "packageManager": {
-          "type": "enum",
-          "cliName": "--package-manager",
-          "values": ["npm", "yarn1", "yarn2", "pnpm", "bun"],
-          "supported": true
+          "cliName": "--package-manager"
         },
         "usePnp": {
-          "type": "boolean",
-          "cliName": "--use-pnp",
-          "supported": true
+          "cliName": "--use-pnp"
         },
         "parser": {
-          "type": "enum",
-          "cliName": "--parser",
-          "values": ["babel", "babylon", "flow", "ts", "tsx"],
-          "supported": true
+          "cliName": "--parser"
         },
         "type": {
-          "type": "enum",
-          "cliName": "--type",
-          "values": [
-            "angular",
-            "ember",
-            "html",
-            "nextjs",
-            "nuxt",
-            "preact",
-            "qwik",
-            "react",
-            "tanstack_react",
-            "react_native",
-            "react_native_and_rnw",
-            "react_native_web",
-            "react_scripts",
-            "server",
-            "solid",
-            "svelte",
-            "sveltekit",
-            "vue3",
-            "web_components"
-          ],
-          "supported": true
+          "cliName": "--type"
         },
         "yes": {
-          "type": "boolean",
-          "cliName": "--yes",
-          "supported": true
+          "cliName": "--yes"
         },
         "builder": {
-          "type": "enum",
-          "cliName": "--builder",
-          "values": ["webpack5", "vite", "rsbuild"],
-          "supported": true
+          "cliName": "--builder"
         },
         "linkable": {
-          "type": "boolean",
-          "cliName": "--linkable",
-          "supported": true
+          "cliName": "--linkable"
         },
         "dev": {
-          "type": "boolean",
-          "cliName": "--dev",
-          "supported": true
+          "cliName": "--dev"
         },
         "noDev": {
-          "type": "boolean",
-          "cliName": "--no-dev",
-          "supported": true
+          "cliName": "--no-dev"
         },
         "agent": {
-          "type": "boolean",
-          "cliName": "--agent",
-          "supported": true
+          "cliName": "--agent"
         },
         "noAgent": {
-          "type": "boolean",
-          "cliName": "--no-agent",
-          "supported": true
+          "cliName": "--no-agent"
         },
         "logfile": {
-          "type": "string",
-          "cliName": "--logfile",
-          "supported": true
+          "cliName": "--logfile"
         },
         "loglevel": {
-          "type": "enum",
-          "cliName": "--loglevel",
-          "values": ["trace", "debug", "info", "warn", "error", "silent"],
-          "supported": true
+          "cliName": "--loglevel"
         },
         "version": {
-          "type": "boolean",
-          "cliName": "--version",
-          "supported": true
+          "cliName": "--version"
         },
         "help": {
-          "type": "boolean",
-          "cliName": "--help",
-          "supported": true
+          "cliName": "--help"
         }
       }
     }

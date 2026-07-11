@@ -29,7 +29,7 @@ describe("toolchains-init CLI", () => {
     expect(help.stdout).toContain("--<tool>.raw.arg <value>");
     expect(help.stdout).not.toContain("--no-install");
     expect(focused.status).toBe(0);
-    expect(focused.stdout).toContain("--playwright.browser <value>");
+    expect(focused.stdout).toContain("--playwright.browser  forwards --browser");
     expect(focused.stdout).toContain("--playwright.help");
     expect(focused.stdout).toContain("--playwright.raw.arg");
   });

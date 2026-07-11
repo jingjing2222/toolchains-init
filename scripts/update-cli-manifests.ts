@@ -25,20 +25,6 @@ const docsProbeTimeoutMs = 30_000;
 const helpProbeTimeoutMs = 120_000;
 const formatTimeoutMs = 60_000;
 const packageManagerNames = ["npm", "pnpm", "yarn", "bun", "deno"] as const;
-const genericValueHints = new Set([
-  "boolean",
-  "dir",
-  "directory",
-  "file",
-  "name",
-  "null",
-  "number",
-  "package",
-  "path",
-  "string",
-  "value",
-]);
-
 if (isMainModule()) {
   try {
     await main();
@@ -799,23 +785,9 @@ async function deriveFlagsForCommand(manifest: CliCommandManifest, commandId: st
   return Object.keys(flags).length > 0 ? flags : undefined;
 }
 
-export type ParsedHelpFlag =
-  | {
-      type: "boolean";
-      cliName: string;
-      supported: true;
-    }
-  | {
-      type: "string";
-      cliName: string;
-      supported: true;
-    }
-  | {
-      type: "enum";
-      cliName: string;
-      values: string[];
-      supported: true;
-    };
+export type ParsedHelpFlag = {
+  cliName: string;
+};
 
 export function parseHelpFlags(helpOutput: string): ParsedHelpFlag[] {
   const flags: ParsedHelpFlag[] = [];
@@ -881,93 +853,7 @@ function parseHelpFlagLine(line: string): ParsedHelpFlag[] {
   if (cliName == null) {
     return [];
   }
-  const suffix = line.slice(optionMatch[0].length);
-  const valueHint = findValueHint(suffix);
-  const trailingType = findTrailingTypeAnnotation(suffix);
-
-  const values = parseEnumValues(valueHint, line);
-  if (values.length > 0) {
-    return [{ type: "enum", cliName, values, supported: true }];
-  }
-
-  return [
-    {
-      type: inferHelpFlagType(valueHint, trailingType),
-      cliName,
-      supported: true,
-    },
-  ];
-}
-
-function inferHelpFlagType(
-  valueHint: string | undefined,
-  trailingType: "boolean" | "string" | undefined,
-) {
-  if (valueHint != null) {
-    return valueHint.replace(/^[<[]|[>\]]$/g, "").toLowerCase() === "boolean"
-      ? ("boolean" as const)
-      : ("string" as const);
-  }
-  return trailingType ?? "boolean";
-}
-
-function findValueHint(suffix: string) {
-  const withoutShortAlias = suffix.replace(/^,\s*-[A-Za-z0-9](?=\s|$)/, "");
-  return /^\s*(?:=\s*)?(<[^>]+>|\[[^\]]+\]|(?:choice|dir|directory|file|int|integer|name|number|path|string|strings|value)\b|[A-Z][A-Z0-9_-]*\b)/.exec(
-    withoutShortAlias,
-  )?.[1];
-}
-
-function findTrailingTypeAnnotation(suffix: string) {
-  return /\[(string|boolean)\]\s*$/i.exec(suffix)?.[1]?.toLowerCase() as
-    | "boolean"
-    | "string"
-    | undefined;
-}
-
-function parseEnumValues(valueHint: string | undefined, line: string) {
-  const fromHint = normalizeEnumValues(valueHint?.match(/[<[]([^>\]]*\|[^>\]]*)[>\]]/)?.[1]);
-  if (
-    fromHint.length > 0 &&
-    !fromHint.every((value) => genericValueHints.has(value.toLowerCase()))
-  ) {
-    return fromHint;
-  }
-
-  for (const match of line.matchAll(/\(([^)]+)\)/g)) {
-    const candidate = match[1];
-    if (
-      candidate == null ||
-      (match.index != null && line[match.index - 1] === ".") ||
-      (!candidate.includes(",") && !candidate.includes("|"))
-    ) {
-      continue;
-    }
-    const values = normalizeEnumValues(candidate);
-    if (values.length > 0 && !values.every((value) => genericValueHints.has(value.toLowerCase()))) {
-      return values;
-    }
-  }
-
-  return [];
-}
-
-function normalizeEnumValues(value: string | undefined) {
-  if (value == null) {
-    return [];
-  }
-
-  const withoutDefault = value
-    .replace(/^choices?:\s*/i, "")
-    .replace(/(?:^|,|\|)\s*default(?:s to)?\s*:?.*$/i, "");
-  const values = withoutDefault
-    .split(withoutDefault.includes("|") ? "|" : ",")
-    .map((candidate) => candidate.trim().replace(/^[`'"]|[`'"]$/g, ""))
-    .filter(Boolean);
-
-  return values.length > 1 && values.every((candidate) => /^[A-Za-z0-9_-]+$/.test(candidate))
-    ? values
-    : [];
+  return [{ cliName }];
 }
 
 function toFlagKey(cliName: string) {

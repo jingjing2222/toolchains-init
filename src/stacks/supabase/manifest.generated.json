@@ -15,100 +15,58 @@
       },
       "flags": {
         "interactive": {
-          "type": "boolean",
-          "cliName": "--interactive",
-          "supported": true
+          "cliName": "--interactive"
         },
         "useOrioledb": {
-          "type": "boolean",
-          "cliName": "--use-orioledb",
-          "supported": true
+          "cliName": "--use-orioledb"
         },
         "force": {
-          "type": "boolean",
-          "cliName": "--force",
-          "supported": true
+          "cliName": "--force"
         },
         "help": {
-          "type": "boolean",
-          "cliName": "--help",
-          "supported": true
+          "cliName": "--help"
         },
         "version": {
-          "type": "boolean",
-          "cliName": "--version",
-          "supported": true
+          "cliName": "--version"
         },
         "completions": {
-          "type": "enum",
-          "cliName": "--completions",
-          "values": ["bash", "zsh", "fish", "sh"],
-          "supported": true
+          "cliName": "--completions"
         },
         "logLevel": {
-          "type": "enum",
-          "cliName": "--log-level",
-          "values": ["all", "trace", "debug", "info", "warn", "warning", "error", "fatal", "none"],
-          "supported": true
+          "cliName": "--log-level"
         },
         "outputFormat": {
-          "type": "enum",
-          "cliName": "--output-format",
-          "values": ["text", "json", "stream-json"],
-          "supported": true
+          "cliName": "--output-format"
         },
         "output": {
-          "type": "enum",
-          "cliName": "--output",
-          "values": ["env", "pretty", "json", "toml", "yaml", "table", "csv"],
-          "supported": true
+          "cliName": "--output"
         },
         "profile": {
-          "type": "string",
-          "cliName": "--profile",
-          "supported": true
+          "cliName": "--profile"
         },
         "debug": {
-          "type": "boolean",
-          "cliName": "--debug",
-          "supported": true
+          "cliName": "--debug"
         },
         "workdir": {
-          "type": "string",
-          "cliName": "--workdir",
-          "supported": true
+          "cliName": "--workdir"
         },
         "experimental": {
-          "type": "boolean",
-          "cliName": "--experimental",
-          "supported": true
+          "cliName": "--experimental"
         },
         "networkId": {
-          "type": "string",
-          "cliName": "--network-id",
-          "supported": true
+          "cliName": "--network-id"
         },
         "yes": {
-          "type": "boolean",
-          "cliName": "--yes",
-          "supported": true
+          "cliName": "--yes"
         },
         "dnsResolver": {
-          "type": "enum",
-          "cliName": "--dns-resolver",
-          "values": ["native", "https"],
-          "supported": true
+          "cliName": "--dns-resolver"
         },
         "createTicket": {
-          "type": "boolean",
-          "cliName": "--create-ticket",
-          "supported": true
+          "cliName": "--create-ticket"
         },
         "agent": {
-          "type": "enum",
-          "cliName": "--agent",
-          "values": ["auto", "yes", "no"],
-          "supported": true
+          "cliName": "--agent"
         }
       }
     }

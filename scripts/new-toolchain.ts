@@ -728,7 +728,7 @@ Generated adapter contract:
   commandArgs contains only documented static tokens that identify the origin command.
   --<manifest.tool> selects the tool; --<tool>.<generated-flag>[=value] forwards an option.
   --<tool>.raw.arg=<token> repeats positionals, repeated flags, or exact passthrough tokens.
-  Generated manifests own typed flag names and values; the wrapper never restricts upstream flags.
+  Generated manifests own discovered flag names for help; parsing forwards opaque upstream tokens.
   --yes belongs to toolchains-init only; it is not forwarded and never changes origin CLI stdin.
 `;
 }

@@ -15,106 +15,64 @@
       },
       "flags": {
         "template": {
-          "type": "enum",
-          "cliName": "--template",
-          "values": ["next", "start", "vite", "react-router", "laravel", "astro"],
-          "supported": true
+          "cliName": "--template"
         },
         "base": {
-          "type": "enum",
-          "cliName": "--base",
-          "values": ["base", "radix"],
-          "supported": true
+          "cliName": "--base"
         },
         "monorepo": {
-          "type": "boolean",
-          "cliName": "--monorepo",
-          "supported": true
+          "cliName": "--monorepo"
         },
         "noMonorepo": {
-          "type": "boolean",
-          "cliName": "--no-monorepo",
-          "supported": true
+          "cliName": "--no-monorepo"
         },
         "preset": {
-          "type": "string",
-          "cliName": "--preset",
-          "supported": true
+          "cliName": "--preset"
         },
         "yes": {
-          "type": "boolean",
-          "cliName": "--yes",
-          "supported": true
+          "cliName": "--yes"
         },
         "defaults": {
-          "type": "boolean",
-          "cliName": "--defaults",
-          "supported": true
+          "cliName": "--defaults"
         },
         "force": {
-          "type": "boolean",
-          "cliName": "--force",
-          "supported": true
+          "cliName": "--force"
         },
         "cwd": {
-          "type": "string",
-          "cliName": "--cwd",
-          "supported": true
+          "cliName": "--cwd"
         },
         "name": {
-          "type": "string",
-          "cliName": "--name",
-          "supported": true
+          "cliName": "--name"
         },
         "silent": {
-          "type": "boolean",
-          "cliName": "--silent",
-          "supported": true
+          "cliName": "--silent"
         },
         "cssVariables": {
-          "type": "boolean",
-          "cliName": "--css-variables",
-          "supported": true
+          "cliName": "--css-variables"
         },
         "noCssVariables": {
-          "type": "boolean",
-          "cliName": "--no-css-variables",
-          "supported": true
+          "cliName": "--no-css-variables"
         },
         "rtl": {
-          "type": "boolean",
-          "cliName": "--rtl",
-          "supported": true
+          "cliName": "--rtl"
         },
         "noRtl": {
-          "type": "boolean",
-          "cliName": "--no-rtl",
-          "supported": true
+          "cliName": "--no-rtl"
         },
         "pointer": {
-          "type": "boolean",
-          "cliName": "--pointer",
-          "supported": true
+          "cliName": "--pointer"
         },
         "noPointer": {
-          "type": "boolean",
-          "cliName": "--no-pointer",
-          "supported": true
+          "cliName": "--no-pointer"
         },
         "reinstall": {
-          "type": "boolean",
-          "cliName": "--reinstall",
-          "supported": true
+          "cliName": "--reinstall"
         },
         "noReinstall": {
-          "type": "boolean",
-          "cliName": "--no-reinstall",
-          "supported": true
+          "cliName": "--no-reinstall"
         },
         "help": {
-          "type": "boolean",
-          "cliName": "--help",
-          "supported": true
+          "cliName": "--help"
         }
       }
     }

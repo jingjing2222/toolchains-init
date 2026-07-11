@@ -15,31 +15,19 @@
       },
       "flags": {
         "level": {
-          "type": "enum",
-          "cliName": "--level",
-          "values": ["suggestion", "warning", "error"],
-          "supported": true
+          "cliName": "--level"
         },
         "pack": {
-          "type": "enum",
-          "cliName": "--pack",
-          "values": ["auto", "npm", "yarn", "pnpm", "bun", "false"],
-          "supported": true
+          "cliName": "--pack"
         },
         "strict": {
-          "type": "boolean",
-          "cliName": "--strict",
-          "supported": true
+          "cliName": "--strict"
         },
         "version": {
-          "type": "boolean",
-          "cliName": "--version",
-          "supported": true
+          "cliName": "--version"
         },
         "help": {
-          "type": "boolean",
-          "cliName": "--help",
-          "supported": true
+          "cliName": "--help"
         }
       }
     }

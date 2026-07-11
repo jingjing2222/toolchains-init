@@ -15,14 +15,10 @@
       },
       "flags": {
         "jsonc": {
-          "type": "boolean",
-          "cliName": "--jsonc",
-          "supported": true
+          "cliName": "--jsonc"
         },
         "help": {
-          "type": "boolean",
-          "cliName": "--help",
-          "supported": true
+          "cliName": "--help"
         }
       }
     }
