@@ -1,0 +1,85 @@
+{
+  "schemaVersion": "toolchains-init/cli-command-manifest/v1",
+  "tool": "cspell",
+  "package": "cspell",
+  "version": "10.0.1",
+  "commands": [
+    {
+      "id": "init",
+      "packageManagers": {
+        "npm": ["npx", "cspell@{version}", "init"],
+        "pnpm": ["pnpm", "dlx", "cspell@{version}", "init"],
+        "yarn": ["yarn", "dlx", "cspell@{version}", "init"],
+        "bun": ["bunx", "cspell@{version}", "init"],
+        "deno": ["deno", "x", "-A", "npm:cspell@{version}", "init"]
+      },
+      "flags": {
+        "config": {
+          "cliName": "--config"
+        },
+        "output": {
+          "cliName": "--output"
+        },
+        "format": {
+          "cliName": "--format"
+        },
+        "import": {
+          "cliName": "--import"
+        },
+        "locale": {
+          "cliName": "--locale"
+        },
+        "dictionary": {
+          "cliName": "--dictionary"
+        },
+        "noComments": {
+          "cliName": "--no-comments"
+        },
+        "removeComments": {
+          "cliName": "--remove-comments"
+        },
+        "noSchema": {
+          "cliName": "--no-schema"
+        },
+        "stdout": {
+          "cliName": "--stdout"
+        },
+        "help": {
+          "cliName": "--help"
+        }
+      }
+    }
+  ],
+  "sources": [
+    {
+      "kind": "npm",
+      "package": "cspell",
+      "version": "10.0.1",
+      "distTag": "latest",
+      "resolvedAt": "2026-05-31T09:06:53.663Z"
+    },
+    {
+      "kind": "cli-help",
+      "command": ["npx", "--yes", "cspell@10.0.1", "init", "--help"],
+      "commandId": "init"
+    },
+    {
+      "kind": "docs",
+      "url": "https://raw.githubusercontent.com/streetsidesoftware/cspell/main/packages/cspell/src/commandInit.ts",
+      "confidence": "medium",
+      "checks": [
+        {
+          "found": true,
+          "text": "Initialize a CSpell configuration file."
+        }
+      ],
+      "review": {
+        "reason": "Adapter executes the documented cspell init command unchanged.",
+        "files": ["src/stacks/cspell/adapter.ts", "src/stacks/cspell/init.test.ts"],
+        "sections": ["commandInit"],
+        "mustContain": ["Initialize a CSpell configuration file."],
+        "checks": ["Confirm cspell init remains the configuration initializer."]
+      }
+    }
+  ]
+}

@@ -1,0 +1,45 @@
+{
+  "schemaVersion": "toolchains-init/cli-command-manifest/v1",
+  "tool": "prisma",
+  "package": "prisma",
+  "version": "7.8.0",
+  "commands": [
+    {
+      "id": "init",
+      "packageManagers": {
+        "npm": ["npx", "prisma@{version}", "init"],
+        "pnpm": ["pnpm", "dlx", "prisma@{version}", "init"],
+        "yarn": ["yarn", "dlx", "prisma@{version}", "init"],
+        "bun": ["bunx", "prisma@{version}", "init"],
+        "deno": ["deno", "x", "-A", "npm:prisma@{version}", "init"]
+      }
+    }
+  ],
+  "sources": [
+    {
+      "kind": "npm",
+      "package": "prisma",
+      "version": "7.8.0",
+      "distTag": "latest",
+      "resolvedAt": "2026-04-22T14:16:58.268Z"
+    },
+    {
+      "kind": "docs",
+      "url": "https://www.prisma.io/docs/cli/init",
+      "confidence": "high",
+      "checks": [
+        {
+          "found": true,
+          "text": "prisma init [options]"
+        }
+      ],
+      "review": {
+        "reason": "Adapter executes the documented prisma init command unchanged.",
+        "files": ["src/stacks/prisma/adapter.ts", "src/stacks/prisma/init.test.ts"],
+        "sections": ["Usage"],
+        "mustContain": ["prisma init [options]"],
+        "checks": ["Confirm prisma init remains the official initialization command."]
+      }
+    }
+  ]
+}

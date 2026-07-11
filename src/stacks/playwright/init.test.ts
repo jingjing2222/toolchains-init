@@ -1,33 +1,33 @@
-import { describe, expect, it } from "vitest";
-import { runExternalToolchains, runPostInstallToolchains } from "../../core/external-toolchains";
-import { writeToolchain } from "../../core/files";
-import {
-  adapterInitTimeout,
-  createFreshViteProject,
-  expectFileToExist,
-  options,
-  readPackageJson,
-} from "../init-test-utils";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { resolveCliCommand } from "../../core/cli-command-manifest";
+import { runExternalToolchains } from "../../core/external-toolchains";
+import { playwright, playwrightCliManifest } from "./index";
+import { options } from "../init-test-utils";
+
+const mocks = vi.hoisted(() => ({
+  runCommand: vi.fn(async () => {}),
+}));
+
+vi.mock("../../core/run-command", () => ({
+  runCommand: mocks.runCommand,
+}));
 
 describe("Playwright adapter init", () => {
-  it(
-    "scaffolds Playwright config and package entries in lifecycle order",
-    async () => {
-      const cwd = await createFreshViteProject();
-      const packageJson = await readPackageJson(cwd);
-      const toolchainOptions = options(["playwright"]);
+  beforeEach(() => {
+    mocks.runCommand.mockClear();
+  });
 
-      await runExternalToolchains(cwd, "npm", toolchainOptions, true);
-      await expectFileToExist(cwd, "playwright.config.ts");
-      await expectFileToExist(cwd, "tests/example.spec.ts");
-      expect((await readPackageJson(cwd)).devDependencies?.["@playwright/test"]).toBeDefined();
+  it("executes the official Playwright initializer with inherited stdin", async () => {
+    expect(playwright.managedCli).toBe(true);
+    const command = resolveCliCommand(playwrightCliManifest, "init", "npm");
+    expect(command).toEqual({
+      bin: "npm",
+      args: ["init", `playwright@${playwrightCliManifest.version}`, "--"],
+    });
 
-      await writeToolchain(cwd, packageJson, toolchainOptions);
-      await expectFileToExist(cwd, "package.json");
+    await runExternalToolchains(".", "npm", options(["playwright"]));
 
-      await runPostInstallToolchains(cwd, "npm", toolchainOptions, true);
-      await expectFileToExist(cwd, "playwright.config.ts");
-    },
-    adapterInitTimeout,
-  );
+    expect(mocks.runCommand).toHaveBeenCalledTimes(1);
+    expect(mocks.runCommand).toHaveBeenCalledWith(".", command.bin, command.args);
+  });
 });

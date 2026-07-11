@@ -1,55 +1,33 @@
-import { describe, expect, it } from "vitest";
-import { runExternalToolchains, runPostInstallToolchains } from "../../core/external-toolchains";
-import { writeToolchain } from "../../core/files";
-import { resolveManagedCliPlans } from "../../core/managed-cli";
-import { tanStackRouter } from "./adapter";
-import { tanStackRouterCliManifest } from "./manifest";
-import {
-  adapterInitTimeout,
-  createFreshViteProject,
-  expectFileToExist,
-  options,
-  readPackageJson,
-} from "../init-test-utils";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { resolveCliCommand } from "../../core/cli-command-manifest";
+import { runExternalToolchains } from "../../core/external-toolchains";
+import { tanStackRouter, tanStackRouterCliManifest } from "./index";
+import { options } from "../init-test-utils";
+
+const mocks = vi.hoisted(() => ({
+  runCommand: vi.fn(async () => {}),
+}));
+
+vi.mock("../../core/run-command", () => ({
+  runCommand: mocks.runCommand,
+}));
 
 describe("TanStack Router adapter init", () => {
-  it.each(["starter", "templateId", "template", "deployment", "addOns", "addOnConfig"])(
-    "blocks %s because router-only mode cannot consume it",
-    (flag) => {
-      const toolchainOptions = options(["router"]);
+  beforeEach(() => {
+    mocks.runCommand.mockClear();
+  });
 
-      expect(() =>
-        resolveManagedCliPlans({
-          manifests: [tanStackRouterCliManifest],
-          options: toolchainOptions,
-          packageManager: "npm",
-          selectedToolchains: [tanStackRouter],
-          userFlags: { router: { [flag]: "example" } },
-          yes: true,
-        }),
-      ).toThrow("is blocked");
-    },
-  );
+  it("executes create --router-only with inherited stdin", async () => {
+    expect(tanStackRouter.managedCli).toBe(true);
+    const command = resolveCliCommand(tanStackRouterCliManifest, "create-router", "npm");
+    expect(command).toEqual({
+      bin: "npx",
+      args: [`@tanstack/cli@${tanStackRouterCliManifest.version}`, "create", "--router-only"],
+    });
 
-  it(
-    "scaffolds router files in lifecycle order",
-    async () => {
-      const cwd = await createFreshViteProject();
-      const packageJson = await readPackageJson(cwd);
-      const toolchainOptions = options(["router"]);
+    await runExternalToolchains(".", "npm", options(["router"]));
 
-      await runExternalToolchains(cwd, "npm", toolchainOptions, true);
-      await expectFileToExist(cwd, "src/router.tsx");
-      await expectFileToExist(cwd, "src/routes/__root.tsx");
-      await expectFileToExist(cwd, "src/routes/index.tsx");
-      await expectFileToExist(cwd, "tsr.config.json");
-
-      await writeToolchain(cwd, packageJson, toolchainOptions);
-      await expectFileToExist(cwd, "package.json");
-
-      await runPostInstallToolchains(cwd, "npm", toolchainOptions, true);
-      await expectFileToExist(cwd, "src/router.tsx");
-    },
-    adapterInitTimeout,
-  );
+    expect(mocks.runCommand).toHaveBeenCalledTimes(1);
+    expect(mocks.runCommand).toHaveBeenCalledWith(".", command.bin, command.args);
+  });
 });

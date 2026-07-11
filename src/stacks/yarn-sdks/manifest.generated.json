@@ -7,9 +7,12 @@
     {
       "id": "vscode",
       "packageManagers": {
-        "yarn": ["yarn", "dlx", "@yarnpkg/sdks@{version}", "vscode"]
-      },
-      "interactive": false
+        "npm": ["npx", "@yarnpkg/sdks@{version}", "vscode"],
+        "pnpm": ["pnpm", "dlx", "@yarnpkg/sdks@{version}", "vscode"],
+        "yarn": ["yarn", "dlx", "@yarnpkg/sdks@{version}", "vscode"],
+        "bun": ["bunx", "@yarnpkg/sdks@{version}", "vscode"],
+        "deno": ["deno", "x", "-A", "npm:@yarnpkg/sdks@{version}", "vscode"]
+      }
     }
   ],
   "sources": [
@@ -35,14 +38,11 @@
         }
       ],
       "review": {
-        "reason": "Adapter runs Yarn SDK generation only for Yarn PnP projects.",
+        "reason": "Adapter executes the documented yarn sdks vscode command unchanged.",
         "files": ["src/stacks/yarn-sdks/adapter.ts", "src/stacks/yarn-sdks/init.test.ts"],
         "sections": ["@yarnpkg/sdks CLI Reference"],
         "mustContain": ["@yarnpkg/sdks", "yarn sdks"],
-        "checks": [
-          "Confirm `yarn sdks vscode` remains the documented editor SDK command.",
-          "Confirm Yarn PnP remains the right availability gate for SDK generation."
-        ]
+        "checks": ["Confirm yarn sdks vscode remains the documented editor SDK command."]
       }
     }
   ]

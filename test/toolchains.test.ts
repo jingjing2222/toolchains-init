@@ -1,89 +1,24 @@
-import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
-import os from "node:os";
-import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { getAvailableToolchains } from "../src/stacks";
-import { getPnpInfo } from "../src/core/yarn";
+import { getSelectedToolchains, toolchains } from "../src/stacks";
 
-describe("toolchain availability", () => {
-  it("detects runtime and project PnP through node:module", () => {
-    const pnpInfo = getPnpInfo(process.cwd());
-
-    expect(pnpInfo.isRuntimePnp).toBe(true);
-    expect(pnpInfo.isProjectPnp).toBe(true);
-    expect(pnpInfo.pnpApi).not.toBeNull();
+describe("toolchain registry", () => {
+  it("lets origin CLIs decide project compatibility", () => {
+    for (const toolchain of toolchains) {
+      expect(toolchain).not.toHaveProperty("isAvailable");
+      expect(toolchain).not.toHaveProperty("nonInteractive");
+      expect(toolchain.managedCli).toBe(true);
+    }
   });
 
-  it("includes Yarn SDKs for Yarn PnP projects", async () => {
-    const cwd = process.cwd();
-
-    const toolchains = await getAvailableToolchains({
-      cwd,
-      packageJson: {},
-      packageManager: "yarn",
-    });
-
-    expect(toolchains.map((toolchain) => toolchain.feature)).toContain("yarnSdks");
+  it("does not guess package-manager compatibility before origin execution", () => {
+    for (const toolchain of toolchains) {
+      expect(toolchain.cli?.packageManagers, toolchain.feature).toBeUndefined();
+    }
   });
 
-  it("includes Yarn SDKs when Yarn has no nodeLinker override", async () => {
-    const cwd = await createProject();
-
-    const toolchains = await getAvailableToolchains({
-      cwd,
-      packageJson: {},
-      packageManager: "yarn",
-    });
-
-    expect(toolchains.map((toolchain) => toolchain.feature)).toContain("yarnSdks");
-  });
-
-  it("includes Yarn SDKs when nodeLinker is PnP", async () => {
-    const cwd = await createProject();
-    await writeFile(path.join(cwd, ".yarnrc.yml"), "nodeLinker: pnp\n");
-
-    const toolchains = await getAvailableToolchains({
-      cwd,
-      packageJson: {},
-      packageManager: "yarn",
-    });
-
-    expect(toolchains.map((toolchain) => toolchain.feature)).toContain("yarnSdks");
-  });
-
-  it("includes Yarn SDKs when PnP artifacts exist in an ancestor directory", async () => {
-    const workspace = await createProject();
-    await writeFile(path.join(workspace, ".pnp.cjs"), "");
-    const cwd = path.join(workspace, "apps", "web");
-    await mkdir(cwd, { recursive: true });
-    await writeFile(path.join(cwd, "package.json"), '{"private":true}\n');
-
-    const toolchains = await getAvailableToolchains({
-      cwd,
-      packageJson: {},
-      packageManager: "yarn",
-    });
-
-    expect(toolchains.map((toolchain) => toolchain.feature)).toContain("yarnSdks");
-  });
-
-  it("excludes Yarn SDKs when Yarn uses node_modules", async () => {
-    const cwd = await createProject();
-    await writeFile(path.join(cwd, ".yarnrc.yml"), "nodeLinker: node-modules\n");
-
-    const toolchains = await getAvailableToolchains({
-      cwd,
-      packageJson: {},
-      packageManager: "yarn",
-    });
-
-    expect(toolchains.map((toolchain) => toolchain.feature)).not.toContain("yarnSdks");
+  it("keeps the user's selected origin command order", () => {
+    expect(
+      getSelectedToolchains(["yarnSdks", "cspell", "router"]).map((toolchain) => toolchain.feature),
+    ).toEqual(["yarnSdks", "cspell", "router"]);
   });
 });
-
-async function createProject() {
-  const cwd = await mkdtemp(path.join(os.tmpdir(), "toolchains-init-availability-"));
-  await mkdir(cwd, { recursive: true });
-  await writeFile(path.join(cwd, "package.json"), '{"private":true}\n');
-  return cwd;
-}

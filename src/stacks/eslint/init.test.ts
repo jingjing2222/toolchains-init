@@ -1,17 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { resolveCliCommand } from "../../core/cli-command-manifest";
-import { runExternalToolchains, runPostInstallToolchains } from "../../core/external-toolchains";
-import { writeToolchain } from "../../core/files";
-import { eslint } from "./adapter";
-import { eslintCliManifest } from "./manifest";
-import {
-  adapterInitTimeout,
-  createFreshViteProject,
-  expectFileToExist,
-  options,
-  readJson,
-  readPackageJson,
-} from "../init-test-utils";
+import { runExternalToolchains } from "../../core/external-toolchains";
+import { eslint, eslintCliManifest } from "./index";
+import { options } from "../init-test-utils";
 
 const mocks = vi.hoisted(() => ({
   runCommand: vi.fn(async () => {}),
@@ -26,38 +17,17 @@ describe("ESLint adapter init", () => {
     mocks.runCommand.mockClear();
   });
 
-  it("keeps the official initializer interactive and manifest-backed", async () => {
-    expect(eslint.nonInteractive).toEqual({
-      supported: false,
-      reason: "@eslint/create-config still prompts for dependency installation",
-    });
+  it("executes the official ESLint configuration CLI with inherited stdin", async () => {
+    expect(eslint.managedCli).toBe(true);
     const command = resolveCliCommand(eslintCliManifest, "init", "npm");
-
-    await runExternalToolchains(".", "npm", options(["eslint"]), false);
-
-    expect(mocks.runCommand).toHaveBeenCalledWith(".", command.bin, command.args, {
-      stdin: "inherit",
+    expect(command).toEqual({
+      bin: "npx",
+      args: [`@eslint/create-config@${eslintCliManifest.version}`],
     });
+
+    await runExternalToolchains(".", "npm", options(["eslint"]));
+
+    expect(mocks.runCommand).toHaveBeenCalledTimes(1);
+    expect(mocks.runCommand).toHaveBeenCalledWith(".", command.bin, command.args);
   });
-
-  it(
-    "keeps ESLint config with the official initializer and adds editor settings",
-    async () => {
-      const cwd = await createFreshViteProject();
-      const packageJson = await readPackageJson(cwd);
-      const toolchainOptions = options(["eslint"]);
-
-      await expectFileToExist(cwd, "package.json");
-
-      await writeToolchain(cwd, packageJson, toolchainOptions);
-      const settings = await readJson(`${cwd}/.vscode/settings.json`);
-      expect(settings["editor.codeActionsOnSave"]).toEqual({
-        "source.fixAll.eslint": "always",
-      });
-
-      await runPostInstallToolchains(cwd, "npm", toolchainOptions, true);
-      await expectFileToExist(cwd, "package.json");
-    },
-    adapterInitTimeout,
-  );
 });

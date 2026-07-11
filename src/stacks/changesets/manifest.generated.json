@@ -12,8 +12,7 @@
         "yarn": ["yarn", "dlx", "@changesets/cli@{version}", "init"],
         "bun": ["bunx", "@changesets/cli@{version}", "init"],
         "deno": ["deno", "x", "-A", "npm:@changesets/cli@{version}", "init"]
-      },
-      "interactive": false
+      }
     }
   ],
   "sources": [
@@ -44,14 +43,11 @@
         }
       ],
       "review": {
-        "reason": "Adapter installs Changesets and runs the documented init command after install.",
+        "reason": "Adapter executes the documented changeset init command unchanged.",
         "files": ["src/stacks/changesets/adapter.ts", "src/stacks/changesets/init.test.ts"],
         "sections": ["Getting Started"],
         "mustContain": ["@changesets/cli", "changeset init"],
-        "checks": [
-          "Confirm `@changesets/cli` remains the package that provides Changesets initialization.",
-          "Confirm `changeset init` remains the documented setup command."
-        ]
+        "checks": ["Confirm changeset init remains the official initialization command."]
       }
     }
   ]

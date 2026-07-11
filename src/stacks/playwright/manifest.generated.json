@@ -15,63 +15,39 @@
       },
       "flags": {
         "browser": {
-          "type": "string",
-          "cliName": "--browser",
-          "supported": true
+          "cliName": "--browser"
         },
         "noBrowsers": {
-          "type": "boolean",
-          "cliName": "--no-browsers",
-          "supported": true
+          "cliName": "--no-browsers"
         },
         "noExamples": {
-          "type": "boolean",
-          "cliName": "--no-examples",
-          "supported": true
+          "cliName": "--no-examples"
         },
         "installDeps": {
-          "type": "boolean",
-          "cliName": "--install-deps",
-          "supported": true
+          "cliName": "--install-deps"
         },
         "next": {
-          "type": "boolean",
-          "cliName": "--next",
-          "supported": true
+          "cliName": "--next"
         },
         "beta": {
-          "type": "boolean",
-          "cliName": "--beta",
-          "supported": true
+          "cliName": "--beta"
         },
         "ct": {
-          "type": "boolean",
-          "cliName": "--ct",
-          "supported": true
+          "cliName": "--ct"
         },
         "quiet": {
-          "type": "boolean",
-          "cliName": "--quiet",
-          "supported": true
+          "cliName": "--quiet"
         },
         "gha": {
-          "type": "boolean",
-          "cliName": "--gha",
-          "supported": true
+          "cliName": "--gha"
         },
         "lang": {
-          "type": "enum",
-          "cliName": "--lang",
-          "values": ["js", "TypeScript"],
-          "supported": true
+          "cliName": "--lang"
         },
         "help": {
-          "type": "boolean",
-          "cliName": "--help",
-          "supported": true
+          "cliName": "--help"
         }
-      },
-      "interactive": false
+      }
     }
   ],
   "sources": [
@@ -84,7 +60,7 @@
     },
     {
       "kind": "cli-help",
-      "command": ["npx", "--yes", "create-playwright@1.17.139", "init", "--help"],
+      "command": ["npx", "--yes", "create-playwright@1.17.139", "--help"],
       "commandId": "init"
     },
     {
@@ -95,21 +71,14 @@
         {
           "found": true,
           "text": "npm init playwright@latest"
-        },
-        {
-          "found": true,
-          "text": "TypeScript or JavaScript"
         }
       ],
       "review": {
-        "reason": "Adapter uses quiet TypeScript init flags when `--yes` is selected.",
+        "reason": "Adapter executes the official Playwright initializer unchanged.",
         "files": ["src/stacks/playwright/adapter.ts", "src/stacks/playwright/init.test.ts"],
         "sections": ["Installing Playwright", "Init options"],
-        "mustContain": ["npm init playwright@latest", "TypeScript or JavaScript"],
-        "checks": [
-          "Confirm `create-playwright` still supports quiet TypeScript setup without browser install.",
-          "Confirm `--no-browsers`, `--quiet`, and `--lang TypeScript` still preserve intended behavior."
-        ]
+        "mustContain": ["npm init playwright@latest"],
+        "checks": ["Confirm create-playwright remains the official initialization CLI."]
       }
     }
   ]

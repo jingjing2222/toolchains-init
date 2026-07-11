@@ -1,0 +1,67 @@
+{
+  "schemaVersion": "toolchains-init/cli-command-manifest/v1",
+  "tool": "publint",
+  "package": "publint",
+  "version": "0.3.21",
+  "commands": [
+    {
+      "id": "check",
+      "packageManagers": {
+        "npm": ["npx", "publint@{version}"],
+        "pnpm": ["pnpm", "dlx", "publint@{version}"],
+        "yarn": ["yarn", "dlx", "publint@{version}"],
+        "bun": ["bunx", "publint@{version}"],
+        "deno": ["deno", "x", "-A", "npm:publint@{version}"]
+      },
+      "flags": {
+        "level": {
+          "cliName": "--level"
+        },
+        "pack": {
+          "cliName": "--pack"
+        },
+        "strict": {
+          "cliName": "--strict"
+        },
+        "version": {
+          "cliName": "--version"
+        },
+        "help": {
+          "cliName": "--help"
+        }
+      }
+    }
+  ],
+  "sources": [
+    {
+      "kind": "npm",
+      "package": "publint",
+      "version": "0.3.21",
+      "distTag": "latest",
+      "resolvedAt": "2026-05-13T00:28:23.832Z"
+    },
+    {
+      "kind": "cli-help",
+      "command": ["npx", "--yes", "publint@0.3.21", "--help"],
+      "commandId": "check"
+    },
+    {
+      "kind": "docs",
+      "url": "https://publint.dev/docs/",
+      "confidence": "high",
+      "checks": [
+        {
+          "found": true,
+          "text": "npx publint"
+        }
+      ],
+      "review": {
+        "reason": "Adapter executes the bare publint CLI unchanged.",
+        "files": ["src/stacks/publint/adapter.ts", "src/stacks/publint/init.test.ts"],
+        "sections": ["Usage"],
+        "mustContain": ["npx publint"],
+        "checks": ["Confirm the bare publint command remains the general package check."]
+      }
+    }
+  ]
+}

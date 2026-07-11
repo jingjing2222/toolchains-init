@@ -1,36 +1,33 @@
-import { describe, expect, it } from "vitest";
-import { runExternalToolchains, runPostInstallToolchains } from "../../core/external-toolchains";
-import { writeToolchain } from "../../core/files";
-import {
-  adapterInitTimeout,
-  createFreshViteProject,
-  expectFileToExist,
-  options,
-  readJson,
-  readPackageJson,
-} from "../init-test-utils";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { resolveCliCommand } from "../../core/cli-command-manifest";
+import { runExternalToolchains } from "../../core/external-toolchains";
+import { oxlint, oxlintCliManifest } from "./index";
+import { options } from "../init-test-utils";
+
+const mocks = vi.hoisted(() => ({
+  runCommand: vi.fn(async () => {}),
+}));
+
+vi.mock("../../core/run-command", () => ({
+  runCommand: mocks.runCommand,
+}));
 
 describe("oxlint adapter init", () => {
-  it(
-    "scaffolds linter config and editor settings in lifecycle order",
-    async () => {
-      const cwd = await createFreshViteProject();
-      const packageJson = await readPackageJson(cwd);
-      const toolchainOptions = options(["oxlint"]);
+  beforeEach(() => {
+    mocks.runCommand.mockClear();
+  });
 
-      await runExternalToolchains(cwd, "npm", toolchainOptions, true);
-      const config = await readJson(`${cwd}/.oxlintrc.json`);
-      expect(config.plugins).toContain("typescript");
+  it("executes oxlint --init with inherited stdin", async () => {
+    expect(oxlint.managedCli).toBe(true);
+    const command = resolveCliCommand(oxlintCliManifest, "init", "npm");
+    expect(command).toEqual({
+      bin: "npx",
+      args: [`oxlint@${oxlintCliManifest.version}`, "--init"],
+    });
 
-      await writeToolchain(cwd, packageJson, toolchainOptions);
-      const settings = await readJson(`${cwd}/.vscode/settings.json`);
-      expect(settings["editor.codeActionsOnSave"]).toEqual({
-        "source.fixAll.oxc": "always",
-      });
+    await runExternalToolchains(".", "npm", options(["oxlint"]));
 
-      await runPostInstallToolchains(cwd, "npm", toolchainOptions, true);
-      await expectFileToExist(cwd, ".oxlintrc.json");
-    },
-    adapterInitTimeout,
-  );
+    expect(mocks.runCommand).toHaveBeenCalledTimes(1);
+    expect(mocks.runCommand).toHaveBeenCalledWith(".", command.bin, command.args);
+  });
 });

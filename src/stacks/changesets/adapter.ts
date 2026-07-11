@@ -1,4 +1,3 @@
-import { setManifestDevDependency } from "../../core/package-json-utils";
 import { defineToolchain } from "../../core/toolchain-adapter";
 
 export const changesets = defineToolchain({
@@ -14,21 +13,13 @@ export const changesets = defineToolchain({
       url: "https://raw.githubusercontent.com/changesets/changesets/main/packages/cli/README.md",
       confidence: "medium",
       review: {
-        reason: "Adapter installs Changesets and runs the documented init command after install.",
+        reason: "Adapter executes the documented changeset init command unchanged.",
         files: ["src/stacks/changesets/adapter.ts", "src/stacks/changesets/init.test.ts"],
         sections: ["Getting Started"],
         mustContain: ["@changesets/cli", "changeset init"],
-        checks: [
-          "Confirm `@changesets/cli` remains the package that provides Changesets initialization.",
-          "Confirm `changeset init` remains the documented setup command.",
-        ],
+        checks: ["Confirm changeset init remains the official initialization command."],
       },
     },
   ],
-  managedCli: {
-    phase: "afterInstall",
-  },
-  updatePackageJson({ cliManifest, packageJson }) {
-    setManifestDevDependency(packageJson, cliManifest);
-  },
+  managedCli: true,
 });

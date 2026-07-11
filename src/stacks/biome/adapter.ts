@@ -1,12 +1,4 @@
-import {
-  addVsCodeExtensionRecommendations,
-  addVsCodeSettings,
-  addZedSettings,
-} from "../../core/editor-settings";
-import { setManifestDevDependency } from "../../core/package-json-utils";
 import { defineToolchain } from "../../core/toolchain-adapter";
-
-const biomeVsCodeLanguages = ["javascript", "javascriptreact", "typescript", "typescriptreact"];
 
 export const biome = defineToolchain({
   feature: "biome",
@@ -18,68 +10,16 @@ export const biome = defineToolchain({
   command: "init",
   docs: [
     {
-      url: "https://biomejs.dev/reference/configuration/",
+      url: "https://biomejs.dev/guides/getting-started/",
       confidence: "high",
       review: {
-        reason:
-          "Adapter installs Biome and writes editor settings that assume Biome config-file behavior.",
+        reason: "Adapter executes the documented biome init command unchanged.",
         files: ["src/stacks/biome/adapter.ts", "src/stacks/biome/init.test.ts"],
         sections: ["Configuration"],
-        mustContain: ["biome.json", "configuration file"],
-        checks: [
-          "Confirm `biome init` still creates a config file for project-local setup.",
-          "Confirm `biome.requireConfiguration` and Zed `require_config_file` remain valid editor settings.",
-        ],
+        mustContain: ["npx @biomejs/biome init"],
+        checks: ["Confirm biome init remains the project configuration initializer."],
       },
     },
   ],
-  managedCli: {
-    phase: "afterInstall",
-  },
-  updatePackageJson({ cliManifest, packageJson }) {
-    setManifestDevDependency(packageJson, cliManifest);
-  },
-  async afterWrite({ cwd, options }) {
-    await addVsCodeExtensionRecommendations(cwd, ["biomejs.biome"]);
-    await addVsCodeSettings(cwd, getBiomeVsCodeSettings(options.features.includes("oxfmt")));
-    await addZedSettings(cwd, {
-      lsp: {
-        biome: {
-          settings: {
-            require_config_file: true,
-          },
-        },
-      },
-    });
-  },
-  notes({ options }) {
-    const notes = [
-      "Install the Biome editor extension: VS Code/Cursor `biomejs.biome`; Zed: search `Biome`.",
-    ];
-    if (options.features.includes("oxfmt")) {
-      notes.push(
-        "Biome and oxfmt are both selected, so no default formatter was set for VS Code/Cursor/Zed.",
-      );
-    }
-    return notes;
-  },
+  managedCli: true,
 });
-
-function getBiomeVsCodeSettings(hasOxfmt: boolean) {
-  if (hasOxfmt) {
-    return {
-      "biome.enabled": true,
-      "biome.requireConfiguration": true,
-    };
-  }
-
-  return Object.fromEntries(
-    biomeVsCodeLanguages.map((language) => [
-      `[${language}]`,
-      {
-        "editor.defaultFormatter": "biomejs.biome",
-        "editor.formatOnSave": true,
-      },
-    ]),
-  );
-}

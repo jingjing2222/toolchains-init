@@ -7,174 +7,107 @@
     {
       "id": "create-router",
       "packageManagers": {
-        "npm": ["npx", "@tanstack/cli@{version}", "create"],
-        "pnpm": ["pnpm", "dlx", "@tanstack/cli@{version}", "create"],
-        "yarn": ["yarn", "dlx", "@tanstack/cli@{version}", "create"],
-        "bun": ["bunx", "@tanstack/cli@{version}", "create"],
-        "deno": ["deno", "x", "-A", "npm:@tanstack/cli@{version}", "create"]
+        "npm": ["npx", "@tanstack/cli@{version}", "create", "--router-only"],
+        "pnpm": ["pnpm", "dlx", "@tanstack/cli@{version}", "create", "--router-only"],
+        "yarn": ["yarn", "dlx", "@tanstack/cli@{version}", "create", "--router-only"],
+        "bun": ["bunx", "@tanstack/cli@{version}", "create", "--router-only"],
+        "deno": ["deno", "x", "-A", "npm:@tanstack/cli@{version}", "create", "--router-only"]
       },
       "flags": {
         "framework": {
-          "type": "enum",
-          "cliName": "--framework",
-          "values": ["React", "Solid"],
-          "supported": true
+          "cliName": "--framework"
         },
         "starter": {
-          "type": "string",
-          "cliName": "--starter",
-          "supported": true
+          "cliName": "--starter"
         },
         "templateId": {
-          "type": "string",
-          "cliName": "--template-id",
-          "supported": true
+          "cliName": "--template-id"
         },
         "template": {
-          "type": "string",
-          "cliName": "--template",
-          "supported": true
+          "cliName": "--template"
         },
         "noInstall": {
-          "type": "boolean",
-          "cliName": "--no-install",
-          "supported": true
+          "cliName": "--no-install"
         },
         "packageManager": {
-          "type": "enum",
-          "cliName": "--package-manager",
-          "values": ["npm", "yarn", "pnpm", "bun", "deno"],
-          "supported": true
+          "cliName": "--package-manager"
         },
         "devWatch": {
-          "type": "string",
-          "cliName": "--dev-watch",
-          "supported": true
+          "cliName": "--dev-watch"
         },
         "runDev": {
-          "type": "boolean",
-          "cliName": "--run-dev",
-          "supported": true
+          "cliName": "--run-dev"
         },
         "routerOnly": {
-          "type": "boolean",
-          "cliName": "--router-only",
-          "supported": true
+          "cliName": "--router-only"
         },
         "tailwind": {
-          "type": "boolean",
-          "cliName": "--tailwind",
-          "supported": true
+          "cliName": "--tailwind"
         },
         "noTailwind": {
-          "type": "boolean",
-          "cliName": "--no-tailwind",
-          "supported": true
+          "cliName": "--no-tailwind"
         },
         "examples": {
-          "type": "boolean",
-          "cliName": "--examples",
-          "supported": true
+          "cliName": "--examples"
         },
         "noExamples": {
-          "type": "boolean",
-          "cliName": "--no-examples",
-          "supported": true
+          "cliName": "--no-examples"
         },
         "deployment": {
-          "type": "enum",
-          "cliName": "--deployment",
-          "values": ["cloudflare", "netlify", "nitro", "railway"],
-          "supported": true
+          "cliName": "--deployment"
         },
         "toolchain": {
-          "type": "enum",
-          "cliName": "--toolchain",
-          "values": ["biome", "eslint"],
-          "supported": true
+          "cliName": "--toolchain"
         },
         "noToolchain": {
-          "type": "boolean",
-          "cliName": "--no-toolchain",
-          "supported": true
+          "cliName": "--no-toolchain"
         },
         "interactive": {
-          "type": "boolean",
-          "cliName": "--interactive",
-          "supported": true
+          "cliName": "--interactive"
         },
         "nonInteractive": {
-          "type": "boolean",
-          "cliName": "--non-interactive",
-          "supported": true
+          "cliName": "--non-interactive"
         },
         "yes": {
-          "type": "boolean",
-          "cliName": "--yes",
-          "supported": true
+          "cliName": "--yes"
         },
         "addOns": {
-          "type": "string",
-          "cliName": "--add-ons",
-          "supported": true
+          "cliName": "--add-ons"
         },
         "listAddOns": {
-          "type": "boolean",
-          "cliName": "--list-add-ons",
-          "supported": true
+          "cliName": "--list-add-ons"
         },
         "addonDetails": {
-          "type": "string",
-          "cliName": "--addon-details",
-          "supported": true
+          "cliName": "--addon-details"
         },
         "json": {
-          "type": "boolean",
-          "cliName": "--json",
-          "supported": true
+          "cliName": "--json"
         },
         "git": {
-          "type": "boolean",
-          "cliName": "--git",
-          "supported": true
+          "cliName": "--git"
         },
         "noGit": {
-          "type": "boolean",
-          "cliName": "--no-git",
-          "supported": true
+          "cliName": "--no-git"
         },
         "intent": {
-          "type": "boolean",
-          "cliName": "--intent",
-          "supported": true
+          "cliName": "--intent"
         },
         "noIntent": {
-          "type": "boolean",
-          "cliName": "--no-intent",
-          "supported": true
+          "cliName": "--no-intent"
         },
         "targetDir": {
-          "type": "string",
-          "cliName": "--target-dir",
-          "supported": true
+          "cliName": "--target-dir"
         },
         "addOnConfig": {
-          "type": "string",
-          "cliName": "--add-on-config",
-          "supported": true
+          "cliName": "--add-on-config"
         },
         "force": {
-          "type": "boolean",
-          "cliName": "--force",
-          "supported": true
+          "cliName": "--force"
         },
         "help": {
-          "type": "boolean",
-          "cliName": "--help",
-          "supported": true
+          "cliName": "--help"
         }
-      },
-      "interactive": false
+      }
     }
   ],
   "sources": [
@@ -205,18 +138,14 @@
         }
       ],
       "review": {
-        "reason": "Adapter uses TanStack CLI router-only creation flags and restores unrelated package.json changes.",
+        "reason": "Adapter executes @tanstack/cli create --router-only unchanged.",
         "files": [
           "src/stacks/tanstack-router/adapter.ts",
           "src/stacks/tanstack-router/init.test.ts"
         ],
         "sections": ["Quick Start"],
         "mustContain": ["@tanstack/cli", "--router-only"],
-        "checks": [
-          "Confirm router-only creation remains supported by `@tanstack/cli create`.",
-          "Confirm package manager, install, git, examples, and toolchain flags still preserve this adapter flow.",
-          "Confirm restoring package.json while keeping dependency additions is still necessary."
-        ]
+        "checks": ["Confirm @tanstack/cli create --router-only remains supported."]
       }
     }
   ]

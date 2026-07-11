@@ -1,4 +1,3 @@
-import { addVsCodeExtensionRecommendations, addVsCodeSettings } from "../../core/editor-settings";
 import { defineToolchain } from "../../core/toolchain-adapter";
 
 export const eslint = defineToolchain({
@@ -13,53 +12,17 @@ export const eslint = defineToolchain({
       url: "https://eslint.org/docs/latest/use/getting-started",
       confidence: "high",
       review: {
-        reason:
-          "Adapter runs the official initializer and assumes ESLint flat config output names.",
+        reason: "Adapter executes the official ESLint configuration CLI unchanged.",
         files: ["src/stacks/eslint/adapter.ts", "src/stacks/eslint/init.test.ts"],
-        sections: ["Getting Started", "Configuration"],
-        mustContain: ["npm init @eslint/config@latest", "eslint.config.js"],
-        checks: [
-          "Confirm `@eslint/create-config` remains the documented initializer.",
-          "Confirm generated config filenames still match adapter target files.",
-        ],
-      },
-    },
-    {
-      url: "https://raw.githubusercontent.com/eslint/create-config/main/lib/config-generator.js",
-      confidence: "high",
-      review: {
-        reason:
-          "Adapter marks the initializer interactive-only because its output phase always asks installation questions.",
-        files: ["src/stacks/eslint/adapter.ts", "src/stacks/eslint/init.test.ts"],
-        sections: ["ConfigGenerator.output"],
-        mustContain: ["installationQuestions", "enquirer.prompt"],
-        checks: [
-          "Confirm the output phase still prompts for dependency installation.",
-          "If a stable full-argument path bypasses every prompt, remove the interactive-only marker and add an enabled `yes: true` smoke test.",
-        ],
+        sections: ["Getting Started"],
+        mustContain: ["npm init @eslint/config@latest"],
+        checks: ["Confirm @eslint/create-config remains the official configuration CLI."],
       },
     },
   ],
   help: false,
   hint: "Find and fix problems in JavaScript code",
-  nonInteractive: {
-    supported: false,
-    reason: "@eslint/create-config still prompts for dependency installation",
-  },
   runner: "dlx",
   subcommand: null,
-  managedCli: {
-    phase: "run",
-  },
-  targetFiles() {
-    return ["eslint.config.js", "eslint.config.mjs", "eslint.config.cjs"];
-  },
-  async afterWrite({ cwd }) {
-    await addVsCodeExtensionRecommendations(cwd, ["dbaeumer.vscode-eslint"]);
-    await addVsCodeSettings(cwd, {
-      "editor.codeActionsOnSave": {
-        "source.fixAll.eslint": "always",
-      },
-    });
-  },
+  managedCli: true,
 });

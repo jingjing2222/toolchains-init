@@ -10,121 +10,77 @@
         "npm": ["npm", "init", "storybook@{version}", "--"],
         "pnpm": ["pnpm", "create", "storybook@{version}"],
         "yarn": ["yarn", "create", "storybook@{version}"],
-        "bun": ["bun", "create", "storybook@{version}"]
+        "bun": ["bun", "create", "storybook@{version}"],
+        "deno": ["deno", "x", "-A", "npm:create-storybook@{version}"]
       },
       "flags": {
         "disableTelemetry": {
-          "type": "boolean",
-          "cliName": "--disable-telemetry",
-          "supported": true
+          "cliName": "--disable-telemetry"
         },
         "features": {
-          "type": "string",
-          "cliName": "--features",
-          "supported": true
+          "cliName": "--features"
         },
         "noFeatures": {
-          "type": "boolean",
-          "cliName": "--no-features",
-          "supported": true
+          "cliName": "--no-features"
         },
         "debug": {
-          "type": "boolean",
-          "cliName": "--debug",
-          "supported": true
+          "cliName": "--debug"
         },
         "enableCrashReports": {
-          "type": "boolean",
-          "cliName": "--enable-crash-reports",
-          "supported": true
+          "cliName": "--enable-crash-reports"
         },
         "force": {
-          "type": "boolean",
-          "cliName": "--force",
-          "supported": true
+          "cliName": "--force"
         },
         "skipInstall": {
-          "type": "boolean",
-          "cliName": "--skip-install",
-          "supported": true
+          "cliName": "--skip-install"
         },
         "packageManager": {
-          "type": "string",
-          "cliName": "--package-manager",
-          "supported": true
+          "cliName": "--package-manager"
         },
         "usePnp": {
-          "type": "boolean",
-          "cliName": "--use-pnp",
-          "supported": true
+          "cliName": "--use-pnp"
         },
         "parser": {
-          "type": "string",
-          "cliName": "--parser",
-          "supported": true
+          "cliName": "--parser"
         },
         "type": {
-          "type": "string",
-          "cliName": "--type",
-          "supported": true
+          "cliName": "--type"
         },
         "yes": {
-          "type": "boolean",
-          "cliName": "--yes",
-          "supported": true
+          "cliName": "--yes"
         },
         "builder": {
-          "type": "string",
-          "cliName": "--builder",
-          "supported": true
+          "cliName": "--builder"
         },
         "linkable": {
-          "type": "boolean",
-          "cliName": "--linkable",
-          "supported": true
+          "cliName": "--linkable"
         },
         "dev": {
-          "type": "boolean",
-          "cliName": "--dev",
-          "supported": true
+          "cliName": "--dev"
         },
         "noDev": {
-          "type": "boolean",
-          "cliName": "--no-dev",
-          "supported": true
+          "cliName": "--no-dev"
         },
         "agent": {
-          "type": "boolean",
-          "cliName": "--agent",
-          "supported": true
+          "cliName": "--agent"
         },
         "noAgent": {
-          "type": "boolean",
-          "cliName": "--no-agent",
-          "supported": true
+          "cliName": "--no-agent"
         },
         "logfile": {
-          "type": "string",
-          "cliName": "--logfile",
-          "supported": true
+          "cliName": "--logfile"
         },
         "loglevel": {
-          "type": "string",
-          "cliName": "--loglevel",
-          "supported": true
+          "cliName": "--loglevel"
         },
         "version": {
-          "type": "boolean",
-          "cliName": "--version",
-          "supported": true
+          "cliName": "--version"
         },
         "help": {
-          "type": "boolean",
-          "cliName": "--help",
-          "supported": true
+          "cliName": "--help"
         }
-      },
-      "interactive": false
+      }
     }
   ],
   "sources": [
@@ -147,51 +103,15 @@
       "checks": [
         {
           "found": true,
-          "text": "storybook@latest init"
-        },
-        {
-          "found": true,
-          "text": "React"
+          "text": "npm create storybook@latest"
         }
       ],
       "review": {
-        "reason": "Adapter runs the Storybook initializer only for React + Vite projects.",
+        "reason": "Adapter executes the official Storybook initializer unchanged.",
         "files": ["src/stacks/storybook/adapter.ts", "src/stacks/storybook/init.test.ts"],
         "sections": ["Install Storybook"],
-        "mustContain": ["storybook@latest init", "React"],
-        "checks": [
-          "Confirm `create-storybook init` remains the recommended initializer.",
-          "Confirm React + Vite availability remains the intended project scope."
-        ]
-      }
-    },
-    {
-      "kind": "docs",
-      "url": "https://storybook.js.org/docs/api/cli-options",
-      "confidence": "high",
-      "checks": [
-        {
-          "found": true,
-          "text": "--builder"
-        },
-        {
-          "found": true,
-          "text": "--skip-install"
-        },
-        {
-          "found": true,
-          "text": "--package-manager"
-        }
-      ],
-      "review": {
-        "reason": "Adapter pins several non-interactive Storybook CLI options.",
-        "files": ["src/stacks/storybook/adapter.ts", "src/stacks/storybook/init.test.ts"],
-        "sections": ["CLI options"],
-        "mustContain": ["--builder", "--skip-install", "--package-manager"],
-        "checks": [
-          "Confirm `--builder vite`, `--skip-install`, `--no-dev`, and package-manager options still exist.",
-          "Confirm `yarn` still needs the `yarn2` package-manager value."
-        ]
+        "mustContain": ["npm create storybook@latest"],
+        "checks": ["Confirm create-storybook remains the official initialization CLI."]
       }
     }
   ]

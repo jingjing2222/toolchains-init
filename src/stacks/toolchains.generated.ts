@@ -2,6 +2,9 @@
 import type { ToolchainAdapter } from "../core/toolchain-adapter";
 import { tanStackRouter } from "./tanstack-router/adapter";
 import { hotUpdater } from "./hot-updater/adapter";
+import { prisma } from "./prisma/adapter";
+import { shadcn } from "./shadcn/adapter";
+import { supabase } from "./supabase/adapter";
 import { playwright } from "./playwright/adapter";
 import { storybook } from "./storybook/adapter";
 import { msw } from "./msw/adapter";
@@ -13,11 +16,18 @@ import { biome } from "./biome/adapter";
 import { knip } from "./knip/adapter";
 import { reactDoctor } from "./react-doctor/adapter";
 import { changesets } from "./changesets/adapter";
+import { cspell } from "./cspell/adapter";
+import { publint } from "./publint/adapter";
+import { areTheTypesWrong } from "./are-the-types-wrong/adapter";
+import { secretlint } from "./secretlint/adapter";
 import { yarnSdks } from "./yarn-sdks/adapter";
 
 export const toolchains = [
   tanStackRouter,
   hotUpdater,
+  prisma,
+  shadcn,
+  supabase,
   playwright,
   storybook,
   msw,
@@ -29,12 +39,19 @@ export const toolchains = [
   knip,
   reactDoctor,
   changesets,
+  cspell,
+  publint,
+  areTheTypesWrong,
+  secretlint,
   yarnSdks,
 ] satisfies readonly ToolchainAdapter[];
 
 export type BuiltInFeature =
   | "router"
   | "hotUpdater"
+  | "prisma"
+  | "shadcn"
+  | "supabase"
   | "playwright"
   | "storybook"
   | "msw"
@@ -46,27 +63,16 @@ export type BuiltInFeature =
   | "knip"
   | "reactDoctor"
   | "changesets"
+  | "cspell"
+  | "publint"
+  | "areTheTypesWrong"
+  | "secretlint"
   | "yarnSdks";
 
 export const ALL_FEATURES = toolchains.map((toolchain) => toolchain.feature);
 
 export function getSelectedToolchains(features: readonly string[]) {
-  return toolchains.filter((toolchain) => features.includes(toolchain.feature));
-}
-
-export async function getAvailableToolchains(
-  context: Parameters<NonNullable<(typeof toolchains)[number]["isAvailable"]>>[0],
-) {
-  const available = await Promise.all(
-    toolchains.map(async (toolchain) => {
-      const supportsPackageManager =
-        toolchain.cli?.packageManagers?.includes(context.packageManager) ?? true;
-      return {
-        toolchain,
-        isAvailable: supportsPackageManager && ((await toolchain.isAvailable?.(context)) ?? true),
-      };
-    }),
+  return features.flatMap((feature) =>
+    toolchains.filter((toolchain) => toolchain.feature === feature),
   );
-
-  return available.filter(({ isAvailable }) => isAvailable).map(({ toolchain }) => toolchain);
 }

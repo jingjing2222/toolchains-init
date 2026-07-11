@@ -7,90 +7,59 @@
     {
       "id": "init",
       "packageManagers": {
-        "npm": ["npx", "oxfmt@{version}"],
-        "pnpm": ["pnpm", "dlx", "oxfmt@{version}"],
-        "yarn": ["yarn", "dlx", "oxfmt@{version}"],
-        "bun": ["bunx", "oxfmt@{version}"],
-        "deno": ["deno", "x", "-A", "npm:oxfmt@{version}"]
+        "npm": ["npx", "oxfmt@{version}", "--init"],
+        "pnpm": ["pnpm", "dlx", "oxfmt@{version}", "--init"],
+        "yarn": ["yarn", "dlx", "oxfmt@{version}", "--init"],
+        "bun": ["bunx", "oxfmt@{version}", "--init"],
+        "deno": ["deno", "x", "-A", "npm:oxfmt@{version}", "--init"]
       },
       "flags": {
         "init": {
-          "type": "boolean",
-          "cliName": "--init",
-          "supported": true
+          "cliName": "--init"
         },
         "migrate": {
-          "type": "string",
-          "cliName": "--migrate",
-          "supported": true
+          "cliName": "--migrate"
         },
         "lsp": {
-          "type": "boolean",
-          "cliName": "--lsp",
-          "supported": true
+          "cliName": "--lsp"
         },
         "stdinFilepath": {
-          "type": "string",
-          "cliName": "--stdin-filepath",
-          "supported": true
+          "cliName": "--stdin-filepath"
         },
         "write": {
-          "type": "boolean",
-          "cliName": "--write",
-          "supported": true
+          "cliName": "--write"
         },
         "check": {
-          "type": "boolean",
-          "cliName": "--check",
-          "supported": true
+          "cliName": "--check"
         },
         "listDifferent": {
-          "type": "boolean",
-          "cliName": "--list-different",
-          "supported": true
+          "cliName": "--list-different"
         },
         "config": {
-          "type": "string",
-          "cliName": "--config",
-          "supported": true
+          "cliName": "--config"
         },
         "disableNestedConfig": {
-          "type": "boolean",
-          "cliName": "--disable-nested-config",
-          "supported": true
+          "cliName": "--disable-nested-config"
         },
         "ignorePath": {
-          "type": "string",
-          "cliName": "--ignore-path",
-          "supported": true
+          "cliName": "--ignore-path"
         },
         "withNodeModules": {
-          "type": "boolean",
-          "cliName": "--with-node-modules",
-          "supported": true
+          "cliName": "--with-node-modules"
         },
         "noErrorOnUnmatchedPattern": {
-          "type": "boolean",
-          "cliName": "--no-error-on-unmatched-pattern",
-          "supported": true
+          "cliName": "--no-error-on-unmatched-pattern"
         },
         "threads": {
-          "type": "string",
-          "cliName": "--threads",
-          "supported": true
+          "cliName": "--threads"
         },
         "help": {
-          "type": "boolean",
-          "cliName": "--help",
-          "supported": true
+          "cliName": "--help"
         },
         "version": {
-          "type": "boolean",
-          "cliName": "--version",
-          "supported": true
+          "cliName": "--version"
         }
-      },
-      "interactive": false
+      }
     }
   ],
   "sources": [
@@ -108,32 +77,20 @@
     },
     {
       "kind": "docs",
-      "url": "https://oxc.rs/docs/guide/usage/formatter",
+      "url": "https://oxc.rs/docs/guide/usage/formatter/quickstart",
       "confidence": "high",
       "checks": [
         {
           "found": true,
-          "text": "oxfmt"
-        },
-        {
-          "found": true,
-          "text": "formatter"
-        },
-        {
-          "found": true,
-          "text": "Editor setup"
+          "text": "oxfmt --init"
         }
       ],
       "review": {
-        "reason": "Adapter runs `oxfmt --init` and writes editor formatter settings.",
+        "reason": "Adapter executes the documented oxfmt --init command unchanged.",
         "files": ["src/stacks/oxfmt/adapter.ts", "src/stacks/oxfmt/init.test.ts"],
-        "sections": ["Oxfmt", "Configuration", "Editor setup"],
-        "mustContain": ["oxfmt", "formatter", "Editor setup"],
-        "checks": [
-          "Confirm `oxfmt --init` remains the right config initializer.",
-          "Confirm `.oxfmtrc.json` remains the right formatter config path.",
-          "Confirm editor setup still uses compatible Oxc formatter settings."
-        ]
+        "sections": ["Oxfmt", "Configuration"],
+        "mustContain": ["oxfmt --init"],
+        "checks": ["Confirm oxfmt --init remains the configuration initializer."]
       }
     }
   ]

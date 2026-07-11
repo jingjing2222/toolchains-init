@@ -15,242 +15,147 @@
       },
       "flags": {
         "help": {
-          "type": "boolean",
-          "cliName": "--help",
-          "supported": true
+          "cliName": "--help"
         },
         "version": {
-          "type": "boolean",
-          "cliName": "--version",
-          "supported": true
+          "cliName": "--version"
         },
         "noProgress": {
-          "type": "boolean",
-          "cliName": "--no-progress",
-          "supported": true
+          "cliName": "--no-progress"
         },
         "config": {
-          "type": "string",
-          "cliName": "--config",
-          "supported": true
+          "cliName": "--config"
         },
         "useTsconfigFiles": {
-          "type": "boolean",
-          "cliName": "--use-tsconfig-files",
-          "supported": true
+          "cliName": "--use-tsconfig-files"
         },
         "tsConfig": {
-          "type": "string",
-          "cliName": "--tsConfig",
-          "supported": true
+          "cliName": "--tsConfig"
         },
         "cache": {
-          "type": "boolean",
-          "cliName": "--cache",
-          "supported": true
+          "cliName": "--cache"
         },
         "cacheLocation": {
-          "type": "boolean",
-          "cliName": "--cache-location",
-          "supported": true
+          "cliName": "--cache-location"
         },
         "includeEntryExports": {
-          "type": "boolean",
-          "cliName": "--include-entry-exports",
-          "supported": true
+          "cliName": "--include-entry-exports"
         },
         "noGitignore": {
-          "type": "boolean",
-          "cliName": "--no-gitignore",
-          "supported": true
+          "cliName": "--no-gitignore"
         },
         "production": {
-          "type": "boolean",
-          "cliName": "--production",
-          "supported": true
+          "cliName": "--production"
         },
         "strict": {
-          "type": "boolean",
-          "cliName": "--strict",
-          "supported": true
+          "cliName": "--strict"
         },
         "watch": {
-          "type": "boolean",
-          "cliName": "--watch",
-          "supported": true
+          "cliName": "--watch"
         },
         "workspace": {
-          "type": "string",
-          "cliName": "--workspace",
-          "supported": true
+          "cliName": "--workspace"
         },
         "directory": {
-          "type": "string",
-          "cliName": "--directory",
-          "supported": true
+          "cliName": "--directory"
         },
         "include": {
-          "type": "boolean",
-          "cliName": "--include",
-          "supported": true
+          "cliName": "--include"
         },
         "exclude": {
-          "type": "boolean",
-          "cliName": "--exclude",
-          "supported": true
+          "cliName": "--exclude"
         },
         "dependencies": {
-          "type": "boolean",
-          "cliName": "--dependencies",
-          "supported": true
+          "cliName": "--dependencies"
         },
         "exports": {
-          "type": "boolean",
-          "cliName": "--exports",
-          "supported": true
+          "cliName": "--exports"
         },
         "files": {
-          "type": "boolean",
-          "cliName": "--files",
-          "supported": true
+          "cliName": "--files"
         },
         "cycles": {
-          "type": "boolean",
-          "cliName": "--cycles",
-          "supported": true
+          "cliName": "--cycles"
         },
         "tags": {
-          "type": "boolean",
-          "cliName": "--tags",
-          "supported": true
+          "cliName": "--tags"
         },
         "fix": {
-          "type": "boolean",
-          "cliName": "--fix",
-          "supported": true
+          "cliName": "--fix"
         },
         "fixType": {
-          "type": "boolean",
-          "cliName": "--fix-type",
-          "supported": true
+          "cliName": "--fix-type"
         },
         "allowRemoveFiles": {
-          "type": "boolean",
-          "cliName": "--allow-remove-files",
-          "supported": true
+          "cliName": "--allow-remove-files"
         },
         "format": {
-          "type": "boolean",
-          "cliName": "--format",
-          "supported": true
+          "cliName": "--format"
         },
         "preprocessor": {
-          "type": "boolean",
-          "cliName": "--preprocessor",
-          "supported": true
+          "cliName": "--preprocessor"
         },
         "preprocessorOptions": {
-          "type": "boolean",
-          "cliName": "--preprocessor-options",
-          "supported": true
+          "cliName": "--preprocessor-options"
         },
         "reporter": {
-          "type": "boolean",
-          "cliName": "--reporter",
-          "supported": true
+          "cliName": "--reporter"
         },
         "reporterOptions": {
-          "type": "boolean",
-          "cliName": "--reporter-options",
-          "supported": true
+          "cliName": "--reporter-options"
         },
         "noConfigHints": {
-          "type": "boolean",
-          "cliName": "--no-config-hints",
-          "supported": true
+          "cliName": "--no-config-hints"
         },
         "noTagHints": {
-          "type": "boolean",
-          "cliName": "--no-tag-hints",
-          "supported": true
+          "cliName": "--no-tag-hints"
         },
         "treatConfigHintsAsErrors": {
-          "type": "boolean",
-          "cliName": "--treat-config-hints-as-errors",
-          "supported": true
+          "cliName": "--treat-config-hints-as-errors"
         },
         "treatTagHintsAsErrors": {
-          "type": "boolean",
-          "cliName": "--treat-tag-hints-as-errors",
-          "supported": true
+          "cliName": "--treat-tag-hints-as-errors"
         },
         "maxIssues": {
-          "type": "boolean",
-          "cliName": "--max-issues",
-          "supported": true
+          "cliName": "--max-issues"
         },
         "maxShowIssues": {
-          "type": "boolean",
-          "cliName": "--max-show-issues",
-          "supported": true
+          "cliName": "--max-show-issues"
         },
         "noExitCode": {
-          "type": "boolean",
-          "cliName": "--no-exit-code",
-          "supported": true
+          "cliName": "--no-exit-code"
         },
         "debug": {
-          "type": "boolean",
-          "cliName": "--debug",
-          "supported": true
+          "cliName": "--debug"
         },
         "memory": {
-          "type": "boolean",
-          "cliName": "--memory",
-          "supported": true
+          "cliName": "--memory"
         },
         "memoryRealtime": {
-          "type": "boolean",
-          "cliName": "--memory-realtime",
-          "supported": true
+          "cliName": "--memory-realtime"
         },
         "performance": {
-          "type": "boolean",
-          "cliName": "--performance",
-          "supported": true
+          "cliName": "--performance"
         },
         "performanceFn": {
-          "type": "string",
-          "cliName": "--performance-fn",
-          "supported": true
+          "cliName": "--performance-fn"
         },
         "duration": {
-          "type": "boolean",
-          "cliName": "--duration",
-          "supported": true
+          "cliName": "--duration"
         },
         "trace": {
-          "type": "boolean",
-          "cliName": "--trace",
-          "supported": true
+          "cliName": "--trace"
         },
         "traceDependency": {
-          "type": "string",
-          "cliName": "--trace-dependency",
-          "supported": true
+          "cliName": "--trace-dependency"
         },
         "traceExport": {
-          "type": "string",
-          "cliName": "--trace-export",
-          "supported": true
+          "cliName": "--trace-export"
         },
         "traceFile": {
-          "type": "string",
-          "cliName": "--trace-file",
-          "supported": true
+          "cliName": "--trace-file"
         }
-      },
-      "interactive": false
+      }
     }
   ],
   "sources": [
@@ -274,21 +179,14 @@
         {
           "found": true,
           "text": "knip"
-        },
-        {
-          "found": true,
-          "text": "--production"
         }
       ],
       "review": {
-        "reason": "Adapter writes a package script that runs Knip through the manifest-backed npm command.",
+        "reason": "Adapter executes the bare Knip CLI unchanged.",
         "files": ["src/stacks/knip/adapter.ts", "src/stacks/knip/init.test.ts"],
         "sections": ["CLI Arguments"],
-        "mustContain": ["knip", "--production"],
-        "checks": [
-          "Confirm the default Knip CLI invocation remains suitable for project checks.",
-          "Confirm script-based usage still does not require installing Knip as a project dependency."
-        ]
+        "mustContain": ["knip"],
+        "checks": ["Confirm the bare knip command remains the general project check."]
       }
     }
   ]

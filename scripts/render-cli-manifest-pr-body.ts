@@ -30,8 +30,8 @@ export async function renderCliManifestPrBody() {
   const lines = [
     "Automated daily update for generated CLI command manifests.",
     "",
-    "Routine package version, command template, and additive generated flag changes do not require handwritten parser or adapter edits.",
-    "Review handwritten adapter policy only when a consumed or required flag contract changes, the docs section below names it, focused verification fails, or the upstream CLI no longer runs.",
+    "Routine package version, command template, and discovered flag-name changes do not require handwritten parser or adapter edits.",
+    "Review handwritten adapter policy only when the docs section below names it, focused verification fails, or the upstream CLI no longer runs.",
     "",
     "Validation:",
     "- yarn manifests:check",
@@ -53,13 +53,13 @@ export async function renderCliManifestPrBody() {
     getManagedPublicContractChanges(change).map((detail) => ({ change, detail })),
   );
   if (publicContractChanges.length > 0) {
-    lines.push("## Generated public CLI contract review required", "");
+    lines.push("## Generated focused-help review required", "");
     for (const { change, detail } of publicContractChanges) {
       lines.push(`- \`${change.current.tool}\`: ${detail}`);
     }
     lines.push(
       "",
-      "Check focused help and release impact. Edit handwritten adapter policy only if it consumes the changed contract or verification fails.",
+      "Check focused help and release impact. Parsing remains opaque and accepts flags absent from the generated list.",
       "",
     );
   }
@@ -296,8 +296,8 @@ function getManagedPublicContractChanges(change: ManifestChange) {
     .sort();
 
   return [
-    ...removed.map((name) => `public flag ${formatCode(name)} was removed`),
-    ...changed.map((name) => `public flag ${formatCode(name)} changed type, name, or values`),
+    ...removed.map((name) => `discovered flag ${formatCode(name)} was removed from focused help`),
+    ...changed.map((name) => `discovered flag ${formatCode(name)} changed its upstream name`),
   ];
 }
 

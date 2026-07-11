@@ -1,32 +1,33 @@
-import { describe, it } from "vitest";
-import { runExternalToolchains, runPostInstallToolchains } from "../../core/external-toolchains";
-import { writeToolchain } from "../../core/files";
-import {
-  adapterInitTimeout,
-  createFreshYarnPnpProject,
-  expectFileToExist,
-  options,
-  readPackageJson,
-} from "../init-test-utils";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { resolveCliCommand } from "../../core/cli-command-manifest";
+import { runExternalToolchains } from "../../core/external-toolchains";
+import { yarnSdks, yarnSdksCliManifest } from "./index";
+import { options } from "../init-test-utils";
+
+const mocks = vi.hoisted(() => ({
+  runCommand: vi.fn(async () => {}),
+}));
+
+vi.mock("../../core/run-command", () => ({
+  runCommand: mocks.runCommand,
+}));
 
 describe("Yarn SDKs adapter init", () => {
-  it(
-    "generates Yarn SDK files in lifecycle order",
-    async () => {
-      const cwd = await createFreshYarnPnpProject();
-      const packageJson = await readPackageJson(cwd);
-      const toolchainOptions = options(["yarnSdks"]);
+  beforeEach(() => {
+    mocks.runCommand.mockClear();
+  });
 
-      await runExternalToolchains(cwd, "yarn", toolchainOptions, true);
-      await expectFileToExist(cwd, ".pnp.cjs");
+  it("executes yarn sdks vscode with inherited stdin", async () => {
+    expect(yarnSdks.managedCli).toBe(true);
+    const command = resolveCliCommand(yarnSdksCliManifest, "vscode", "yarn");
+    expect(command).toEqual({
+      bin: "yarn",
+      args: ["dlx", `@yarnpkg/sdks@${yarnSdksCliManifest.version}`, "vscode"],
+    });
 
-      await writeToolchain(cwd, packageJson, toolchainOptions);
-      await expectFileToExist(cwd, "package.json");
+    await runExternalToolchains(".", "yarn", options(["yarnSdks"]));
 
-      await runPostInstallToolchains(cwd, "yarn", toolchainOptions, true);
-      await expectFileToExist(cwd, ".yarn/sdks/integrations.yml");
-      await expectFileToExist(cwd, ".vscode/settings.json");
-    },
-    adapterInitTimeout,
-  );
+    expect(mocks.runCommand).toHaveBeenCalledTimes(1);
+    expect(mocks.runCommand).toHaveBeenCalledWith(".", command.bin, command.args);
+  });
 });

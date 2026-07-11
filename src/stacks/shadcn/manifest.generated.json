@@ -1,0 +1,112 @@
+{
+  "schemaVersion": "toolchains-init/cli-command-manifest/v1",
+  "tool": "shadcn",
+  "package": "shadcn",
+  "version": "4.13.0",
+  "commands": [
+    {
+      "id": "init",
+      "packageManagers": {
+        "npm": ["npx", "shadcn@{version}", "init"],
+        "pnpm": ["pnpm", "dlx", "shadcn@{version}", "init"],
+        "yarn": ["yarn", "dlx", "shadcn@{version}", "init"],
+        "bun": ["bunx", "shadcn@{version}", "init"],
+        "deno": ["deno", "x", "-A", "npm:shadcn@{version}", "init"]
+      },
+      "flags": {
+        "template": {
+          "cliName": "--template"
+        },
+        "base": {
+          "cliName": "--base"
+        },
+        "monorepo": {
+          "cliName": "--monorepo"
+        },
+        "noMonorepo": {
+          "cliName": "--no-monorepo"
+        },
+        "preset": {
+          "cliName": "--preset"
+        },
+        "yes": {
+          "cliName": "--yes"
+        },
+        "defaults": {
+          "cliName": "--defaults"
+        },
+        "force": {
+          "cliName": "--force"
+        },
+        "cwd": {
+          "cliName": "--cwd"
+        },
+        "name": {
+          "cliName": "--name"
+        },
+        "silent": {
+          "cliName": "--silent"
+        },
+        "cssVariables": {
+          "cliName": "--css-variables"
+        },
+        "noCssVariables": {
+          "cliName": "--no-css-variables"
+        },
+        "rtl": {
+          "cliName": "--rtl"
+        },
+        "noRtl": {
+          "cliName": "--no-rtl"
+        },
+        "pointer": {
+          "cliName": "--pointer"
+        },
+        "noPointer": {
+          "cliName": "--no-pointer"
+        },
+        "reinstall": {
+          "cliName": "--reinstall"
+        },
+        "noReinstall": {
+          "cliName": "--no-reinstall"
+        },
+        "help": {
+          "cliName": "--help"
+        }
+      }
+    }
+  ],
+  "sources": [
+    {
+      "kind": "npm",
+      "package": "shadcn",
+      "version": "4.13.0",
+      "distTag": "latest",
+      "resolvedAt": "2026-07-03T12:29:02.707Z"
+    },
+    {
+      "kind": "cli-help",
+      "command": ["npx", "--yes", "shadcn@4.13.0", "init", "--help"],
+      "commandId": "init"
+    },
+    {
+      "kind": "docs",
+      "url": "https://ui.shadcn.com/docs/cli",
+      "confidence": "high",
+      "checks": [
+        {
+          "found": true,
+          "text": "shadcn init [options]"
+        }
+      ],
+      "review": {
+        "reason": "Adapter executes the official shadcn init command unchanged.",
+        "files": ["src/stacks/shadcn/adapter.ts", "src/stacks/shadcn/init.test.ts"],
+        "sections": ["init"],
+        "mustContain": ["shadcn init [options]"],
+        "checks": ["Confirm shadcn init remains the official initialization command."]
+      }
+    }
+  ]
+}

@@ -12,6 +12,7 @@ import {
 } from "../src/stacks";
 import {
   findOrphanGeneratedFiles,
+  parseHelpFlags,
   removeOrphanGeneratedFiles,
   resolvePackageManagerCommands,
   runHelpCommand,
@@ -34,15 +35,6 @@ describe("CLI command manifests", () => {
     expect(cliCommandManifests.map((manifest) => manifest.tool)).toEqual(expectedTools);
   });
 
-  it("derives manifest interaction contracts from the adapter exception", () => {
-    for (const toolchain of toolchains.filter((candidate) => candidate.cli != null)) {
-      const manifest = getCliCommandManifest(getToolchainCliTool(toolchain));
-      expect(manifest?.commands[0]?.interactive).toBe(
-        toolchain.nonInteractive?.supported === false,
-      );
-    }
-  });
-
   it("resolves every command for its declared package managers", () => {
     for (const manifest of cliCommandManifests) {
       for (const command of manifest.commands) {
@@ -62,39 +54,87 @@ describe("CLI command manifests", () => {
 
   it("derives CLI flags from help output, not a hand-written subset", () => {
     expect(playwrightCliManifest.commands[0]?.flags).toMatchObject({
-      browser: { cliName: "--browser", type: "string" },
-      noBrowsers: { cliName: "--no-browsers", type: "boolean" },
-      lang: { cliName: "--lang", type: "enum", values: ["js", "TypeScript"] },
+      browser: { cliName: "--browser" },
+      noBrowsers: { cliName: "--no-browsers" },
+      lang: { cliName: "--lang" },
     });
 
     const tanStackCliManifest = getCliCommandManifest("tanstack-router");
     expect(tanStackCliManifest?.commands[0]?.flags).toMatchObject({
-      deployment: {
-        cliName: "--deployment",
-        type: "enum",
-        values: ["cloudflare", "netlify", "nitro", "railway"],
-      },
-      routerOnly: { cliName: "--router-only", type: "boolean" },
+      deployment: { cliName: "--deployment" },
+      routerOnly: { cliName: "--router-only" },
     });
 
     const storybookCliManifest = getCliCommandManifest("storybook");
     expect(storybookCliManifest?.commands[0]?.flags).toMatchObject({
-      force: { cliName: "--force", type: "boolean" },
-      skipInstall: { cliName: "--skip-install", type: "boolean" },
-      yes: { cliName: "--yes", type: "boolean" },
+      force: { cliName: "--force" },
+      skipInstall: { cliName: "--skip-install" },
+      yes: { cliName: "--yes" },
     });
   });
 
-  it("rejects ambiguous generated flag identities and invalid enum contracts", () => {
+  it("extracts long flag names without interpreting their value syntax", () => {
+    expect(
+      Object.fromEntries(
+        parseHelpFlags(`
+  -p, --preset [name]        use a preset configuration
+                             --preset=base-nova (default: false)
+  --workdir string           path to a project directory
+  --format                   [String] formatter name
+  --output, -o choice        output format (choices: json, yaml, table)
+  --import <path|package>    import a config path or package
+  --level                    level ('suggestion' | 'warning' | 'error')
+  --cwd                      Custom current worker directory             [string]
+  --save                     Save the worker directory                   [boolean]
+  --format <format>             file format (choices: "yaml",
+                                "yml", "json", "jsonc", default: "yaml")
+  -t, --template <template>     template (next, start, vite,
+                                react-router, laravel, astro)
+  --secretlintignore [path:String] path to the ignore file
+  --secretlintrcJSON [String] a JSON config string
+  --ignore-rules <rules...>     rules to ignore (choices: "no-resolution",
+                                "cjs-only-exports-default", "named-exports",
+                                default: [])
+  --migrate=SOURCE              migrate from a specified source
+  -c, --config=PATH             path to configuration (.json, .jsonc, knip.(js|ts))
+`).map((flag) => [flag.cliName, flag]),
+      ),
+    ).toEqual({
+      "--config": { cliName: "--config" },
+      "--cwd": { cliName: "--cwd" },
+      "--format": { cliName: "--format" },
+      "--ignore-rules": { cliName: "--ignore-rules" },
+      "--import": { cliName: "--import" },
+      "--level": { cliName: "--level" },
+      "--migrate": { cliName: "--migrate" },
+      "--output": { cliName: "--output" },
+      "--preset": { cliName: "--preset" },
+      "--save": { cliName: "--save" },
+      "--secretlintignore": { cliName: "--secretlintignore" },
+      "--secretlintrcJSON": { cliName: "--secretlintrcJSON" },
+      "--template": { cliName: "--template" },
+      "--workdir": { cliName: "--workdir" },
+    });
+  });
+
+  it("keeps wrapped descriptions from creating extra flag names", () => {
+    expect(
+      parseHelpFlags(`
+  --format <format>             file format (choices: "yaml",
+                                "yml", "json", "jsonc", default: "yaml")
+`).map((flag) => flag.cliName),
+    ).toEqual(["--format"]);
+  });
+
+  it("rejects ambiguous generated flag identities", () => {
     const manifest = {
       commands: [
         {
           flags: {
-            first: { cliName: "--same", supported: true, type: "boolean" },
-            second: { cliName: "--same", supported: true, type: "string" },
+            first: { cliName: "--same" },
+            second: { cliName: "--same" },
           },
           id: "init",
-          interactive: false,
           packageManagers: { npm: ["npx", "example@{version}"] },
         },
       ],
@@ -106,19 +146,6 @@ describe("CLI command manifests", () => {
     };
 
     expect(() => defineCliCommandManifest(manifest)).toThrow("Duplicate CLI flag name");
-    expect(() =>
-      defineCliCommandManifest({
-        ...manifest,
-        commands: [
-          {
-            ...manifest.commands[0],
-            flags: {
-              mode: { cliName: "--mode", supported: true, type: "enum", values: [] },
-            },
-          },
-        ],
-      }),
-    ).toThrow("Invalid enum values");
   });
 
   it("keeps docs-backed adapter review metadata in generated manifests", () => {
@@ -135,7 +162,7 @@ describe("CLI command manifests", () => {
         url: "https://mswjs.io/docs/cli/init/",
         review: expect.objectContaining({
           files: ["src/stacks/msw/adapter.ts", "src/stacks/msw/init.test.ts"],
-          reason: expect.stringContaining("Adapter appends"),
+          reason: expect.stringContaining("bare msw init command unchanged"),
         }),
       }),
     );
@@ -189,25 +216,25 @@ describe("CLI command manifests", () => {
       deno: ["deno", "x", "-A", "npm:knip@{version}"],
     });
     expect(oxfmtCliManifest?.commands[0]?.packageManagers).toMatchObject({
-      npm: ["npx", "oxfmt@{version}"],
-      pnpm: ["pnpm", "dlx", "oxfmt@{version}"],
-      yarn: ["yarn", "dlx", "oxfmt@{version}"],
-      bun: ["bunx", "oxfmt@{version}"],
-      deno: ["deno", "x", "-A", "npm:oxfmt@{version}"],
+      npm: ["npx", "oxfmt@{version}", "--init"],
+      pnpm: ["pnpm", "dlx", "oxfmt@{version}", "--init"],
+      yarn: ["yarn", "dlx", "oxfmt@{version}", "--init"],
+      bun: ["bunx", "oxfmt@{version}", "--init"],
+      deno: ["deno", "x", "-A", "npm:oxfmt@{version}", "--init"],
     });
     expect(oxlintCliManifest?.commands[0]?.packageManagers).toMatchObject({
-      npm: ["npx", "oxlint@{version}"],
-      pnpm: ["pnpm", "dlx", "oxlint@{version}"],
-      yarn: ["yarn", "dlx", "oxlint@{version}"],
-      bun: ["bunx", "oxlint@{version}"],
-      deno: ["deno", "x", "-A", "npm:oxlint@{version}"],
+      npm: ["npx", "oxlint@{version}", "--init"],
+      pnpm: ["pnpm", "dlx", "oxlint@{version}", "--init"],
+      yarn: ["yarn", "dlx", "oxlint@{version}", "--init"],
+      bun: ["bunx", "oxlint@{version}", "--init"],
+      deno: ["deno", "x", "-A", "npm:oxlint@{version}", "--init"],
     });
     expect(prettierCliManifest?.commands[0]?.packageManagers).toMatchObject({
-      npm: ["npx", "prettier@{version}"],
-      pnpm: ["pnpm", "dlx", "prettier@{version}"],
-      yarn: ["yarn", "dlx", "prettier@{version}"],
-      bun: ["bunx", "prettier@{version}"],
-      deno: ["deno", "x", "-A", "npm:prettier@{version}"],
+      npm: ["npx", "prettier@{version}", "--check", "."],
+      pnpm: ["pnpm", "dlx", "prettier@{version}", "--check", "."],
+      yarn: ["yarn", "dlx", "prettier@{version}", "--check", "."],
+      bun: ["bunx", "prettier@{version}", "--check", "."],
+      deno: ["deno", "x", "-A", "npm:prettier@{version}", "--check", "."],
     });
     expect(eslintCliManifest?.commands[0]?.packageManagers).toMatchObject({
       npm: ["npx", "@eslint/create-config@{version}"],
@@ -217,7 +244,11 @@ describe("CLI command manifests", () => {
       deno: ["deno", "x", "-A", "npm:@eslint/create-config@{version}"],
     });
     expect(yarnSdksCliManifest?.commands[0]?.packageManagers).toEqual({
+      npm: ["npx", "@yarnpkg/sdks@{version}", "vscode"],
+      pnpm: ["pnpm", "dlx", "@yarnpkg/sdks@{version}", "vscode"],
       yarn: ["yarn", "dlx", "@yarnpkg/sdks@{version}", "vscode"],
+      bun: ["bunx", "@yarnpkg/sdks@{version}", "vscode"],
+      deno: ["deno", "x", "-A", "npm:@yarnpkg/sdks@{version}", "vscode"],
     });
     expect(yarnSdksCliManifest?.sources.map((source) => source.kind)).toEqual(["npm", "docs"]);
     expect(storybookCliManifest?.commands[0]?.packageManagers).toEqual({
@@ -225,21 +256,22 @@ describe("CLI command manifests", () => {
       pnpm: ["pnpm", "create", "storybook@{version}"],
       yarn: ["yarn", "create", "storybook@{version}"],
       bun: ["bun", "create", "storybook@{version}"],
+      deno: ["deno", "x", "-A", "npm:create-storybook@{version}"],
     });
   });
 
-  it("keeps flag-only initializers free of positional init subcommands", () => {
+  it("keeps flag-only initializers in the generated command identity", () => {
     const oxfmtCliManifest = getCliCommandManifest("oxfmt");
     const oxlintCliManifest = getCliCommandManifest("oxlint");
     if (oxfmtCliManifest == null || oxlintCliManifest == null) {
       throw new Error("Missing Oxc CLI manifests");
     }
 
-    expect(resolveCliCommand(oxfmtCliManifest, "init", "npm", { init: true })).toEqual({
+    expect(resolveCliCommand(oxfmtCliManifest, "init", "npm")).toEqual({
       bin: "npx",
       args: [`oxfmt@${oxfmtCliManifest.version}`, "--init"],
     });
-    expect(resolveCliCommand(oxlintCliManifest, "init", "npm", { init: true })).toEqual({
+    expect(resolveCliCommand(oxlintCliManifest, "init", "npm")).toEqual({
       bin: "npx",
       args: [`oxlint@${oxlintCliManifest.version}`, "--init"],
     });
@@ -254,7 +286,7 @@ describe("CLI command manifests", () => {
           docs: [],
           exportName: "scopedCreateCliManifest",
           help: undefined,
-          interactive: false,
+          commandArgs: ["--template", "react"],
           packageManagers: ["npm", "pnpm", "yarn", "bun", "deno"],
           packageName: "@scope/create-widget",
           runner: "auto",
@@ -265,12 +297,34 @@ describe("CLI command manifests", () => {
         "1.2.3",
       ),
     ).toEqual({
-      npm: ["npm", "init", "@scope/widget@{version}", "--"],
-      pnpm: ["pnpm", "create", "@scope/widget@{version}"],
-      yarn: ["yarn", "create", "@scope/widget@{version}"],
-      bun: ["bun", "create", "@scope/widget@{version}"],
-      deno: ["deno", "x", "-A", "npm:@scope/create-widget@{version}"],
+      npm: ["npm", "init", "@scope/widget@{version}", "--", "--template", "react"],
+      pnpm: ["pnpm", "create", "@scope/widget@{version}", "--template", "react"],
+      yarn: ["yarn", "create", "@scope/widget@{version}", "--template", "react"],
+      bun: ["bun", "create", "@scope/widget@{version}", "--template", "react"],
+      deno: ["deno", "x", "-A", "npm:@scope/create-widget@{version}", "--template", "react"],
     });
+  });
+
+  it("appends static command identity to custom runner templates", () => {
+    expect(
+      resolvePackageManagerCommands(
+        {
+          commandArgs: ["--check", "."],
+          commandId: "check",
+          distTag: "latest",
+          docs: [],
+          exportName: "exampleCliManifest",
+          help: undefined,
+          packageManagers: ["npm"],
+          packageName: "example",
+          runner: { npm: ["npx", "example@{version}"] },
+          stackDir: "example",
+          subcommand: null,
+          tool: "example",
+        },
+        "1.2.3",
+      ),
+    ).toEqual({ npm: ["npx", "example@{version}", "--check", "."] });
   });
 
   it("keeps help output from CLIs that exit non-zero", async () => {
@@ -648,13 +702,14 @@ describe("CLI command manifests", () => {
     });
   });
 
-  it("serializes manifest-backed Playwright quiet flags", () => {
+  it("appends Playwright arguments without interpreting them", () => {
     expect(
-      resolveCliCommand(playwrightCliManifest, "init", "npm", {
-        quiet: true,
-        lang: "TypeScript",
-        noBrowsers: true,
-      }),
+      resolveCliCommand(playwrightCliManifest, "init", "npm", [
+        "--quiet",
+        "--lang=Rust",
+        "--no-browsers",
+        "--future-flag",
+      ]),
     ).toEqual({
       bin: "npm",
       args: [
@@ -662,18 +717,10 @@ describe("CLI command manifests", () => {
         `playwright@${playwrightCliManifest.version}`,
         "--",
         "--quiet",
-        "--lang",
-        "TypeScript",
+        "--lang=Rust",
         "--no-browsers",
+        "--future-flag",
       ],
     });
-  });
-
-  it("rejects flags not declared by the command contract", () => {
-    expect(() =>
-      resolveCliCommand(playwrightCliManifest, "init", "npm", {
-        framework: "react",
-      }),
-    ).toThrow("Unsupported CLI flag");
   });
 });

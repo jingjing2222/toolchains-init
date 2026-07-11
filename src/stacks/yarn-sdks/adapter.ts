@@ -1,5 +1,4 @@
 import { defineToolchain } from "../../core/toolchain-adapter";
-import { usesYarnPnp } from "../../core/yarn";
 
 export const yarnSdks = defineToolchain({
   feature: "yarnSdks",
@@ -14,23 +13,14 @@ export const yarnSdks = defineToolchain({
       url: "https://yarnpkg.com/cli/sdks",
       confidence: "high",
       review: {
-        reason: "Adapter runs Yarn SDK generation only for Yarn PnP projects.",
+        reason: "Adapter executes the documented yarn sdks vscode command unchanged.",
         files: ["src/stacks/yarn-sdks/adapter.ts", "src/stacks/yarn-sdks/init.test.ts"],
         sections: ["@yarnpkg/sdks CLI Reference"],
         mustContain: ["@yarnpkg/sdks", "yarn sdks"],
-        checks: [
-          "Confirm `yarn sdks vscode` remains the documented editor SDK command.",
-          "Confirm Yarn PnP remains the right availability gate for SDK generation.",
-        ],
+        checks: ["Confirm yarn sdks vscode remains the documented editor SDK command."],
       },
     },
   ],
   help: false,
-  packageManagers: ["yarn"],
-  managedCli: {
-    phase: "afterInstall",
-  },
-  isAvailable({ cwd, packageManager }) {
-    return usesYarnPnp(cwd, packageManager);
-  },
+  managedCli: true,
 });

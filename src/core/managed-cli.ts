@@ -1,47 +1,20 @@
-import type {
-  CliCommandContract,
-  CliCommandManifest,
-  CliFlagContract,
-} from "./cli-command-manifest";
+import type { CliCommandContract, CliCommandManifest } from "./cli-command-manifest";
 import { resolveCliCommand } from "./cli-command-manifest";
 import type { PackageManager } from "./package-manager";
-import type {
-  ManagedCliFlagValue,
-  ManagedCliFlagValues,
-  ManagedCliPolicyContext,
-  ManagedCliPolicyValue,
-  ManagedCliSetupContract,
-  ManagedToolchainCli,
-  ToolchainAdapter,
-} from "./toolchain-adapter";
+import type { ToolchainAdapter } from "./toolchain-adapter";
 import { getToolchainCliTool, getToolchainId } from "./toolchain-adapter";
-import type { ToolchainOptions } from "./types";
 import { cliCommandManifests, toolchains } from "../stacks/index";
 
 export const reservedDirectSelectors = new Set([
   "help",
-  "no-install",
   "package-manager",
   "target",
   "version",
   "yes",
 ]);
 
-const universalBlockedFlags = new Map([
-  ["--help", "Use focused toolchains-init help instead of forwarding upstream help."],
-  ["--version", "Upstream version output does not initialize the selected toolchain."],
-]);
-
 export type ManagedCliSurfaceFlag = {
   cliName: string;
-  contract: CliFlagContract;
-  logicalName: string;
-  optionName: string;
-};
-
-export type ManagedCliSurfaceSetup = {
-  contract: ManagedCliSetupContract;
-  logicalName: string;
   optionName: string;
 };
 
@@ -49,19 +22,17 @@ export type ManagedCliGroup = {
   command: CliCommandContract | null;
   flags: readonly ManagedCliSurfaceFlag[];
   manifest: CliCommandManifest | null;
+  rawArgOptionName: string | null;
   selector: string;
-  setup: readonly ManagedCliSurfaceSetup[];
   toolchain: ToolchainAdapter;
 };
 
 export type ManagedCliSurface = {
-  byOptionName: ReadonlyMap<string, ManagedCliSurfaceFlag & { group: ManagedCliGroup }>;
   bySelector: ReadonlyMap<string, ManagedCliGroup>;
-  bySetupOptionName: ReadonlyMap<string, ManagedCliSurfaceSetup & { group: ManagedCliGroup }>;
   groups: readonly ManagedCliGroup[];
 };
 
-export type ManagedCliUserFlags = Readonly<Record<string, ManagedCliFlagValues | undefined>>;
+export type ManagedCliUserArgs = Readonly<Record<string, readonly string[] | undefined>>;
 
 export type ManagedCliPlan = {
   command: {
@@ -69,7 +40,6 @@ export type ManagedCliPlan = {
     bin: string;
   };
   feature: ToolchainAdapter["feature"];
-  phase: ManagedToolchainCli["phase"];
   selector: string;
 };
 
@@ -81,8 +51,6 @@ export function createManagedCliSurface(
 ): ManagedCliSurface {
   const groups: ManagedCliGroup[] = [];
   const bySelector = new Map<string, ManagedCliGroup>();
-  const byOptionName = new Map<string, ManagedCliSurfaceFlag & { group: ManagedCliGroup }>();
-  const bySetupOptionName = new Map<string, ManagedCliSurfaceSetup & { group: ManagedCliGroup }>();
   const manifestsByTool = new Map<string, CliCommandManifest>();
   for (const manifest of manifests) {
     if (manifestsByTool.has(manifest.tool)) {
@@ -111,7 +79,7 @@ export function createManagedCliSurface(
     }
     let command: CliCommandContract | null = null;
     const flags: ManagedCliSurfaceFlag[] = [];
-    if (toolchain.managedCli != null) {
+    if (toolchain.managedCli === true) {
       if (toolchain.cli == null || manifest == null) {
         throw new Error(`Managed CLI adapter ${selector} has no generated manifest.`);
       }
@@ -122,164 +90,74 @@ export function createManagedCliSurface(
       }
 
       const seenCliNames = new Set<string>();
-      for (const [logicalName, contract] of Object.entries(command.flags ?? {})) {
+      for (const contract of Object.values(command.flags ?? {})) {
         if (seenCliNames.has(contract.cliName)) {
           throw new Error(
             `Duplicate CLI flag name in ${selector}/${command.id}: ${contract.cliName}`,
           );
         }
         seenCliNames.add(contract.cliName);
-        if (!contract.supported) {
-          continue;
-        }
         if (!/^--[A-Za-z0-9][A-Za-z0-9-]*$/.test(contract.cliName)) {
           throw new Error(
             `Managed CLI flag must use a long option in ${selector}/${command.id}: ${contract.cliName}`,
           );
         }
         const optionName = `${selector}.${contract.cliName.slice(2)}`;
-        const flag = { cliName: contract.cliName, contract, logicalName, optionName };
-        flags.push(flag);
+        flags.push({
+          cliName: contract.cliName,
+          optionName,
+        });
       }
     }
 
-    const setup = Object.entries(toolchain.managedCli?.setup ?? {}).map(
-      ([logicalName, contract]): ManagedCliSurfaceSetup => {
-        if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(logicalName)) {
-          throw new Error(`Managed CLI setup name must use lowercase kebab-case: ${logicalName}`);
-        }
-        if (contract.description.trim().length === 0) {
-          throw new Error(
-            `Managed CLI setup option needs a description: ${selector}/${logicalName}`,
-          );
-        }
-        if (
-          contract.type === "enum" &&
-          (contract.values.length === 0 ||
-            contract.values.some((value) => value.length === 0) ||
-            new Set(contract.values).size !== contract.values.length)
-        ) {
-          throw new Error(`Invalid managed CLI setup enum: ${selector}/${logicalName}`);
-        }
-        return {
-          contract,
-          logicalName,
-          optionName: `${selector}.setup.${logicalName}`,
-        };
-      },
-    );
-    const group: ManagedCliGroup = { command, flags, manifest, selector, setup, toolchain };
+    const rawArgOptionName = toolchain.managedCli === true ? `${selector}.raw.arg` : null;
+    const group: ManagedCliGroup = {
+      command,
+      flags,
+      manifest,
+      rawArgOptionName,
+      selector,
+      toolchain,
+    };
     groups.push(group);
     bySelector.set(selector, group);
-    for (const flag of flags) {
-      if (byOptionName.has(flag.optionName)) {
-        throw new Error(`Duplicate managed CLI option: --${flag.optionName}`);
-      }
-      byOptionName.set(flag.optionName, { ...flag, group });
-    }
-    for (const entry of setup) {
-      if (bySetupOptionName.has(entry.optionName)) {
-        throw new Error(`Duplicate managed CLI setup option: --${entry.optionName}`);
-      }
-      bySetupOptionName.set(entry.optionName, { ...entry, group });
-    }
   }
 
-  return { byOptionName, bySelector, bySetupOptionName, groups };
+  return { bySelector, groups };
 }
 
 export function resolveManagedCliPlans({
   manifests = cliCommandManifests,
-  options,
   packageManager,
   selectedToolchains,
-  userFlags = {},
-  yes,
+  userArgs = {},
 }: {
   manifests?: readonly CliCommandManifest[];
-  options: ToolchainOptions;
   packageManager: PackageManager;
   selectedToolchains: readonly ToolchainAdapter[];
-  userFlags?: ManagedCliUserFlags;
-  yes: boolean;
+  userArgs?: ManagedCliUserArgs;
 }): ManagedCliPlans {
   const selectedFeatures = new Set(selectedToolchains.map((toolchain) => toolchain.feature));
-  const optionFeatures = new Set(options.features);
-  if (
-    selectedFeatures.size !== optionFeatures.size ||
-    [...selectedFeatures].some((feature) => !optionFeatures.has(feature))
-  ) {
-    throw new Error("Selected toolchains do not match options.features.");
-  }
+  validateSelectedInputKeys(selectedFeatures, userArgs, "arguments");
 
   const surface = createManagedCliSurface(selectedToolchains, manifests);
-  for (const feature of Object.keys(userFlags)) {
-    if (!selectedFeatures.has(feature)) {
-      throw new Error(
-        `Managed CLI arguments were provided for an unselected toolchain: ${feature}`,
-      );
-    }
-  }
-
-  const context = { options, packageManager, yes } satisfies ManagedCliPolicyContext;
   const plans = new Map<ToolchainAdapter["feature"], ManagedCliPlan>();
   for (const group of surface.groups) {
-    const policy = group.toolchain.managedCli;
-    const requested = userFlags[group.toolchain.feature] ?? {};
-    if (policy == null) {
-      if (Object.keys(requested).length > 0) {
-        throw new Error(`Toolchain --${group.selector} does not run a managed initializer.`);
+    const requested = userArgs[group.toolchain.feature] ?? [];
+    if (group.toolchain.managedCli !== true) {
+      if (requested.length > 0) {
+        throw new Error(`Toolchain --${group.selector} does not run a managed CLI command.`);
       }
       continue;
     }
-    if (group.manifest == null || group.command == null) {
+    if (group.manifest == null || group.command == null || group.toolchain.cli == null) {
       throw new Error(`Managed CLI adapter ${group.selector} is missing its command contract.`);
     }
 
-    const defaults = resolvePolicyValue(policy.defaults, context, {});
-    const locked = resolvePolicyValue(policy.locked, context, {});
-    const blocked = resolvePolicyValue(policy.blocked, context, {});
-    const positionals = resolvePolicyValue(policy.positionals, context, []);
-    const knownFlags = new Set(group.flags.map((flag) => flag.logicalName));
-    validatePolicyKeys(group, knownFlags, "default", Object.keys(defaults));
-    validatePolicyKeys(group, knownFlags, "locked", Object.keys(locked));
-    validatePolicyKeys(group, knownFlags, "blocked", Object.keys(blocked));
-    validateUniversalPolicyKeys(group, "default", Object.keys(defaults));
-    validateUniversalPolicyKeys(group, "locked", Object.keys(locked));
-
-    for (const [logicalName, value] of Object.entries(requested)) {
-      const flag = group.flags.find((candidate) => candidate.logicalName === logicalName);
-      if (flag == null) {
-        throw new Error(`Unknown managed CLI flag for --${group.selector}: ${logicalName}`);
-      }
-      const blockedReason = universalBlockedFlags.get(flag.cliName) ?? blocked[logicalName];
-      if (blockedReason != null) {
-        throw new Error(`Option --${flag.optionName} is blocked: ${blockedReason}`);
-      }
-      const lockedValue = locked[logicalName];
-      if (Object.hasOwn(locked, logicalName) && lockedValue !== value) {
-        throw new Error(
-          `Option --${flag.optionName} is locked to ${JSON.stringify(lockedValue)} by toolchains-init.`,
-        );
-      }
-    }
-
-    const effectiveFlags: Record<string, ManagedCliFlagValue> = {
-      ...defaults,
-      ...requested,
-      ...locked,
-    };
-    const command = resolveCliCommand(
-      group.manifest,
-      group.command.id,
-      packageManager,
-      effectiveFlags,
-      positionals,
-    );
+    const resolved = resolveCliCommand(group.manifest, group.command.id, packageManager, requested);
     plans.set(group.toolchain.feature, {
-      command,
+      command: resolved,
       feature: group.toolchain.feature,
-      phase: policy.phase,
       selector: group.selector,
     });
   }
@@ -287,60 +165,15 @@ export function resolveManagedCliPlans({
   return plans;
 }
 
-export function getManagedCliFlagPolicy(
-  group: ManagedCliGroup,
-  flag: ManagedCliSurfaceFlag,
-  context: ManagedCliPolicyContext,
+function validateSelectedInputKeys(
+  selectedFeatures: ReadonlySet<string>,
+  values: Readonly<Record<string, unknown>>,
+  label: string,
 ) {
-  const policy = group.toolchain.managedCli;
-  const defaults = resolvePolicyValue(policy?.defaults, context, {});
-  const locked = resolvePolicyValue(policy?.locked, context, {});
-  const blocked = resolvePolicyValue(policy?.blocked, context, {});
-  return {
-    blockedReason: universalBlockedFlags.get(flag.cliName) ?? blocked[flag.logicalName] ?? null,
-    defaultValue: defaults[flag.logicalName],
-    lockedValue: locked[flag.logicalName],
-  };
-}
-
-function resolvePolicyValue<T>(
-  value: ManagedCliPolicyValue<T> | undefined,
-  context: ManagedCliPolicyContext,
-  fallback: T,
-) {
-  return value == null
-    ? fallback
-    : typeof value === "function"
-      ? (value as (context: ManagedCliPolicyContext) => T)(context)
-      : value;
-}
-
-function validatePolicyKeys(
-  group: ManagedCliGroup,
-  knownFlags: ReadonlySet<string>,
-  policyName: string,
-  keys: readonly string[],
-) {
-  const unknown = keys.find((key) => !knownFlags.has(key));
-  if (unknown != null) {
-    throw new Error(
-      `Managed CLI ${policyName} flag no longer exists in ${group.selector}/${group.command?.id}: ${unknown}`,
-    );
-  }
-}
-
-function validateUniversalPolicyKeys(
-  group: ManagedCliGroup,
-  policyName: string,
-  keys: readonly string[],
-) {
-  const blockedFlag = group.flags.find(
-    (flag) => keys.includes(flag.logicalName) && universalBlockedFlags.has(flag.cliName),
-  );
-  if (blockedFlag != null) {
-    throw new Error(
-      `Managed CLI ${policyName} cannot set universally blocked option --${blockedFlag.optionName}.`,
-    );
+  for (const feature of Object.keys(values)) {
+    if (!selectedFeatures.has(feature)) {
+      throw new Error(`Managed CLI ${label} were provided for an unselected toolchain: ${feature}`);
+    }
   }
 }
 

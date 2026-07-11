@@ -1,0 +1,106 @@
+{
+  "schemaVersion": "toolchains-init/cli-command-manifest/v1",
+  "tool": "supabase",
+  "package": "supabase",
+  "version": "2.109.1",
+  "commands": [
+    {
+      "id": "init",
+      "packageManagers": {
+        "npm": ["npx", "supabase@{version}", "init"],
+        "pnpm": ["pnpm", "dlx", "supabase@{version}", "init"],
+        "yarn": ["yarn", "dlx", "supabase@{version}", "init"],
+        "bun": ["bunx", "supabase@{version}", "init"],
+        "deno": ["deno", "x", "-A", "npm:supabase@{version}", "init"]
+      },
+      "flags": {
+        "interactive": {
+          "cliName": "--interactive"
+        },
+        "useOrioledb": {
+          "cliName": "--use-orioledb"
+        },
+        "force": {
+          "cliName": "--force"
+        },
+        "help": {
+          "cliName": "--help"
+        },
+        "version": {
+          "cliName": "--version"
+        },
+        "completions": {
+          "cliName": "--completions"
+        },
+        "logLevel": {
+          "cliName": "--log-level"
+        },
+        "outputFormat": {
+          "cliName": "--output-format"
+        },
+        "output": {
+          "cliName": "--output"
+        },
+        "profile": {
+          "cliName": "--profile"
+        },
+        "debug": {
+          "cliName": "--debug"
+        },
+        "workdir": {
+          "cliName": "--workdir"
+        },
+        "experimental": {
+          "cliName": "--experimental"
+        },
+        "networkId": {
+          "cliName": "--network-id"
+        },
+        "yes": {
+          "cliName": "--yes"
+        },
+        "dnsResolver": {
+          "cliName": "--dns-resolver"
+        },
+        "createTicket": {
+          "cliName": "--create-ticket"
+        },
+        "agent": {
+          "cliName": "--agent"
+        }
+      }
+    }
+  ],
+  "sources": [
+    {
+      "kind": "npm",
+      "package": "supabase",
+      "version": "2.109.1",
+      "distTag": "latest",
+      "resolvedAt": "2026-07-07T09:00:02.193Z"
+    },
+    {
+      "kind": "cli-help",
+      "command": ["npx", "--yes", "supabase@2.109.1", "init", "--help"],
+      "commandId": "init"
+    },
+    {
+      "kind": "docs",
+      "url": "https://supabase.com/docs/reference/cli/v0/supabase-init",
+      "confidence": "high",
+      "checks": [
+        {
+          "found": true,
+          "text": "supabase init [flags]"
+        }
+      ],
+      "review": {
+        "reason": "Adapter executes the official supabase init command unchanged.",
+        "files": ["src/stacks/supabase/adapter.ts", "src/stacks/supabase/init.test.ts"],
+        "sections": ["supabase init"],
+        "mustContain": ["supabase init [flags]"],
+        "checks": ["Confirm supabase init remains the official local-project initializer."]
+      }
+    }
+  ]
+}

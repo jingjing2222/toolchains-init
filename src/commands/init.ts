@@ -1,32 +1,15 @@
-import {
-  cancel,
-  confirm,
-  groupMultiselect,
-  intro,
-  isCancel,
-  log,
-  outro,
-  select,
-  spinner,
-} from "@clack/prompts";
+import { cancel, groupMultiselect, intro, isCancel, outro } from "@clack/prompts";
 import type { Option } from "@clack/prompts";
 import path from "node:path";
 import pc from "picocolors";
-import { validateNonInteractiveToolchains } from "../core/cli-options";
 import type { InitCliOptions } from "../core/cli-options";
-import { runExternalToolchains, runPostInstallToolchains } from "../core/external-toolchains";
+import { runExternalToolchains } from "../core/external-toolchains";
 import { resolveManagedCliPlans } from "../core/managed-cli";
-import {
-  existingTargetFiles,
-  readPackageJson,
-  writeBeforeRunToolchain,
-  writeToolchain,
-} from "../core/files";
-import { detectPackageManager, runInstall } from "../core/package-manager";
-import { getAvailableToolchains, getSelectedToolchains } from "../stacks/index";
-import { DEFAULT_ROUTER_MODE, type Feature, type RouterMode } from "../core/types";
-import { getToolchainCliTool } from "../core/toolchain-adapter";
+import { detectPackageManager } from "../core/package-manager";
 import type { ToolchainAdapter, ToolchainCatalog } from "../core/toolchain-adapter";
+import { getToolchainCliTool } from "../core/toolchain-adapter";
+import type { Feature } from "../core/types";
+import { getSelectedToolchains, toolchains } from "../stacks/index";
 
 const toolchainCatalogs = [
   ["app", "App Foundation"],
@@ -36,26 +19,15 @@ const toolchainCatalogs = [
 ] as const satisfies readonly (readonly [ToolchainCatalog, string])[];
 
 export async function runInit(cliOptions: InitCliOptions) {
-  const { managedCliFlags, selectedFeatures, skipInstall, toolchainOptions, yes } = cliOptions;
-  const routerModeFromArgs = toolchainOptions.routerMode ?? null;
+  const { managedCliArgs, selectedFeatures, yes } = cliOptions;
   const cwd = path.resolve(process.cwd(), cliOptions.target ?? ".");
+  const packageManager = cliOptions.packageManager ?? detectPackageManager();
 
   intro(pc.bgBlue(pc.white(" toolchains-init ")));
 
-  const packageJson = await readPackageJson(cwd);
-  if (packageJson == null) {
-    cancel(`Could not find package.json in target directory: ${cwd}`);
-    process.exitCode = 1;
-    return;
-  }
-
-  log.warn("Run this only in a freshly scaffolded repository.");
-  log.warn(`Target directory: ${cwd}`);
-  log.warn("It can overwrite router and quality-tool files.");
-  log.warn("Files at the same paths may be overwritten.");
-
-  const packageManager = cliOptions.packageManager ?? detectPackageManager();
-  const availableToolchains = await getAvailableToolchains({ cwd, packageJson, packageManager });
+  const availableToolchains = (toolchains as readonly ToolchainAdapter[]).filter(
+    (toolchain) => toolchain.cli?.packageManagers?.includes(packageManager) ?? true,
+  );
   let features: Feature[] | null;
   if (selectedFeatures != null) {
     const requestedAdapters = getSelectedToolchains(selectedFeatures);
@@ -65,7 +37,7 @@ export async function runInit(cliOptions: InitCliOptions) {
     );
     if (unavailable.length > 0) {
       cancel(
-        `Toolchain${unavailable.length === 1 ? " is" : "s are"} not available for this target: ${unavailable
+        `Toolchain${unavailable.length === 1 ? " is" : "s are"} not supported by ${packageManager}: ${unavailable
           .map((toolchain) => getToolchainCliTool(toolchain))
           .join(", ")}`,
       );
@@ -85,93 +57,26 @@ export async function runInit(cliOptions: InitCliOptions) {
     cancel("Initialization cancelled.");
     return;
   }
-  if (routerModeFromArgs != null && !features.includes("router")) {
-    cancel("The router setup option requires --tanstack-router.");
-    process.exitCode = 1;
-    return;
-  }
-  const routerMode =
-    features.includes("router") && !yes && routerModeFromArgs == null
-      ? await selectRouterMode()
-      : (routerModeFromArgs ?? DEFAULT_ROUTER_MODE);
-  if (routerMode == null) {
-    cancel("Initialization cancelled.");
-    return;
-  }
-  if (yes && routerMode === "code") {
-    cancel(
-      "Code-Based Routing is selected inside the interactive TanStack CLI. Run without --yes.",
-    );
-    process.exitCode = 1;
-    return;
-  }
+
   const selectedToolchains = getSelectedToolchains(features);
-  const nonInteractiveErrors = validateNonInteractiveToolchains(
+  const options = { features };
+  const managedCliPlans = resolveManagedCliPlans({
+    packageManager,
     selectedToolchains,
-    yes && !skipInstall,
-  );
-  if (nonInteractiveErrors.length > 0) {
-    cancel(nonInteractiveErrors.join("\n"));
-    process.exitCode = 1;
-    return;
-  }
-  const options = { features, routerMode };
-  const managedCliPlans = skipInstall
-    ? new Map()
-    : resolveManagedCliPlans({
-        options,
-        packageManager,
-        selectedToolchains,
-        userFlags: managedCliFlags,
-        yes,
-      });
-
-  const overwritten = await existingTargetFiles(cwd, options);
-  if (overwritten.length > 0 && !yes) {
-    printOverwrittenFiles(overwritten);
-  }
-  if (overwritten.length > 0 && !yes && !(await confirmOverwrite(overwritten))) {
-    cancel("Initialization cancelled.");
-    return;
-  }
-
-  const s = spinner();
-  s.start("Preparing toolchain");
-  s.stop("Toolchain prepared");
-
-  if (!skipInstall) {
-    if (await writeBeforeRunToolchain(cwd, packageJson, options)) {
-      log.info(`Running ${packageManager} install before official initializers.`);
-      await runInstall(packageManager, cwd);
-    }
-    log.info("Running official initializers.");
-    await runExternalToolchains(cwd, packageManager, options, yes, managedCliPlans);
-    log.info("Official initializers completed.");
-  }
-
-  const latestPackageJson = (await readPackageJson(cwd)) ?? packageJson;
-  await writeToolchain(cwd, latestPackageJson, options);
-  printToolchainNotes(options);
-
-  if (!skipInstall) {
-    log.info(`Running ${packageManager} install.`);
-    await runInstall(packageManager, cwd);
-    log.info("Dependencies installed.");
-    await runPostInstallToolchains(cwd, packageManager, options, yes, managedCliPlans);
-  }
+    userArgs: managedCliArgs,
+  });
 
   outro(
-    [pc.green("toolchains-init is ready."), `Check: ${pc.cyan(buildCheckCommand(packageManager))}`]
-      .filter(Boolean)
-      .join("\n"),
+    `Wrapper selection complete. Passing control to ${selectedToolchains.length} upstream CLI command${selectedToolchains.length === 1 ? "" : "s"}.`,
   );
+  await runExternalToolchains(cwd, packageManager, options, managedCliPlans);
 }
 
 export async function selectFeatures(
-  availableToolchains: Awaited<ReturnType<typeof getAvailableToolchains>>,
+  availableToolchains: readonly ToolchainAdapter[],
 ): Promise<Feature[] | null> {
   const selected = await groupMultiselect({
-    message: "What should be initialized?",
+    message: "Which upstream CLI commands should run?",
     options: groupToolchainOptions(availableToolchains),
     required: true,
     initialValues: [],
@@ -201,70 +106,4 @@ function groupToolchainOptions(availableToolchains: readonly ToolchainAdapter[])
   }
 
   return Object.fromEntries(entries);
-}
-
-async function selectRouterMode(): Promise<RouterMode | null> {
-  const selected = await select({
-    message: "Which TanStack Router mode should be initialized?",
-    options: [
-      {
-        value: "file",
-        label: "File-Based Routing",
-        hint: "File routes with generated routeTree.gen.ts",
-      },
-      {
-        value: "code",
-        label: "Code-Based Routing",
-        hint: "Code-defined route tree",
-      },
-    ],
-    initialValue: DEFAULT_ROUTER_MODE,
-  });
-
-  return isCancel(selected) ? null : (selected as RouterMode);
-}
-
-function printOverwrittenFiles(files: string[]) {
-  const visibleFiles = files.slice(0, 12);
-  for (const file of visibleFiles) {
-    log.warn(`Will overwrite: ${file}`);
-  }
-  if (files.length > visibleFiles.length) {
-    log.warn(`${files.length - visibleFiles.length} more files will be overwritten.`);
-  }
-}
-
-function printToolchainNotes(options: { features: Feature[]; routerMode: RouterMode }) {
-  const notes = [
-    ...new Set(
-      getSelectedToolchains(options.features).flatMap(
-        (toolchain) => toolchain.notes?.({ options }) ?? [],
-      ),
-    ),
-  ];
-
-  for (const note of notes) {
-    log.info(note);
-  }
-}
-
-async function confirmOverwrite(files: string[]) {
-  const answer = await confirm({
-    message: `Overwrite these ${files.length} files?`,
-    initialValue: false,
-  });
-  return isCancel(answer) ? false : answer;
-}
-
-function buildCheckCommand(packageManager: string) {
-  if (packageManager === "npm") {
-    return "npm run build";
-  }
-  if (packageManager === "bun") {
-    return "bun run build";
-  }
-  if (packageManager === "deno") {
-    return "deno task build";
-  }
-  return `${packageManager} build`;
 }

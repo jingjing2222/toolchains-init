@@ -1,35 +1,33 @@
-import { describe, expect, it } from "vitest";
-import { runExternalToolchains, runPostInstallToolchains } from "../../core/external-toolchains";
-import { writeToolchain } from "../../core/files";
-import { reactDoctorCliManifest } from "./index";
-import {
-  adapterInitTimeout,
-  createFreshViteProject,
-  options,
-  readPackageJson,
-} from "../init-test-utils";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { resolveCliCommand } from "../../core/cli-command-manifest";
+import { runExternalToolchains } from "../../core/external-toolchains";
+import { reactDoctor, reactDoctorCliManifest } from "./index";
+import { options } from "../init-test-utils";
+
+const mocks = vi.hoisted(() => ({
+  runCommand: vi.fn(async () => {}),
+}));
+
+vi.mock("../../core/run-command", () => ({
+  runCommand: mocks.runCommand,
+}));
 
 describe("React Doctor adapter init", () => {
-  it(
-    "adds the package script in lifecycle order",
-    async () => {
-      const cwd = await createFreshViteProject();
-      const packageJson = await readPackageJson(cwd);
-      const toolchainOptions = options(["reactDoctor"]);
+  beforeEach(() => {
+    mocks.runCommand.mockClear();
+  });
 
-      await runExternalToolchains(cwd, "npm", toolchainOptions, true);
-      expect((await readPackageJson(cwd)).scripts?.["react-doctor"]).toBeUndefined();
+  it("executes the bare React Doctor CLI with inherited stdin", async () => {
+    expect(reactDoctor.managedCli).toBe(true);
+    const command = resolveCliCommand(reactDoctorCliManifest, "check", "npm");
+    expect(command).toEqual({
+      bin: "npx",
+      args: [`react-doctor@${reactDoctorCliManifest.version}`],
+    });
 
-      await writeToolchain(cwd, packageJson, toolchainOptions);
-      expect((await readPackageJson(cwd)).scripts?.["react-doctor"]).toBe(
-        `npx react-doctor@${reactDoctorCliManifest.version}`,
-      );
+    await runExternalToolchains(".", "npm", options(["reactDoctor"]));
 
-      await runPostInstallToolchains(cwd, "npm", toolchainOptions, true);
-      expect((await readPackageJson(cwd)).scripts?.["react-doctor"]).toBe(
-        `npx react-doctor@${reactDoctorCliManifest.version}`,
-      );
-    },
-    adapterInitTimeout,
-  );
+    expect(mocks.runCommand).toHaveBeenCalledTimes(1);
+    expect(mocks.runCommand).toHaveBeenCalledWith(".", command.bin, command.args);
+  });
 });

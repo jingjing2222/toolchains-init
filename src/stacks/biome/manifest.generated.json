@@ -15,17 +15,12 @@
       },
       "flags": {
         "jsonc": {
-          "type": "boolean",
-          "cliName": "--jsonc",
-          "supported": true
+          "cliName": "--jsonc"
         },
         "help": {
-          "type": "boolean",
-          "cliName": "--help",
-          "supported": true
+          "cliName": "--help"
         }
-      },
-      "interactive": false
+      }
     }
   ],
   "sources": [
@@ -43,27 +38,20 @@
     },
     {
       "kind": "docs",
-      "url": "https://biomejs.dev/reference/configuration/",
+      "url": "https://biomejs.dev/guides/getting-started/",
       "confidence": "high",
       "checks": [
         {
           "found": true,
-          "text": "biome.json"
-        },
-        {
-          "found": true,
-          "text": "configuration file"
+          "text": "npx @biomejs/biome init"
         }
       ],
       "review": {
-        "reason": "Adapter installs Biome and writes editor settings that assume Biome config-file behavior.",
+        "reason": "Adapter executes the documented biome init command unchanged.",
         "files": ["src/stacks/biome/adapter.ts", "src/stacks/biome/init.test.ts"],
         "sections": ["Configuration"],
-        "mustContain": ["biome.json", "configuration file"],
-        "checks": [
-          "Confirm `biome init` still creates a config file for project-local setup.",
-          "Confirm `biome.requireConfiguration` and Zed `require_config_file` remain valid editor settings."
-        ]
+        "mustContain": ["npx @biomejs/biome init"],
+        "checks": ["Confirm biome init remains the project configuration initializer."]
       }
     }
   ]

@@ -1,6 +1,2 @@
-export {
-  mergeDependencyChanges,
-  restorePackageJsonWithDependencyChanges,
-  tanStackRouter,
-} from "./adapter";
+export { tanStackRouter } from "./adapter";
 export { tanStackRouterCliManifest, tanStackRouterCliManifestData } from "./manifest";

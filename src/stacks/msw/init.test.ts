@@ -1,67 +1,33 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { resolveCliCommand } from "../../core/cli-command-manifest";
-import { runExternalToolchains, runPostInstallToolchains } from "../../core/external-toolchains";
-import { writeToolchain } from "../../core/files";
-import {
-  adapterInitTimeout,
-  createFreshViteProject,
-  expectFileToExist,
-  options,
-  readPackageJson,
-} from "../init-test-utils";
+import { runExternalToolchains } from "../../core/external-toolchains";
+import { msw, mswCliManifest } from "./index";
+import { options } from "../init-test-utils";
+
+const mocks = vi.hoisted(() => ({
+  runCommand: vi.fn(async () => {}),
+}));
+
+vi.mock("../../core/run-command", () => ({
+  runCommand: mocks.runCommand,
+}));
 
 describe("MSW adapter init", () => {
-  it("is only available for Vite projects with supported package managers", async () => {
-    const cwd = await createFreshViteProject();
-    const packageJson = await readPackageJson(cwd);
-    const { msw } = await import("./adapter");
-
-    expect(await msw.isAvailable?.({ cwd, packageJson, packageManager: "npm" })).toBe(true);
-    expect(await msw.isAvailable?.({ cwd, packageJson, packageManager: "deno" })).toBe(false);
-    expect(
-      await msw.isAvailable?.({
-        cwd,
-        packageJson: { ...packageJson, dependencies: { react: "^18.3.1" } },
-        packageManager: "npm",
-      }),
-    ).toBe(false);
+  beforeEach(() => {
+    mocks.runCommand.mockClear();
   });
 
-  it("declares the generated service worker as an overwrite target", async () => {
-    const { msw } = await import("./adapter");
-
-    expect(msw.targetFiles?.(options(["msw"]))).toEqual(["public/mockServiceWorker.js"]);
-  });
-
-  it("resolves the MSW init command", async () => {
-    const { mswCliManifest } = await import("./manifest");
-
-    expect(resolveCliCommand(mswCliManifest, "init", "npm")).toEqual({
+  it("executes bare msw init with inherited stdin", async () => {
+    expect(msw.managedCli).toBe(true);
+    const command = resolveCliCommand(mswCliManifest, "init", "npm");
+    expect(command).toEqual({
       bin: "npx",
       args: [`msw@${mswCliManifest.version}`, "init"],
     });
+
+    await runExternalToolchains(".", "npm", options(["msw"]));
+
+    expect(mocks.runCommand).toHaveBeenCalledTimes(1);
+    expect(mocks.runCommand).toHaveBeenCalledWith(".", command.bin, command.args);
   });
-
-  it(
-    "scaffolds MSW worker and package entries in lifecycle order",
-    async () => {
-      const cwd = await createFreshViteProject();
-      const packageJson = await readPackageJson(cwd);
-      const toolchainOptions = options(["msw"]);
-
-      await runExternalToolchains(cwd, "npm", toolchainOptions, true);
-      await expectFileToExist(cwd, "public/mockServiceWorker.js");
-      expect((await readPackageJson(cwd)).msw?.workerDirectory).toEqual(["public"]);
-
-      await writeToolchain(cwd, packageJson, toolchainOptions);
-      const nextPackageJson = await readPackageJson(cwd);
-      const { mswCliManifest } = await import("./manifest");
-      expect(nextPackageJson.devDependencies?.msw).toBe(mswCliManifest.version);
-      expect(nextPackageJson.msw?.workerDirectory).toEqual(["public"]);
-
-      await runPostInstallToolchains(cwd, "npm", toolchainOptions, true);
-      await expectFileToExist(cwd, "public/mockServiceWorker.js");
-    },
-    adapterInitTimeout,
-  );
 });

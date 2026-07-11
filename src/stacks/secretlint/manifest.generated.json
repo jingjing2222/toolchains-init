@@ -1,0 +1,94 @@
+{
+  "schemaVersion": "toolchains-init/cli-command-manifest/v1",
+  "tool": "secretlint",
+  "package": "secretlint",
+  "version": "13.0.2",
+  "commands": [
+    {
+      "id": "init",
+      "packageManagers": {
+        "npm": ["npx", "secretlint@{version}", "--init"],
+        "pnpm": ["pnpm", "dlx", "secretlint@{version}", "--init"],
+        "yarn": ["yarn", "dlx", "secretlint@{version}", "--init"],
+        "bun": ["bunx", "secretlint@{version}", "--init"],
+        "deno": ["deno", "x", "-A", "npm:secretlint@{version}", "--init"]
+      },
+      "flags": {
+        "init": {
+          "cliName": "--init"
+        },
+        "format": {
+          "cliName": "--format"
+        },
+        "output": {
+          "cliName": "--output"
+        },
+        "secretlintrc": {
+          "cliName": "--secretlintrc"
+        },
+        "secretlintignore": {
+          "cliName": "--secretlintignore"
+        },
+        "stdinFileName": {
+          "cliName": "--stdinFileName"
+        },
+        "noColor": {
+          "cliName": "--no-color"
+        },
+        "noTerminalLink": {
+          "cliName": "--no-terminalLink"
+        },
+        "noMaskSecrets": {
+          "cliName": "--no-maskSecrets"
+        },
+        "noGlob": {
+          "cliName": "--no-glob"
+        },
+        "noGitignore": {
+          "cliName": "--no-gitignore"
+        },
+        "profile": {
+          "cliName": "--profile"
+        },
+        "secretlintrcJSON": {
+          "cliName": "--secretlintrcJSON"
+        },
+        "locale": {
+          "cliName": "--locale"
+        }
+      }
+    }
+  ],
+  "sources": [
+    {
+      "kind": "npm",
+      "package": "secretlint",
+      "version": "13.0.2",
+      "distTag": "latest",
+      "resolvedAt": "2026-05-15T14:43:43.715Z"
+    },
+    {
+      "kind": "cli-help",
+      "command": ["npx", "--yes", "secretlint@13.0.2", "--help"],
+      "commandId": "init"
+    },
+    {
+      "kind": "docs",
+      "url": "https://raw.githubusercontent.com/secretlint/secretlint/master/README.md",
+      "confidence": "high",
+      "checks": [
+        {
+          "found": true,
+          "text": "npx secretlint --init"
+        }
+      ],
+      "review": {
+        "reason": "Adapter executes the documented secretlint --init command unchanged.",
+        "files": ["src/stacks/secretlint/adapter.ts", "src/stacks/secretlint/init.test.ts"],
+        "sections": ["Using Node.js"],
+        "mustContain": ["npx secretlint --init"],
+        "checks": ["Confirm secretlint --init remains the configuration initializer."]
+      }
+    }
+  ]
+}
