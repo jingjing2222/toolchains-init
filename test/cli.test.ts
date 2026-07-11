@@ -3,12 +3,31 @@ import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { describe, expect, it } from "vitest";
+import { getToolchainCliTool } from "../src/core/toolchain-adapter";
 import { biomeCliManifest } from "../src/stacks/biome";
 import { changesetsCliManifest } from "../src/stacks/changesets";
 import { knipCliManifest } from "../src/stacks/knip";
 import { prettierCliManifest } from "../src/stacks/prettier";
+import { reactDoctorCliManifest } from "../src/stacks/react-doctor";
+import { toolchains } from "../src/stacks/index";
 
 const cliPath = path.resolve("dist/cli.mjs");
+const freshViteNoInstallArgs = [
+  "--tanstack-router",
+  "--playwright",
+  "--storybook",
+  "--msw",
+  "--oxfmt",
+  "--prettier",
+  "--oxlint",
+  "--eslint",
+  "--biome",
+  "--knip",
+  "--react-doctor",
+  "--changesets",
+  "--yes",
+  "--no-install",
+];
 
 describe("toolchains-init CLI", () => {
   it("prints the package version", async () => {
@@ -30,12 +49,65 @@ describe("toolchains-init CLI", () => {
 
     expect(result.status).toBe(0);
     expect(result.stdout).toContain("toolchains-init [--target path]");
-    expect(result.stdout).toContain("--router file|code");
+    expect(result.stdout).not.toContain("--toolchains");
+    expect(result.stdout).not.toContain("--router file|code");
+  });
+
+  it("prints focused manifest-generated help for a direct selector", () => {
+    const result = spawnSync(process.execPath, [cliPath, "--playwright", "--help"], {
+      encoding: "utf8",
+    });
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain("Tool: --playwright");
+    expect(result.stdout).toContain("--playwright.browser <value>");
+    expect(result.stdout).toContain("--playwright.lang <js|TypeScript>");
+  });
+
+  it("lists every generated toolchain ID in help", () => {
+    const result = spawnSync(process.execPath, [cliPath, "--help"], {
+      encoding: "utf8",
+    });
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain("--package-manager");
+
+    for (const toolchain of toolchains) {
+      expect(result.stdout).toContain(`--${getToolchainCliTool(toolchain)}`);
+    }
+  });
+
+  it("recognizes help and version after other options", async () => {
+    const helpResult = spawnSync(
+      process.execPath,
+      [cliPath, "--package-manager", "wat", "--help"],
+      {
+        encoding: "utf8",
+      },
+    );
+    const versionResult = spawnSync(
+      process.execPath,
+      [cliPath, "--package-manager", "wat", "--version"],
+      { encoding: "utf8" },
+    );
+    const helpWinsResult = spawnSync(process.execPath, [cliPath, "--version", "--help"], {
+      encoding: "utf8",
+    });
+    const packageJson = JSON.parse(await readFile(path.resolve("package.json"), "utf8")) as {
+      version: string;
+    };
+
+    expect(helpResult.status).toBe(0);
+    expect(helpResult.stdout).toContain("Usage:");
+    expect(versionResult.status).toBe(0);
+    expect(versionResult.stdout.trim()).toBe(packageJson.version);
+    expect(helpWinsResult.status).toBe(0);
+    expect(helpWinsResult.stdout).toContain("Usage:");
   });
 
   it("initializes a fresh Vite React project", async () => {
     const appDir = await createFreshViteProject();
-    const result = spawnSync(process.execPath, [cliPath, "--yes", "--no-install"], {
+    const result = spawnSync(process.execPath, [cliPath, ...freshViteNoInstallArgs], {
       cwd: appDir,
       encoding: "utf8",
     });
@@ -86,7 +158,7 @@ describe("toolchains-init CLI", () => {
 
   it("does not scaffold router files when external CLIs are skipped", async () => {
     const appDir = await createFreshViteProject();
-    const result = spawnSync(process.execPath, [cliPath, "--yes", "--no-install"], {
+    const result = spawnSync(process.execPath, [cliPath, ...freshViteNoInstallArgs], {
       cwd: appDir,
       encoding: "utf8",
     });
@@ -101,7 +173,7 @@ describe("toolchains-init CLI", () => {
   it("uses the current directory as the toolchain target", async () => {
     const appDir = await createFreshViteProject();
     const nestedDir = path.join(appDir, "src", "pages", "home");
-    const result = spawnSync(process.execPath, [cliPath, "--yes", "--no-install"], {
+    const result = spawnSync(process.execPath, [cliPath, "--knip", "--yes", "--no-install"], {
       cwd: nestedDir,
       encoding: "utf8",
     });
@@ -119,7 +191,7 @@ describe("toolchains-init CLI", () => {
     );
     const result = spawnSync(
       process.execPath,
-      [cliPath, "--target", "apps/web", "--yes", "--no-install"],
+      [cliPath, "--target", "apps/web", ...freshViteNoInstallArgs],
       {
         cwd: workspaceDir,
         encoding: "utf8",
@@ -135,6 +207,165 @@ describe("toolchains-init CLI", () => {
     expect(packageJson.scripts.knip).toBe(`npx knip@${knipCliManifest.version}`);
   });
 
+  it("initializes only explicitly selected toolchains without prompting", async () => {
+    const appDir = await createFreshViteProject();
+    const result = spawnSync(
+      process.execPath,
+      [cliPath, "--knip", "--react-doctor", "--package-manager", "npm", "--yes", "--no-install"],
+      {
+        cwd: appDir,
+        encoding: "utf8",
+      },
+    );
+
+    expect(result.status, cliOutput(result)).toBe(0);
+
+    const packageJson = JSON.parse(await readFile(path.join(appDir, "package.json"), "utf8")) as {
+      scripts: Record<string, string>;
+      devDependencies: Record<string, string>;
+    };
+    expect(packageJson.scripts.knip).toBe(`npx knip@${knipCliManifest.version}`);
+    expect(packageJson.scripts["react-doctor"]).toBe(
+      `npx react-doctor@${reactDoctorCliManifest.version}`,
+    );
+    expect(packageJson.scripts.typecheck).toBe("tsc --build");
+    expect(packageJson.devDependencies["@changesets/cli"]).toBeUndefined();
+    expect(packageJson.devDependencies["@biomejs/biome"]).toBe("^1.9.4");
+    await expectFileNotToExist(appDir, ".vscode/settings.json");
+  });
+
+  it("rejects unknown options", async () => {
+    const appDir = await createFreshViteProject();
+    const packageJsonPath = path.join(appDir, "package.json");
+    const packageJsonBefore = await readFile(packageJsonPath, "utf8");
+    const result = spawnSync(
+      process.execPath,
+      [cliPath, "--does-not-exist", "--yes", "--no-install"],
+      {
+        cwd: appDir,
+        encoding: "utf8",
+      },
+    );
+
+    expect(result.status).toBe(1);
+    expect(cliOutput(result)).toMatch(/unknown option/i);
+    expect(cliOutput(result)).toContain("--does-not-exist");
+    expect(await readFile(packageJsonPath, "utf8")).toBe(packageJsonBefore);
+  });
+
+  it.each(["--toolchains", "--router"])("rejects the removed %s option", async (option) => {
+    const appDir = await createFreshViteProject();
+    const packageJsonPath = path.join(appDir, "package.json");
+    const packageJsonBefore = await readFile(packageJsonPath, "utf8");
+    const result = spawnSync(process.execPath, [cliPath, option, "value"], {
+      cwd: appDir,
+      encoding: "utf8",
+    });
+
+    expect(result.status).toBe(1);
+    expect(cliOutput(result)).toMatch(/unknown option/i);
+    expect(cliOutput(result)).toContain(option);
+    expect(await readFile(packageJsonPath, "utf8")).toBe(packageJsonBefore);
+  });
+
+  it("rejects a known toolchain that is unavailable for the target", async () => {
+    const appDir = await createFreshViteProject();
+    const packageJsonPath = path.join(appDir, "package.json");
+    const packageJsonBefore = await readFile(packageJsonPath, "utf8");
+    const result = spawnSync(
+      process.execPath,
+      [cliPath, "--hot-updater", "--package-manager", "npm", "--yes", "--no-install"],
+      {
+        cwd: appDir,
+        encoding: "utf8",
+      },
+    );
+
+    expect(result.status).toBe(1);
+    expect(cliOutput(result)).toMatch(/not available/i);
+    expect(cliOutput(result)).toContain("hot-updater");
+    expect(await readFile(packageJsonPath, "utf8")).toBe(packageJsonBefore);
+    await expectFileNotToExist(appDir, ".vscode/settings.json");
+  });
+
+  it("rejects an interactive-only Hot Updater initializer before writing", async () => {
+    const appDir = await createFreshReactNativeProject();
+    const packageJsonPath = path.join(appDir, "package.json");
+    const packageJsonBefore = await readFile(packageJsonPath, "utf8");
+    const result = spawnSync(
+      process.execPath,
+      [cliPath, "--hot-updater", "--package-manager", "npm", "--yes"],
+      {
+        cwd: appDir,
+        encoding: "utf8",
+      },
+    );
+
+    expect(result.status).toBe(1);
+    expect(cliOutput(result)).toContain("Interactive-only");
+    expect(cliOutput(result)).toContain("hot-updater");
+    expect(await readFile(packageJsonPath, "utf8")).toBe(packageJsonBefore);
+    await expectFileNotToExist(appDir, "hot-updater.config.ts");
+  });
+
+  it("requires explicit selectors for --yes without side effects", async () => {
+    const appDir = await createFreshViteProject();
+    const packageJsonPath = path.join(appDir, "package.json");
+    const packageJsonBefore = await readFile(packageJsonPath, "utf8");
+    const result = spawnSync(process.execPath, [cliPath, "--package-manager", "npm", "--yes"], {
+      cwd: appDir,
+      encoding: "utf8",
+    });
+
+    expect(result.status).toBe(1);
+    expect(cliOutput(result)).toContain("requires at least one direct --<tool> selector");
+    expect(await readFile(packageJsonPath, "utf8")).toBe(packageJsonBefore);
+    await expectFileNotToExist(appDir, ".vscode/settings.json");
+  });
+
+  it("rejects an interactive-only ESLint initializer before writing", async () => {
+    const appDir = await createFreshViteProject();
+    const packageJsonPath = path.join(appDir, "package.json");
+    const packageJsonBefore = await readFile(packageJsonPath, "utf8");
+    const result = spawnSync(
+      process.execPath,
+      [cliPath, "--eslint", "--package-manager", "npm", "--yes"],
+      {
+        cwd: appDir,
+        encoding: "utf8",
+      },
+    );
+
+    expect(result.status).toBe(1);
+    expect(cliOutput(result)).toContain("Interactive-only");
+    expect(cliOutput(result)).toContain("eslint");
+    expect(await readFile(packageJsonPath, "utf8")).toBe(packageJsonBefore);
+    await expectFileNotToExist(appDir, ".vscode/settings.json");
+  });
+
+  it("rejects unattended code-router setup before writing", async () => {
+    const appDir = await createFreshViteProject();
+    const packageJsonPath = path.join(appDir, "package.json");
+    const packageJsonBefore = await readFile(packageJsonPath, "utf8");
+    const result = spawnSync(
+      process.execPath,
+      [
+        cliPath,
+        "--tanstack-router",
+        "--tanstack-router.setup.router-mode=code",
+        "--package-manager",
+        "npm",
+        "--yes",
+      ],
+      { cwd: appDir, encoding: "utf8" },
+    );
+
+    expect(result.status).toBe(1);
+    expect(cliOutput(result)).toContain("Code-Based Routing");
+    expect(await readFile(packageJsonPath, "utf8")).toBe(packageJsonBefore);
+    await expectFileNotToExist(appDir, "src/routes");
+  });
+
   it("rejects the removed init subcommand", async () => {
     const appDir = await createFreshViteProject();
     const result = spawnSync(process.execPath, [cliPath, "init", "--yes", "--no-install"], {
@@ -143,7 +374,7 @@ describe("toolchains-init CLI", () => {
     });
 
     expect(result.status).toBe(1);
-    expect(result.stdout).toContain("Unknown argument: init");
+    expect(cliOutput(result)).toContain("Unknown argument: init");
   });
 });
 
@@ -189,6 +420,26 @@ async function createFreshViteProject(appDir?: string) {
   await writeFile(path.join(appDir, "eslint.config.js"), "export default [];\n");
   await writeFile(path.join(appDir, "biome.json"), "{}\n");
   await mkdir(path.join(appDir, "src", "pages", "home"), { recursive: true });
+  return appDir;
+}
+
+async function createFreshReactNativeProject() {
+  const appDir = await mkdtemp(path.join(os.tmpdir(), "toolchains-init-react-native-"));
+  await writeFile(
+    path.join(appDir, "package.json"),
+    `${JSON.stringify(
+      {
+        name: "react-native-smoke",
+        private: true,
+        dependencies: {
+          react: "19.2.3",
+          "react-native": "0.86.0",
+        },
+      },
+      null,
+      2,
+    )}\n`,
+  );
   return appDir;
 }
 
@@ -249,4 +500,8 @@ async function expectEditorSettingsToExist(rootDir: string) {
 
 async function readJson(file: string) {
   return JSON.parse(await readFile(file, "utf8")) as Record<string, unknown>;
+}
+
+function cliOutput(result: ReturnType<typeof spawnSync>) {
+  return `${result.stdout ?? ""}${result.stderr ?? ""}`;
 }

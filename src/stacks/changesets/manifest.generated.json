@@ -13,7 +13,7 @@
         "bun": ["bunx", "@changesets/cli@{version}", "init"],
         "deno": ["deno", "x", "-A", "npm:@changesets/cli@{version}", "init"]
       },
-      "interactive": true
+      "interactive": false
     }
   ],
   "sources": [

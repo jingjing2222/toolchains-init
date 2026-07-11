@@ -1,6 +1,5 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import { resolveCliCommand } from "../../core/cli-command-manifest";
 import { runCommand } from "../../core/run-command";
 import { defineToolchain } from "../../core/toolchain-adapter";
 
@@ -36,47 +35,59 @@ export const tanStackRouter = defineToolchain({
       },
     },
   ],
-  async run({ cwd, packageManager, options, yes }) {
-    const { tanStackRouterCliManifest } = await import("./manifest");
-    const command = resolveCliCommand(
-      tanStackRouterCliManifest,
-      "create-router",
-      packageManager,
-      yes && options.routerMode === "file"
-        ? {
-            routerOnly: true,
-            targetDir: ".",
-            force: true,
-            noInstall: true,
-            noGit: true,
-            noToolchain: true,
-            noExamples: true,
-            noIntent: true,
-            packageManager,
-            framework: "React",
-            yes: true,
-          }
-        : {
-            routerOnly: true,
-            targetDir: ".",
-            force: true,
-            noInstall: true,
-            noGit: true,
-            noToolchain: true,
-            noExamples: true,
-            noIntent: true,
-            packageManager,
-            interactive: true,
-          },
-    );
-
-    const packageJsonBefore = await readPackageJson(cwd);
-
-    await runCommand(cwd, command.bin, command.args);
-
-    if (packageJsonBefore != null) {
-      await restorePackageJsonWithDependencyChanges(cwd, packageJsonBefore);
-    }
+  managedCli: {
+    phase: "run",
+    setup: {
+      "router-mode": {
+        description: "Choose file-based or code-based routing (code mode remains interactive).",
+        option: "routerMode",
+        type: "enum",
+        values: ["file", "code"],
+      },
+    },
+    locked({ packageManager, options, yes }) {
+      const invariants = {
+        routerOnly: true,
+        targetDir: ".",
+        force: true,
+        noInstall: true,
+        noGit: true,
+        noToolchain: true,
+        noExamples: true,
+        noIntent: true,
+        packageManager,
+      };
+      return yes && options.routerMode === "file"
+        ? { ...invariants, framework: "React", yes: true }
+        : { ...invariants, interactive: true };
+    },
+    blocked: {
+      addOnConfig: "Add-on configuration is unavailable in router-only initialization.",
+      addOns: "Start-dependent add-ons are unavailable in router-only initialization.",
+      addonDetails: "Add-on inspection does not create the managed router project.",
+      deployment: "Deployment adapters are unavailable in router-only initialization.",
+      devWatch: "Development watchers must not run during initialization.",
+      examples: "Examples are disabled for router-only initialization.",
+      git: "Git initialization is owned by the target repository.",
+      intent: "TanStack Start intent selection is disabled for router-only initialization.",
+      interactive: "Router interaction is controlled by the selected router mode.",
+      json: "JSON output does not create the managed router project.",
+      listAddOns: "Add-on listing does not create the managed router project.",
+      nonInteractive: "Router interaction is controlled by the selected router mode.",
+      runDev: "Starting a development server is outside initialization.",
+      starter: "Starter selection is unavailable in router-only initialization.",
+      template: "Template selection is unavailable in router-only initialization.",
+      templateId: "Template selection is unavailable in router-only initialization.",
+      toolchain: "Additional toolchain setup is managed by toolchains-init selections.",
+      yes: "Use the global --yes option to select unattended initialization.",
+    },
+    async execute({ cwd, command, yes }) {
+      const packageJsonBefore = await readPackageJson(cwd);
+      await runCommand(cwd, command.bin, command.args, { stdin: yes ? "ignore" : "inherit" });
+      if (packageJsonBefore != null) {
+        await restorePackageJsonWithDependencyChanges(cwd, packageJsonBefore);
+      }
+    },
   },
 });
 

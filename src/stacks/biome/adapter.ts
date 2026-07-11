@@ -3,10 +3,7 @@ import {
   addVsCodeSettings,
   addZedSettings,
 } from "../../core/editor-settings";
-import { resolveCliCommand } from "../../core/cli-command-manifest";
 import { setManifestDevDependency } from "../../core/package-json-utils";
-import type { PackageManager } from "../../core/package-manager";
-import { runCommand } from "../../core/run-command";
 import { defineToolchain } from "../../core/toolchain-adapter";
 
 const biomeVsCodeLanguages = ["javascript", "javascriptreact", "typescript", "typescriptreact"];
@@ -36,6 +33,9 @@ export const biome = defineToolchain({
       },
     },
   ],
+  managedCli: {
+    phase: "afterInstall",
+  },
   updatePackageJson({ cliManifest, packageJson }) {
     setManifestDevDependency(packageJson, cliManifest);
   },
@@ -51,9 +51,6 @@ export const biome = defineToolchain({
         },
       },
     });
-  },
-  async afterInstall({ cwd, packageManager }) {
-    await runBiomeInit(cwd, packageManager);
   },
   notes({ options }) {
     const notes = [
@@ -85,11 +82,4 @@ function getBiomeVsCodeSettings(hasOxfmt: boolean) {
       },
     ]),
   );
-}
-
-function runBiomeInit(cwd: string, packageManager: PackageManager) {
-  return import("./manifest").then(({ biomeCliManifest }) => {
-    const command = resolveCliCommand(biomeCliManifest, "init", packageManager);
-    return runCommand(cwd, command.bin, command.args);
-  });
 }

@@ -1,6 +1,4 @@
 import { addVsCodeExtensionRecommendations, addVsCodeSettings } from "../../core/editor-settings";
-import { resolveCliCommand } from "../../core/cli-command-manifest";
-import { runCommand } from "../../core/run-command";
 import { defineToolchain } from "../../core/toolchain-adapter";
 
 export const eslint = defineToolchain({
@@ -26,15 +24,32 @@ export const eslint = defineToolchain({
         ],
       },
     },
+    {
+      url: "https://raw.githubusercontent.com/eslint/create-config/main/lib/config-generator.js",
+      confidence: "high",
+      review: {
+        reason:
+          "Adapter marks the initializer interactive-only because its output phase always asks installation questions.",
+        files: ["src/stacks/eslint/adapter.ts", "src/stacks/eslint/init.test.ts"],
+        sections: ["ConfigGenerator.output"],
+        mustContain: ["installationQuestions", "enquirer.prompt"],
+        checks: [
+          "Confirm the output phase still prompts for dependency installation.",
+          "If a stable full-argument path bypasses every prompt, remove the interactive-only marker and add an enabled `yes: true` smoke test.",
+        ],
+      },
+    },
   ],
   help: false,
   hint: "Find and fix problems in JavaScript code",
+  nonInteractive: {
+    supported: false,
+    reason: "@eslint/create-config still prompts for dependency installation",
+  },
   runner: "dlx",
   subcommand: null,
-  async run({ cwd, packageManager }) {
-    const { eslintCliManifest } = await import("./manifest");
-    const command = resolveCliCommand(eslintCliManifest, "init", packageManager);
-    await runCommand(cwd, command.bin, command.args);
+  managedCli: {
+    phase: "run",
   },
   targetFiles() {
     return ["eslint.config.js", "eslint.config.mjs", "eslint.config.cjs"];

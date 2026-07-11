@@ -88,7 +88,9 @@ export type CliCommandContract = InferOutput<typeof cliCommandContractSchema>;
 export type CliCommandManifest = InferOutput<typeof cliCommandManifestSchema>;
 
 export function defineCliCommandManifest(manifest: unknown) {
-  return v.parse(cliCommandManifestSchema, manifest);
+  const parsed = v.parse(cliCommandManifestSchema, manifest);
+  validateManifestIdentities(parsed);
+  return parsed;
 }
 
 export function resolveCliCommand(
@@ -96,6 +98,7 @@ export function resolveCliCommand(
   commandId: string,
   packageManager: PackageManager,
   flags: Record<string, boolean | string> = {},
+  positionals: readonly string[] = [],
 ) {
   const command = manifest.commands.find((candidate) => candidate.id === commandId);
   if (command == null) {
@@ -111,6 +114,7 @@ export function resolveCliCommand(
 
   const tokens = [
     ...template.map((token) => token.replaceAll("{version}", manifest.version)),
+    ...positionals,
     ...serializeCliFlags(command, flags),
   ];
   const [bin, ...args] = tokens;
@@ -136,6 +140,9 @@ function serializeCliFlags(command: CliCommandContract, values: Record<string, b
     }
 
     if (flag.type === "boolean") {
+      if (typeof value !== "boolean") {
+        throw new Error(`Invalid CLI flag value for ${command.id}: ${name}=${String(value)}`);
+      }
       if (value === true) {
         result.push(flag.cliName);
       }
@@ -161,4 +168,47 @@ function serializeCliFlags(command: CliCommandContract, values: Record<string, b
 
 function formatShellToken(token: string) {
   return /^[A-Za-z0-9_./:@=-]+$/.test(token) ? token : JSON.stringify(token);
+}
+
+function validateManifestIdentities(manifest: CliCommandManifest) {
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(manifest.tool)) {
+    throw new Error(`Invalid CLI manifest tool selector: ${manifest.tool}`);
+  }
+
+  assertUnique(
+    manifest.commands.map((command) => command.id),
+    `CLI command id in ${manifest.tool}`,
+  );
+
+  for (const command of manifest.commands) {
+    const cliNames: string[] = [];
+    for (const [logicalName, flag] of Object.entries(command.flags ?? {})) {
+      if (logicalName.length === 0) {
+        throw new Error(`Empty CLI flag key in ${manifest.tool}/${command.id}`);
+      }
+      if (!/^--[A-Za-z0-9][A-Za-z0-9-]*$/.test(flag.cliName)) {
+        throw new Error(`Invalid CLI flag name in ${manifest.tool}/${command.id}: ${flag.cliName}`);
+      }
+      cliNames.push(flag.cliName);
+      if (
+        flag.type === "enum" &&
+        (flag.values.length === 0 ||
+          flag.values.some((value) => value.length === 0) ||
+          new Set(flag.values).size !== flag.values.length)
+      ) {
+        throw new Error(`Invalid enum values for ${manifest.tool}/${command.id}/${logicalName}`);
+      }
+    }
+    assertUnique(cliNames, `CLI flag name in ${manifest.tool}/${command.id}`);
+  }
+}
+
+function assertUnique(values: readonly string[], label: string) {
+  const seen = new Set<string>();
+  for (const value of values) {
+    if (seen.has(value)) {
+      throw new Error(`Duplicate ${label}: ${value}`);
+    }
+    seen.add(value);
+  }
 }

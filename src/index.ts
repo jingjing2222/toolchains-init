@@ -1,2 +1,2 @@
 export { packageName, packageVersion } from "./package-info";
-export { cliCommandManifestData, cliCommandManifests } from "./stacks";
+export { cliCommandManifestData, cliCommandManifests } from "./stacks/index";

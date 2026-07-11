@@ -235,7 +235,7 @@
           "supported": true
         }
       },
-      "interactive": true
+      "interactive": false
     }
   ],
   "sources": [

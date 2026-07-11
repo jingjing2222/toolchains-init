@@ -1,4 +1,4 @@
 interface:
-  display_name: "Add Toolchain Stack"
-  short_description: "Add stacks to ait-toolchain correctly"
-  default_prompt: "Use $add-toolchain-stack to add a new toolchain stack to this repo."
+  display_name: "Add or Maintain Toolchain Stack"
+  short_description: "Add and safely maintain toolchain adapters"
+  default_prompt: "Use $add-toolchain-stack to add or maintain a manifest-backed toolchain adapter in this repository."

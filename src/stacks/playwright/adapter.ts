@@ -1,5 +1,3 @@
-import { runCommand } from "../../core/run-command";
-import { resolveCliCommand } from "../../core/cli-command-manifest";
 import { defineToolchain } from "../../core/toolchain-adapter";
 
 export const playwright = defineToolchain({
@@ -26,15 +24,25 @@ export const playwright = defineToolchain({
       },
     },
   ],
-  async run({ cwd, packageManager, yes }) {
-    const { playwrightCliManifest } = await import("./manifest");
-    const command = resolveCliCommand(
-      playwrightCliManifest,
-      "init",
-      packageManager,
-      yes ? { quiet: true, lang: "TypeScript", noBrowsers: true } : {},
-    );
-
-    await runCommand(cwd, command.bin, command.args);
+  managedCli: {
+    phase: "run",
+    defaults({ yes }) {
+      const defaults: Record<string, boolean | string> = {};
+      if (yes) {
+        defaults.lang = "TypeScript";
+      }
+      return defaults;
+    },
+    locked({ yes }) {
+      const locked: Record<string, boolean | string> = {};
+      if (yes) {
+        locked.quiet = true;
+        locked.noBrowsers = true;
+      }
+      return locked;
+    },
+    blocked: {
+      installDeps: "Dependency installation is owned by toolchains-init.",
+    },
   },
 });

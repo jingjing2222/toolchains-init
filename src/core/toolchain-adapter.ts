@@ -9,6 +9,56 @@ export type RunToolchainContext = {
   yes: boolean;
 };
 
+export type ManagedCliFlagValue = boolean | string;
+
+export type ManagedCliFlagValues = Readonly<Record<string, ManagedCliFlagValue>>;
+
+type ToolchainSetupOption = Exclude<keyof ToolchainOptions, "features">;
+
+export type ManagedCliSetupContract = {
+  [Option in ToolchainSetupOption]: ToolchainOptions[Option] extends boolean
+    ? {
+        description: string;
+        option: Option;
+        type: "boolean";
+      }
+    : {
+        description: string;
+        option: Option;
+        type: "enum";
+        values: readonly ToolchainOptions[Option][];
+      };
+}[ToolchainSetupOption];
+
+export type ToolchainOptionOverrides = Partial<Omit<ToolchainOptions, "features">>;
+
+export type ManagedCliPolicyContext = {
+  packageManager: PackageManager;
+  options: ToolchainOptions;
+  yes: boolean;
+};
+
+export type ManagedCliPolicyValue<T> = T | ((context: ManagedCliPolicyContext) => T);
+
+export type ResolvedCliCommand = {
+  bin: string;
+  args: readonly string[];
+};
+
+export type ExecuteManagedCliContext = RunToolchainContext & {
+  command: ResolvedCliCommand;
+};
+
+export type ManagedToolchainCli = {
+  phase: "run" | "afterInstall";
+  defaults?: ManagedCliPolicyValue<ManagedCliFlagValues>;
+  locked?: ManagedCliPolicyValue<ManagedCliFlagValues>;
+  blocked?: ManagedCliPolicyValue<Readonly<Record<string, string>>>;
+  positionals?: ManagedCliPolicyValue<readonly string[]>;
+  setup?: Readonly<Record<string, ManagedCliSetupContract>>;
+  execute?: (context: ExecuteManagedCliContext) => Promise<void>;
+};
+
 export type UpdatePackageJsonContext = {
   cliManifest?: CliCommandManifest;
   packageJson: PackageJson;
@@ -35,6 +85,8 @@ export type ToolchainCatalog = "app" | "quality" | "release" | "editor";
 export type PackageManagerCommandTemplates = Partial<Record<PackageManager, readonly string[]>>;
 
 export type ToolchainCliRunner = "auto" | "create" | "dlx" | PackageManagerCommandTemplates;
+
+const packageManagerNames = ["npm", "pnpm", "yarn", "bun", "deno"] as const;
 
 export type ToolchainCliDocs = Omit<
   Extract<CliCommandManifest["sources"][number], { kind: "docs" }>,
@@ -63,6 +115,11 @@ export type ToolchainAdapter = {
   catalog: ToolchainCatalog;
   order?: number;
   cli?: ToolchainCliDefinition;
+  managedCli?: ManagedToolchainCli;
+  nonInteractive?: {
+    supported: false;
+    reason: string;
+  };
   isAvailable?: (context: ToolchainAvailabilityContext) => boolean | Promise<boolean>;
   beforeRun?: (context: UpdatePackageJsonContext) => void;
   run?: (context: RunToolchainContext) => Promise<void>;
@@ -119,6 +176,11 @@ export function defineToolchain(options: DefineToolchainOptions): ToolchainAdapt
     tool,
     ...adapter
   } = options;
+  const resolvedPackageManagers =
+    packageManagers ??
+    (runner != null && typeof runner === "object"
+      ? packageManagerNames.filter((packageManager) => runner[packageManager] != null)
+      : undefined);
 
   return {
     ...adapter,
@@ -132,7 +194,7 @@ export function defineToolchain(options: DefineToolchainOptions): ToolchainAdapt
       exportName,
       help,
       package: packageName,
-      packageManagers,
+      packageManagers: resolvedPackageManagers,
       runner,
       stackDir,
       subcommand,
@@ -142,9 +204,9 @@ export function defineToolchain(options: DefineToolchainOptions): ToolchainAdapt
 }
 
 export function getToolchainCliTool(toolchain: ToolchainAdapter) {
-  return toolchain.cli?.tool ?? kebabCase(toolchain.feature);
+  return toolchain.cli?.tool ?? getToolchainId(toolchain);
 }
 
-function kebabCase(value: string) {
-  return value.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`);
+export function getToolchainId(toolchain: Pick<ToolchainAdapter, "feature">) {
+  return toolchain.feature.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`);
 }

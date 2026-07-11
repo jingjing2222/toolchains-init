@@ -1,5 +1,3 @@
-import { resolveCliCommand } from "../../core/cli-command-manifest";
-import { runCommand } from "../../core/run-command";
 import { defineToolchain } from "../../core/toolchain-adapter";
 import { usesYarnPnp } from "../../core/yarn";
 
@@ -29,12 +27,10 @@ export const yarnSdks = defineToolchain({
   ],
   help: false,
   packageManagers: ["yarn"],
+  managedCli: {
+    phase: "afterInstall",
+  },
   isAvailable({ cwd, packageManager }) {
     return usesYarnPnp(cwd, packageManager);
-  },
-  async afterInstall({ cwd }) {
-    const { yarnSdksCliManifest } = await import("./manifest");
-    const command = resolveCliCommand(yarnSdksCliManifest, "vscode", "yarn");
-    await runCommand(cwd, command.bin, command.args);
   },
 });

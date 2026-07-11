@@ -1,7 +1,5 @@
-import { resolveCliCommand } from "../../core/cli-command-manifest";
 import type { PackageManager } from "../../core/package-manager";
 import { hasPackageDependency } from "../../core/package-json-utils";
-import { runCommand } from "../../core/run-command";
 import { defineToolchain } from "../../core/toolchain-adapter";
 
 export const storybook = defineToolchain({
@@ -45,29 +43,30 @@ export const storybook = defineToolchain({
   packageManagers: ["npm", "pnpm", "yarn", "bun"],
   runner: "create",
   subcommand: null,
-  isAvailable({ packageJson, packageManager }) {
-    if (packageManager === "deno") {
-      return false;
-    }
-
+  isAvailable({ packageJson }) {
     return hasPackageDependency(packageJson, "react") && hasPackageDependency(packageJson, "vite");
   },
-  async run({ cwd, packageManager, yes }) {
-    const { storybookCliManifest } = await import("./manifest");
-    const command = resolveCliCommand(storybookCliManifest, "init", packageManager, {
-      builder: "vite",
-      disableTelemetry: true,
-      loglevel: "warn",
-      noAgent: true,
-      noDev: true,
-      noFeatures: yes,
-      packageManager: getStorybookPackageManager(packageManager),
-      skipInstall: true,
-      type: "react",
-      yes,
-    });
-
-    await runCommand(cwd, command.bin, command.args);
+  managedCli: {
+    phase: "run",
+    locked({ packageManager, yes }) {
+      return {
+        builder: "vite",
+        disableTelemetry: true,
+        loglevel: "warn",
+        noAgent: true,
+        noDev: true,
+        noFeatures: yes,
+        packageManager: getStorybookPackageManager(packageManager),
+        skipInstall: true,
+        type: "react",
+        yes,
+      };
+    },
+    blocked: {
+      agent: "Storybook agent mode is disabled during managed initialization.",
+      dev: "Starting the Storybook development server is outside initialization.",
+      features: "Feature selection is owned by the managed non-interactive profile.",
+    },
   },
   targetFiles() {
     return [

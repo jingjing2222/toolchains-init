@@ -12,7 +12,10 @@ import {
 import type { Option } from "@clack/prompts";
 import path from "node:path";
 import pc from "picocolors";
+import { validateNonInteractiveToolchains } from "../core/cli-options";
+import type { InitCliOptions } from "../core/cli-options";
 import { runExternalToolchains, runPostInstallToolchains } from "../core/external-toolchains";
+import { resolveManagedCliPlans } from "../core/managed-cli";
 import {
   existingTargetFiles,
   readPackageJson,
@@ -20,8 +23,9 @@ import {
   writeToolchain,
 } from "../core/files";
 import { detectPackageManager, runInstall } from "../core/package-manager";
-import { getAvailableToolchains, getSelectedToolchains } from "../stacks";
+import { getAvailableToolchains, getSelectedToolchains } from "../stacks/index";
 import { DEFAULT_ROUTER_MODE, type Feature, type RouterMode } from "../core/types";
+import { getToolchainCliTool } from "../core/toolchain-adapter";
 import type { ToolchainAdapter, ToolchainCatalog } from "../core/toolchain-adapter";
 
 const toolchainCatalogs = [
@@ -31,29 +35,10 @@ const toolchainCatalogs = [
   ["editor", "Editor"],
 ] as const satisfies readonly (readonly [ToolchainCatalog, string])[];
 
-export async function runInit(args: string[]) {
-  const unknownArg = findUnknownArg(args);
-  if (unknownArg != null) {
-    cancel(`Unknown argument: ${unknownArg}`);
-    process.exitCode = 1;
-    return;
-  }
-
-  const yes = args.includes("--yes") || args.includes("-y");
-  const skipInstall = args.includes("--no-install");
-  const targetFromArgs = parsePathOption(args, ["--target"]);
-  if (targetFromArgs === "invalid") {
-    cancel("Invalid target directory. Use --target <path>.");
-    process.exitCode = 1;
-    return;
-  }
-  const routerModeFromArgs = parseRouterMode(args);
-  if (routerModeFromArgs === "invalid") {
-    cancel("Invalid router mode. Use --router code or --router file.");
-    process.exitCode = 1;
-    return;
-  }
-  const cwd = path.resolve(process.cwd(), targetFromArgs ?? ".");
+export async function runInit(cliOptions: InitCliOptions) {
+  const { managedCliFlags, selectedFeatures, skipInstall, toolchainOptions, yes } = cliOptions;
+  const routerModeFromArgs = toolchainOptions.routerMode ?? null;
+  const cwd = path.resolve(process.cwd(), cliOptions.target ?? ".");
 
   intro(pc.bgBlue(pc.white(" toolchains-init ")));
 
@@ -69,12 +54,40 @@ export async function runInit(args: string[]) {
   log.warn("It can overwrite router and quality-tool files.");
   log.warn("Files at the same paths may be overwritten.");
 
-  const packageManager = detectPackageManager();
+  const packageManager = cliOptions.packageManager ?? detectPackageManager();
   const availableToolchains = await getAvailableToolchains({ cwd, packageJson, packageManager });
-  const availableFeatures = availableToolchains.map((toolchain) => toolchain.feature);
-  const features = yes ? availableFeatures : await selectFeatures(availableToolchains);
+  let features: Feature[] | null;
+  if (selectedFeatures != null) {
+    const requestedAdapters = getSelectedToolchains(selectedFeatures);
+    const availableFeatureSet = new Set(availableToolchains.map((toolchain) => toolchain.feature));
+    const unavailable = requestedAdapters.filter(
+      (toolchain) => !availableFeatureSet.has(toolchain.feature),
+    );
+    if (unavailable.length > 0) {
+      cancel(
+        `Toolchain${unavailable.length === 1 ? " is" : "s are"} not available for this target: ${unavailable
+          .map((toolchain) => getToolchainCliTool(toolchain))
+          .join(", ")}`,
+      );
+      process.exitCode = 1;
+      return;
+    }
+    features = requestedAdapters.map((toolchain) => toolchain.feature);
+  } else {
+    if (yes) {
+      cancel("The --yes option requires at least one direct --<tool> selector.");
+      process.exitCode = 1;
+      return;
+    }
+    features = await selectFeatures(availableToolchains);
+  }
   if (features == null) {
     cancel("Initialization cancelled.");
+    return;
+  }
+  if (routerModeFromArgs != null && !features.includes("router")) {
+    cancel("The router setup option requires --tanstack-router.");
+    process.exitCode = 1;
     return;
   }
   const routerMode =
@@ -92,7 +105,26 @@ export async function runInit(args: string[]) {
     process.exitCode = 1;
     return;
   }
+  const selectedToolchains = getSelectedToolchains(features);
+  const nonInteractiveErrors = validateNonInteractiveToolchains(
+    selectedToolchains,
+    yes && !skipInstall,
+  );
+  if (nonInteractiveErrors.length > 0) {
+    cancel(nonInteractiveErrors.join("\n"));
+    process.exitCode = 1;
+    return;
+  }
   const options = { features, routerMode };
+  const managedCliPlans = skipInstall
+    ? new Map()
+    : resolveManagedCliPlans({
+        options,
+        packageManager,
+        selectedToolchains,
+        userFlags: managedCliFlags,
+        yes,
+      });
 
   const overwritten = await existingTargetFiles(cwd, options);
   if (overwritten.length > 0 && !yes) {
@@ -113,7 +145,7 @@ export async function runInit(args: string[]) {
       await runInstall(packageManager, cwd);
     }
     log.info("Running official initializers.");
-    await runExternalToolchains(cwd, packageManager, options, yes);
+    await runExternalToolchains(cwd, packageManager, options, yes, managedCliPlans);
     log.info("Official initializers completed.");
   }
 
@@ -125,7 +157,7 @@ export async function runInit(args: string[]) {
     log.info(`Running ${packageManager} install.`);
     await runInstall(packageManager, cwd);
     log.info("Dependencies installed.");
-    await runPostInstallToolchains(cwd, packageManager, options, yes);
+    await runPostInstallToolchains(cwd, packageManager, options, yes, managedCliPlans);
   }
 
   outro(
@@ -133,56 +165,6 @@ export async function runInit(args: string[]) {
       .filter(Boolean)
       .join("\n"),
   );
-}
-
-function findUnknownArg(args: string[]) {
-  for (let index = 0; index < args.length; index += 1) {
-    const arg = args[index];
-    if (arg === "--router") {
-      index += 1;
-      continue;
-    }
-    if (arg === "--target") {
-      index += 1;
-      continue;
-    }
-    if (arg != null && !arg.startsWith("-")) {
-      return arg;
-    }
-  }
-  return null;
-}
-
-function parsePathOption(args: string[], names: string[]): string | "invalid" | null {
-  const inline = args.find((arg) => names.some((name) => arg.startsWith(`${name}=`)));
-  const flagIndex = args.findIndex((arg) => names.includes(arg));
-  const value =
-    inline != null
-      ? inline.slice(inline.indexOf("=") + 1)
-      : flagIndex >= 0
-        ? args[flagIndex + 1]
-        : null;
-  if (value == null) {
-    return null;
-  }
-  if (value.length === 0 || value.startsWith("-")) {
-    return "invalid";
-  }
-  return value;
-}
-
-function parseRouterMode(args: string[]): RouterMode | "invalid" | null {
-  const inline = args.find((arg) => arg.startsWith("--router="));
-  const routerFlagIndex = args.indexOf("--router");
-  const value =
-    inline != null ? inline.split("=")[1] : routerFlagIndex >= 0 ? args[routerFlagIndex + 1] : null;
-  if (value == null) {
-    return null;
-  }
-  if (value === "code" || value === "file") {
-    return value;
-  }
-  return "invalid";
 }
 
 export async function selectFeatures(

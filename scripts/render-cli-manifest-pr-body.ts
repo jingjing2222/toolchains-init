@@ -5,6 +5,8 @@ import { pathToFileURL } from "node:url";
 import { promisify } from "node:util";
 import type { CliCommandManifest, CliFlagContract } from "../src/core/cli-command-manifest";
 import { defineCliCommandManifest } from "../src/core/cli-command-manifest";
+import { getToolchainCliTool } from "../src/core/toolchain-adapter";
+import { toolchains } from "../src/stacks/index";
 
 const execFileAsync = promisify(execFile);
 
@@ -28,8 +30,12 @@ export async function renderCliManifestPrBody() {
   const lines = [
     "Automated daily update for generated CLI command manifests.",
     "",
+    "Routine package version, command template, and additive generated flag changes do not require handwritten parser or adapter edits.",
+    "Review handwritten adapter policy only when a consumed or required flag contract changes, the docs section below names it, focused verification fails, or the upstream CLI no longer runs.",
+    "",
     "Validation:",
     "- yarn manifests:check",
+    "- yarn verify",
     "",
   ];
 
@@ -41,6 +47,21 @@ export async function renderCliManifestPrBody() {
   lines.push("## Changed manifests", "");
   for (const change of changes) {
     lines.push(...renderManifestChange(change), "");
+  }
+
+  const publicContractChanges = changes.flatMap((change) =>
+    getManagedPublicContractChanges(change).map((detail) => ({ change, detail })),
+  );
+  if (publicContractChanges.length > 0) {
+    lines.push("## Generated public CLI contract review required", "");
+    for (const { change, detail } of publicContractChanges) {
+      lines.push(`- \`${change.current.tool}\`: ${detail}`);
+    }
+    lines.push(
+      "",
+      "Check focused help and release impact. Edit handwritten adapter policy only if it consumes the changed contract or verification fails.",
+      "",
+    );
   }
 
   const reviewChanges = changes
@@ -240,6 +261,43 @@ function diffFlags(
     ...added.map((name) => `added ${formatCode(name)}`),
     ...removed.map((name) => `removed ${formatCode(name)}`),
     ...changed.map((name) => `changed ${formatCode(name)}`),
+  ];
+}
+
+function getManagedPublicContractChanges(change: ManifestChange) {
+  const adapter = toolchains.find(
+    (toolchain) => toolchain.cli != null && getToolchainCliTool(toolchain) === change.current.tool,
+  );
+  if (adapter?.managedCli == null || adapter.cli == null || change.previous == null) {
+    return [];
+  }
+
+  const commandId = adapter.cli.commandId ?? adapter.cli.command;
+  const previousCommand = change.previous.commands.find((command) => command.id === commandId);
+  const currentCommand = change.current.commands.find((command) => command.id === commandId);
+  if (previousCommand == null) {
+    return [];
+  }
+  if (currentCommand == null) {
+    return [`managed command ${formatCode(commandId)} was removed`];
+  }
+
+  const previousFlags = previousCommand.flags ?? {};
+  const currentFlags = currentCommand.flags ?? {};
+  const removed = Object.keys(previousFlags)
+    .filter((name) => currentFlags[name] == null)
+    .sort();
+  const changed = Object.keys(currentFlags)
+    .filter(
+      (name) =>
+        previousFlags[name] != null &&
+        JSON.stringify(previousFlags[name]) !== JSON.stringify(currentFlags[name]),
+    )
+    .sort();
+
+  return [
+    ...removed.map((name) => `public flag ${formatCode(name)} was removed`),
+    ...changed.map((name) => `public flag ${formatCode(name)} changed type, name, or values`),
   ];
 }
 

@@ -2,7 +2,7 @@
   "schemaVersion": "toolchains-init/cli-command-manifest/v1",
   "tool": "react-doctor",
   "package": "react-doctor",
-  "version": "0.7.3",
+  "version": "0.7.4",
   "commands": [
     {
       "id": "check",
@@ -170,20 +170,20 @@
           "supported": true
         }
       },
-      "interactive": true
+      "interactive": false
     }
   ],
   "sources": [
     {
       "kind": "npm",
       "package": "react-doctor",
-      "version": "0.7.3",
+      "version": "0.7.4",
       "distTag": "latest",
-      "resolvedAt": "2026-07-09T13:19:57.025Z"
+      "resolvedAt": "2026-07-10T08:34:29.221Z"
     },
     {
       "kind": "cli-help",
-      "command": ["npx", "--yes", "react-doctor@0.7.3", "--help"],
+      "command": ["npx", "--yes", "react-doctor@0.7.4", "--help"],
       "commandId": "check"
     },
     {

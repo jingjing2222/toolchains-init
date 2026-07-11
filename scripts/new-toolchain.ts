@@ -1,11 +1,12 @@
-import { cancel, intro, isCancel, log, outro, spinner, text } from "@clack/prompts";
+import { cancel, intro, isCancel, log, outro, select, spinner, text } from "@clack/prompts";
 import { execFile } from "node:child_process";
 import { access, mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { parseArgs, promisify } from "node:util";
 import pc from "picocolors";
-import type { ToolchainCatalog } from "../src/core/toolchain-adapter";
+import type { PackageManager } from "../src/core/package-manager";
+import type { ToolchainCatalog, ToolchainCliDocs } from "../src/core/toolchain-adapter";
 
 const execFileAsync = promisify(execFile);
 
@@ -15,16 +16,19 @@ type NewToolchainOptions = {
   command: string;
   commandId?: string;
   distTag?: string;
+  docs: readonly ToolchainCliDocs[];
   feature: string;
   help: boolean;
   hint?: string;
+  interactiveOnlyReason?: string;
   label: string;
   manifestExportName: string;
-  packageManagers?: string[];
+  packageManagers?: PackageManager[];
   packageName: string;
   runner?: string;
   stackDir: string;
   subcommand?: string | null;
+  supportsNonInteractive: boolean;
   tool?: string;
 };
 
@@ -95,6 +99,8 @@ export async function main(argv: readonly string[]) {
       `Adapter: ${pc.cyan(path.relative(process.cwd(), adapterPath))}`,
       `Init test: ${pc.cyan(path.relative(process.cwd(), testPath))}`,
       `Manifest: ${pc.cyan(`${path.relative(process.cwd(), stackDir)}/manifest.generated.json`)}`,
+      `Managed group: ${pc.cyan(`--${options.tool ?? kebabCase(options.feature)}`)}`,
+      "Next: replace generated smoke-test TODOs with adapter-specific assertions before merging.",
     ].join("\n"),
   );
 }
@@ -104,23 +110,31 @@ type ParsedArgs = {
   catalog?: string;
   commandId?: string;
   distTag?: string;
+  docsChecks?: string[];
+  docsConfidence?: string;
+  docsMustContain?: string[];
+  docsReason?: string;
+  docsSections?: string[];
+  docsUrl?: string;
   feature?: string;
   help: boolean;
   hint?: string;
   label?: string;
   adapterExportName?: string;
   manifestExportName?: string;
-  packageManagers?: string[];
+  packageManagers?: PackageManager[];
   packageName?: string;
   runner?: string;
   stackDir?: string;
   subcommand?: string | null;
+  supportsNonInteractive: boolean;
+  interactiveOnlyReason?: string;
   tool?: string;
   shouldProbeHelp: boolean;
 };
 
-function parseNewToolchainArgs(argv: readonly string[]): ParsedArgs {
-  const { positionals, values } = parseArgs({
+export function parseNewToolchainArgs(argv: readonly string[]): ParsedArgs {
+  const { positionals, tokens, values } = parseArgs({
     args: [...argv],
     allowPositionals: true,
     options: {
@@ -129,12 +143,19 @@ function parseNewToolchainArgs(argv: readonly string[]): ParsedArgs {
       command: { type: "string" },
       "command-id": { type: "string" },
       "dist-tag": { type: "string" },
+      "docs-check": { type: "string", multiple: true },
+      "docs-confidence": { type: "string" },
+      "docs-must-contain": { type: "string", multiple: true },
+      "docs-reason": { type: "string" },
+      "docs-section": { type: "string", multiple: true },
+      "docs-url": { type: "string" },
       export: { type: "string" },
       feature: { type: "string" },
       help: { type: "boolean", short: "h" },
       hint: { type: "string" },
       label: { type: "string" },
       "manifest-export": { type: "string" },
+      "interactive-only-reason": { type: "string" },
       "no-help": { type: "boolean" },
       package: { type: "string" },
       "package-managers": { type: "string" },
@@ -142,30 +163,61 @@ function parseNewToolchainArgs(argv: readonly string[]): ParsedArgs {
       runner: { type: "string" },
       "stack-dir": { type: "string" },
       subcommand: { type: "string" },
+      "supports-non-interactive": { type: "boolean" },
       tool: { type: "string" },
     },
     strict: true,
+    tokens: true,
   });
+
+  if (positionals.length > 1) {
+    throw new Error(`Unknown argument: ${positionals[1]}`);
+  }
+  rejectDuplicateNewToolchainOptions(tokens);
+  if (positionals.length === 1 && values.feature != null) {
+    throw new Error("Use either a positional feature or --feature, not both.");
+  }
+  const feature = positionals[0] ?? values.feature;
+  if (feature != null) {
+    assertFeature(feature);
+  }
+  const interactiveOnlyReason = values["interactive-only-reason"]?.trim();
+  if (values["interactive-only-reason"] != null && interactiveOnlyReason?.length === 0) {
+    throw new Error("Invalid interactive-only reason: a non-empty reason is required.");
+  }
+  if (values["supports-non-interactive"] === true && interactiveOnlyReason != null) {
+    throw new Error(
+      "Use either --supports-non-interactive or --interactive-only-reason, not both.",
+    );
+  }
+  if (values["stack-dir"] != null) {
+    assertStackDir(values["stack-dir"]);
+  }
 
   return {
     command: values.command ?? values.cmd,
     catalog: values.catalog,
     commandId: values["command-id"],
     distTag: values["dist-tag"],
-    feature: positionals[0] ?? values.feature,
+    docsChecks: normalizeRepeatedValues(values["docs-check"]),
+    docsConfidence: values["docs-confidence"],
+    docsMustContain: normalizeRepeatedValues(values["docs-must-contain"]),
+    docsReason: values["docs-reason"],
+    docsSections: normalizeRepeatedValues(values["docs-section"]),
+    docsUrl: values["docs-url"],
+    feature,
     help: values.help === true,
     hint: values.hint,
     label: values.label,
     adapterExportName: values.export,
     manifestExportName: values["manifest-export"],
-    packageManagers: values["package-managers"]
-      ?.split(",")
-      .map((value) => value.trim())
-      .filter(Boolean),
+    packageManagers: parsePackageManagers(values["package-managers"]),
     packageName: values.package ?? values.pkg,
     runner: values.runner,
     stackDir: values["stack-dir"],
     subcommand: parseSubcommand(values.subcommand),
+    supportsNonInteractive: values["supports-non-interactive"] === true,
+    interactiveOnlyReason,
     tool: values.tool,
     shouldProbeHelp: values["no-help"] !== true,
   };
@@ -180,6 +232,7 @@ async function resolveOptions(parsed: ParsedArgs): Promise<NewToolchainOptions |
   if (feature == null) {
     return null;
   }
+  assertFeature(feature);
 
   const packageName = await promptRequired({
     initialValue: parsed.packageName,
@@ -199,6 +252,29 @@ async function resolveOptions(parsed: ParsedArgs): Promise<NewToolchainOptions |
     return null;
   }
 
+  const docsUrl = await promptRequired({
+    initialValue: parsed.docsUrl,
+    message: "Official CLI/setup docs URL",
+    placeholder: "https://example.com/docs/cli",
+  });
+  if (docsUrl == null) {
+    return null;
+  }
+
+  const docsMustContain = await resolveDocsMustContain(
+    parsed.docsMustContain,
+    packageName,
+    command,
+  );
+  if (docsMustContain == null) {
+    return null;
+  }
+
+  const interaction = await resolveInteractionCapability(parsed);
+  if (interaction == null) {
+    return null;
+  }
+
   const stackDir = parsed.stackDir ?? kebabCase(feature);
   const adapterExportName = parsed.adapterExportName ?? camelCase(feature);
   const manifestExportName = parsed.manifestExportName ?? `${camelCase(feature)}CliManifest`;
@@ -208,6 +284,21 @@ async function resolveOptions(parsed: ParsedArgs): Promise<NewToolchainOptions |
   assertCatalog(parsed.catalog);
   assertPackageManagers(parsed.packageManagers);
   assertRunner(parsed.runner);
+  const docsConfidence = parseDocsConfidence(parsed.docsConfidence);
+  const docsReason =
+    parsed.docsReason?.trim() ||
+    (interaction.supportsNonInteractive
+      ? `Adapter runs the official ${parsed.label ?? titleCase(feature)} initializer through the generated command contract.`
+      : `Adapter marks the official ${parsed.label ?? titleCase(feature)} initializer interactive-only because ${interaction.reason}.`);
+  const docsChecks =
+    parsed.docsChecks?.length != null && parsed.docsChecks.length > 0
+      ? parsed.docsChecks
+      : [
+          `Confirm \`${packageName} ${command}\` remains the supported initializer flow.`,
+          interaction.supportsNonInteractive
+            ? "Confirm the complete initializer still finishes without stdin when `yes: true` is used."
+            : "Confirm no stable full-argument invocation bypasses every required prompt; remove the interactive-only marker if upstream adds one.",
+        ];
 
   return {
     adapterExportName,
@@ -215,6 +306,21 @@ async function resolveOptions(parsed: ParsedArgs): Promise<NewToolchainOptions |
     command,
     commandId: parsed.commandId,
     distTag: parsed.distTag,
+    docs: [
+      {
+        url: docsUrl,
+        confidence: docsConfidence,
+        review: {
+          reason: docsReason,
+          files: [`src/stacks/${stackDir}/adapter.ts`, `src/stacks/${stackDir}/init.test.ts`],
+          ...(parsed.docsSections != null && parsed.docsSections.length > 0
+            ? { sections: parsed.docsSections }
+            : {}),
+          mustContain: docsMustContain,
+          checks: docsChecks,
+        },
+      },
+    ],
     feature,
     help: parsed.shouldProbeHelp,
     hint: parsed.hint,
@@ -225,6 +331,8 @@ async function resolveOptions(parsed: ParsedArgs): Promise<NewToolchainOptions |
     runner: parsed.runner,
     stackDir,
     subcommand: parsed.subcommand,
+    supportsNonInteractive: interaction.supportsNonInteractive,
+    ...(interaction.reason == null ? {} : { interactiveOnlyReason: interaction.reason }),
     tool: parsed.tool,
   };
 }
@@ -235,7 +343,11 @@ async function promptRequired(options: {
   placeholder: string;
 }) {
   if (options.initialValue != null) {
-    return options.initialValue;
+    const value = options.initialValue.trim();
+    if (value.length === 0) {
+      throw new Error(`${options.message} is required.`);
+    }
+    return value;
   }
 
   const answer = await text({
@@ -247,6 +359,128 @@ async function promptRequired(options: {
   });
 
   return isCancel(answer) ? null : answer.trim();
+}
+
+async function resolveDocsMustContain(
+  values: string[] | undefined,
+  packageName: string,
+  command: string,
+) {
+  if (values != null && values.length > 0) {
+    return [...new Set(values)];
+  }
+
+  const marker = await promptRequired({
+    message: "Stable text that must remain in the docs",
+    placeholder: `${packageName} ${command}`,
+  });
+  return marker == null ? null : [marker];
+}
+
+async function resolveInteractionCapability(parsed: ParsedArgs) {
+  if (parsed.supportsNonInteractive) {
+    return { supportsNonInteractive: true as const };
+  }
+  if (parsed.interactiveOnlyReason != null) {
+    return {
+      supportsNonInteractive: false as const,
+      reason: parsed.interactiveOnlyReason,
+    };
+  }
+
+  const answer = await select({
+    message: "Can the complete initializer finish without stdin?",
+    options: [
+      {
+        value: "interactive-only",
+        label: "No, prompts remain",
+        hint: "Marks the adapter interactive-only",
+      },
+      {
+        value: "non-interactive",
+        label: "Yes, fully unattended",
+        hint: "Requires an enabled yes:true smoke test",
+      },
+    ],
+    initialValue: "interactive-only",
+  });
+  if (isCancel(answer)) {
+    return null;
+  }
+  if (answer === "non-interactive") {
+    return { supportsNonInteractive: true as const };
+  }
+
+  const reason = await promptRequired({
+    message: "Remaining prompt or project-specific choice",
+    placeholder: "provider credentials require project-specific choices",
+  });
+  return reason == null ? null : { supportsNonInteractive: false as const, reason };
+}
+
+function parseDocsConfidence(value: string | undefined): ToolchainCliDocs["confidence"] {
+  if (value == null || value === "high") {
+    return "high";
+  }
+  if (value === "medium" || value === "low") {
+    return value;
+  }
+  throw new Error(`Invalid docs confidence: ${value}`);
+}
+
+function normalizeRepeatedValues(values: string[] | undefined) {
+  if (values == null) {
+    return undefined;
+  }
+  const normalized = values.map((value) => value.trim());
+  if (normalized.some((value) => value.length === 0)) {
+    throw new Error("Repeated option values cannot be empty.");
+  }
+  return normalized;
+}
+
+function parsePackageManagers(value: string | undefined): PackageManager[] | undefined {
+  if (value == null) {
+    return undefined;
+  }
+
+  const packageManagers = value.split(",").map((manager) => manager.trim());
+  if (packageManagers.length === 0 || packageManagers.some((manager) => manager.length === 0)) {
+    throw new Error("Invalid package manager list: provide at least one comma-separated value.");
+  }
+  assertPackageManagers(packageManagers);
+  return [...new Set(packageManagers)] as PackageManager[];
+}
+
+function rejectDuplicateNewToolchainOptions(tokens: readonly { kind: string; name?: string }[]) {
+  const aliases = [
+    ["command", "cmd"],
+    ["package", "pkg"],
+  ];
+  const repeatable = new Set(["docs-check", "docs-must-contain", "docs-section"]);
+  const optionTokens = tokens.filter(
+    (token): token is { kind: "option"; name: string } =>
+      token.kind === "option" && token.name != null,
+  );
+  const checked = new Set<string>();
+
+  for (const aliasGroup of aliases) {
+    const matches = optionTokens.filter((token) => aliasGroup.includes(token.name));
+    if (matches.length > 1) {
+      throw new Error(`Duplicate option: --${matches[1]?.name ?? aliasGroup[0]}.`);
+    }
+    aliasGroup.forEach((name) => checked.add(name));
+  }
+
+  for (const token of optionTokens) {
+    if (checked.has(token.name) || repeatable.has(token.name)) {
+      continue;
+    }
+    checked.add(token.name);
+    if (optionTokens.filter((candidate) => candidate.name === token.name).length > 1) {
+      throw new Error(`Duplicate option: --${token.name}.`);
+    }
+  }
 }
 
 function parseSubcommand(value: string | undefined) {
@@ -262,8 +496,17 @@ function assertIdentifier(value: string, label: string) {
   }
 }
 
+function assertFeature(value: string) {
+  if (!/^[a-z][A-Za-z0-9]*$/.test(value)) {
+    throw new Error(`Invalid feature id: ${value}. Use lowerCamelCase.`);
+  }
+  if (value === "all") {
+    throw new Error('Invalid feature id: "all" is reserved by the CLI selector.');
+  }
+}
+
 function assertStackDir(value: string) {
-  if (value.length === 0 || path.isAbsolute(value) || value.includes("..")) {
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value)) {
     throw new Error(`Invalid stack directory: ${value}`);
   }
 }
@@ -329,7 +572,14 @@ function printProcessError(error: unknown) {
   }
 }
 
-function renderAdapter(options: NewToolchainOptions) {
+export function renderAdapter(options: NewToolchainOptions) {
+  if (options.docs.length === 0) {
+    throw new Error("At least one docs source is required.");
+  }
+  if (!options.supportsNonInteractive && !options.interactiveOnlyReason?.trim()) {
+    throw new Error("Interactive-only adapters require a non-empty reason.");
+  }
+
   const defaultManifestExportName = `${options.feature}CliManifest`;
   const properties: Array<readonly [string, unknown]> = [
     ["feature", options.feature],
@@ -337,6 +587,8 @@ function renderAdapter(options: NewToolchainOptions) {
     ["catalog", options.catalog],
     ["package", options.packageName],
     ["command", options.command],
+    ["managedCli", { phase: "run" }],
+    ["docs", options.docs],
   ];
 
   if (options.hint != null) properties.push(["hint", options.hint]);
@@ -344,6 +596,16 @@ function renderAdapter(options: NewToolchainOptions) {
   if (options.distTag != null) properties.push(["distTag", options.distTag]);
   if (options.manifestExportName !== defaultManifestExportName) {
     properties.push(["exportName", options.manifestExportName]);
+  }
+  const defaultStackDir = options.tool ?? kebabCase(options.feature);
+  if (options.stackDir !== defaultStackDir) {
+    properties.push(["stackDir", options.stackDir]);
+  }
+  if (!options.supportsNonInteractive) {
+    properties.push([
+      "nonInteractive",
+      { supported: false, reason: options.interactiveOnlyReason },
+    ]);
   }
   if (!options.help) properties.push(["help", false]);
   if (options.packageManagers != null)
@@ -361,7 +623,61 @@ ${properties.map(([key, value]) => `  ${key}: ${JSON.stringify(value)},`).join("
 }
 
 export function renderInitTest(options: NewToolchainOptions) {
+  const packageManager = options.packageManagers?.[0] ?? "npm";
+  const commandId = options.commandId ?? options.command;
+
+  if (!options.supportsNonInteractive) {
+    return `import { beforeEach, describe, expect, it, vi } from "vitest";
+import { resolveCliCommand } from "../../core/cli-command-manifest";
+import { runExternalToolchains } from "../../core/external-toolchains";
+import { ${options.adapterExportName} } from "./adapter";
+import { ${options.manifestExportName} } from "./manifest";
+import { options } from "../init-test-utils";
+
+const mocks = vi.hoisted(() => ({
+  runCommand: vi.fn(async () => {}),
+}));
+
+vi.mock("../../core/run-command", () => ({
+  runCommand: mocks.runCommand,
+}));
+
+describe("${options.label} adapter init", () => {
+  beforeEach(() => {
+    mocks.runCommand.mockClear();
+  });
+
+  it("declares the project-specific initializer as interactive-only", () => {
+    expect(${options.adapterExportName}.managedCli).toEqual({ phase: "run" });
+    expect(${options.adapterExportName}.nonInteractive).toEqual({
+      supported: false,
+      reason: ${JSON.stringify(options.interactiveOnlyReason)},
+    });
+  });
+
+  it("runs the interactive command through its generated manifest", async () => {
+    const command = resolveCliCommand(
+      ${options.manifestExportName},
+      ${JSON.stringify(commandId)},
+      ${JSON.stringify(packageManager)},
+    );
+    const toolchainOptions = options([${JSON.stringify(options.feature)}]);
+
+    await runExternalToolchains(".", ${JSON.stringify(packageManager)}, toolchainOptions, false);
+
+    expect(mocks.runCommand).toHaveBeenCalledOnce();
+    expect(mocks.runCommand.mock.calls[0]?.slice(0, 3)).toEqual([
+      ".",
+      command.bin,
+      command.args,
+    ]);
+  });
+});
+`;
+  }
+
   return `import { describe, expect, it } from "vitest";
+import { ${options.adapterExportName} } from "./adapter";
 import {
   runExternalToolchains,
   runPostInstallToolchains,
@@ -375,14 +691,19 @@ import {
 } from "../init-test-utils";
 
 describe("${options.label} adapter init", () => {
-  it.skip(
+  it("declares a fully unattended initializer", () => {
+    expect(${options.adapterExportName}.managedCli).toEqual({ phase: "run" });
+    expect(${options.adapterExportName}.nonInteractive).toBeUndefined();
+  });
+
+  it(
     "scaffolds ${options.label} in lifecycle order",
     async () => {
       const cwd = await createFreshViteProject();
       const packageJson = await readPackageJson(cwd);
       const toolchainOptions = options([${JSON.stringify(options.feature)}]);
 
-      await runExternalToolchains(cwd, "npm", toolchainOptions, true);
+      await runExternalToolchains(cwd, ${JSON.stringify(packageManager)}, toolchainOptions, true);
       // TODO: replace with files, package entries, or config produced by the external CLI.
       expect(await readPackageJson(cwd)).toBeDefined();
 
@@ -390,7 +711,7 @@ describe("${options.label} adapter init", () => {
       // TODO: replace with adapter-specific after-write expectations.
       expect(await readPackageJson(cwd)).toBeDefined();
 
-      await runPostInstallToolchains(cwd, "npm", toolchainOptions, true);
+      await runPostInstallToolchains(cwd, ${JSON.stringify(packageManager)}, toolchainOptions, true);
       // TODO: replace with adapter-specific post-install expectations.
       expect(await readPackageJson(cwd)).toBeDefined();
     },
@@ -407,29 +728,51 @@ export { ${options.manifestExportName}, ${options.manifestExportName}Data } from
 }
 
 function printHelp() {
-  console.log(`Create a CLI-backed stack adapter and generate its manifest.
+  console.log(renderNewToolchainHelp());
+}
+
+export function renderNewToolchainHelp() {
+  return `Create a managed CLI-backed stack adapter and generate its manifest.
 
 Usage:
-  yarn new <feature> --package <package> --command <command>
+  yarn new <feature> --package <package> --command <command> --docs-url <url> \\
+    --docs-must-contain <text> (--supports-non-interactive | --interactive-only-reason <reason>)
 
 Example:
-  yarn new hotUpdater --label "Hot Updater" --package hot-updater --command init
+  yarn new example --package create-example --command init \\
+    --docs-url https://example.com/docs/cli --docs-must-contain "create-example init" \\
+    --supports-non-interactive
 
 Options:
+  <feature>                    lowerCamelCase feature id, such as reactDoctor.
   --stack-dir <name>           Directory under src/stacks. Defaults to kebab-case feature.
   --label <label>              Prompt label. Defaults to title-cased feature.
   --catalog <name>             app,quality,release,editor. Defaults to quality.
   --hint <hint>                Optional prompt hint.
   --export <name>              Adapter export name. Defaults to camel-cased feature.
   --manifest-export <name>     Manifest export name. Defaults to <feature>CliManifest.
-  --tool <tool>                Manifest tool id override.
+  --tool <tool>                Manifest tool and public argument-group id override.
   --command-id <id>            Manifest command id override.
   --subcommand <cmd|none>      Runtime subcommand override.
   --dist-tag <tag>             npm dist-tag. Defaults to latest.
   --package-managers <list>    Comma list: npm,pnpm,yarn,bun,deno.
   --runner <auto|create|dlx>   Package manager command inference mode.
   --no-help                    Skip CLI help probing.
-`);
+  --docs-url <url>             Official CLI/setup docs URL. Required.
+  --docs-confidence <level>    high,medium,low. Defaults to high.
+  --docs-reason <reason>       Why the adapter policy depends on the docs.
+  --docs-section <name>        Review section. Repeat for multiple sections.
+  --docs-must-contain <text>   Stable docs marker. At least one; repeatable.
+  --docs-check <check>         Manual review check. Repeat for multiple checks.
+  --supports-non-interactive   Assert the complete yes:true path needs no stdin.
+  --interactive-only-reason <reason>
+                                Mark prompts that prevent unattended execution.
+
+Generated adapter contract:
+  Executable scaffolds declare managedCli: { phase: "run" }.
+  --<manifest.tool> selects the tool; --<tool>.<generated-flag>[=value] forwards an option.
+  Generated manifests own public flag names, types, and enum values; do not hardcode them.
+`;
 }
 
 function camelCase(value: string) {
