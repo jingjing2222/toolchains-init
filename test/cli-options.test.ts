@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { parseCliOptions, renderHelp } from "../src/core/cli-options";
-import { resolveManagedCliPlans } from "../src/core/managed-cli";
+import { buildExecutionPlan } from "../src/core/execution-plan";
 import { getSelectedToolchains } from "../src/stacks";
 
 describe("CLI options", () => {
-  it("parses direct selectors and generated namespaced flags", () => {
+  it("parses direct selectors, origin arguments, and wrapper planning options", () => {
     const options = parseCliOptions([
       "--playwright",
       "--playwright.lang",
@@ -12,24 +12,24 @@ describe("CLI options", () => {
       "--playwright.quiet",
       "--package-manager",
       "pnpm",
-      "--yes",
+      "--plan",
     ]);
 
     expect(options).toMatchObject({
-      managedCliArgs: { playwright: ["--lang", "TypeScript", "--quiet"] },
+      originArgs: { playwright: ["--lang", "TypeScript", "--quiet"] },
       packageManager: "pnpm",
-      selectedFeatures: ["playwright"],
-      yes: true,
+      plan: true,
+      selectedToolIds: ["playwright"],
     });
   });
 
-  it("preserves direct selector order for origin command execution", () => {
-    const parsed = parseCliOptions(["--yarn-sdks", "--cspell"]);
+  it("parses selector order but resolves execution in canonical catalog order", () => {
+    const parsed = parseCliOptions(["--yarn-sdks", "--cspell", "--playwright"]);
 
-    expect(parsed.selectedFeatures).toEqual(["yarnSdks", "cspell"]);
+    expect(parsed.selectedToolIds).toEqual(["yarn-sdks", "cspell", "playwright"]);
     expect(
-      getSelectedToolchains(parsed.selectedFeatures ?? []).map((toolchain) => toolchain.feature),
-    ).toEqual(["yarnSdks", "cspell"]);
+      getSelectedToolchains(parsed.selectedToolIds ?? []).map((toolchain) => toolchain.id),
+    ).toEqual(["playwright", "cspell", "yarn-sdks"]);
   });
 
   it("parses repeatable raw arguments without interpreting their contents", () => {
@@ -43,7 +43,7 @@ describe("CLI options", () => {
       "--prisma.raw.arg=file.ts",
     ]);
 
-    expect(options.managedCliArgs).toEqual({
+    expect(options.originArgs).toEqual({
       prisma: ["--preview-feature", "one", "--", "file.ts"],
     });
   });
@@ -54,44 +54,34 @@ describe("CLI options", () => {
       "--playwright.browser=chromium",
       "--playwright.help",
       "--playwright.raw.arg=--version",
-      "--yes",
     ]);
-    const selectedToolchains = getSelectedToolchains(parsed.selectedFeatures ?? []);
-    const plan = resolveManagedCliPlans({
+    const plan = buildExecutionPlan({
+      cwd: "/repo",
       packageManager: "npm",
-      selectedToolchains,
-      userArgs: parsed.managedCliArgs,
-    }).get("playwright");
+      selectedToolchains: getSelectedToolchains(parsed.selectedToolIds ?? []),
+      userArgs: parsed.originArgs,
+    });
 
-    expect(plan?.command.args.slice(-3)).toEqual(["--browser=chromium", "--help", "--version"]);
+    expect(plan.steps[0]?.command.args.slice(-3)).toEqual([
+      "--browser=chromium",
+      "--help",
+      "--version",
+    ]);
   });
 
-  it("keeps wrapper --yes out of origin arguments", () => {
-    const withoutYes = parseCliOptions(["--cspell"]);
-    const withYes = parseCliOptions(["--cspell", "--yes"]);
-    const selectedToolchains = getSelectedToolchains(["cspell"]);
-
-    const resolve = (parsed: typeof withoutYes) =>
-      resolveManagedCliPlans({
-        packageManager: "npm",
-        selectedToolchains,
-        userArgs: parsed.managedCliArgs,
-      }).get("cspell")?.command;
-
-    expect(resolve(withYes)).toEqual(resolve(withoutYes));
-  });
-
-  it("requires explicit selectors for wrapper --yes", () => {
-    expect(() => parseCliOptions(["--toolchains", "all"])).toThrow(/unknown option/i);
-    expect(() => parseCliOptions(["--router", "file"])).toThrow(/unknown option/i);
-    expect(() => parseCliOptions(["--yes"])).toThrow("requires at least one direct");
+  it("accepts plan-only selection while removing the former wrapper --yes contract", () => {
+    expect(parseCliOptions(["--plan"])).toMatchObject({
+      plan: true,
+      selectedToolIds: null,
+    });
+    expect(() => parseCliOptions(["--yes"])).toThrow(/yes/i);
   });
 
   it("validates wrapper values but leaves origin values to the origin CLI", () => {
     expect(() => parseCliOptions(["--package-manager", "pip"])).toThrow(
       "Expected one of: npm, pnpm, yarn, bun, deno",
     );
-    expect(parseCliOptions(["--playwright", "--playwright.lang=rust"]).managedCliArgs).toEqual({
+    expect(parseCliOptions(["--playwright", "--playwright.lang=rust"]).originArgs).toEqual({
       playwright: ["--lang=rust"],
     });
   });
@@ -110,13 +100,13 @@ describe("CLI options", () => {
         "--playwright.lang=TypeScript",
         "--playwright.raw.arg=first",
         "--playwright.raw.arg=second",
-      ]).managedCliArgs,
+      ]).originArgs,
     ).toEqual({ playwright: ["--lang=js", "--lang=TypeScript", "first", "second"] });
   });
 
   it("accepts unknown origin flags but requires the matching selector", () => {
     expect(
-      parseCliOptions(["--playwright", "--playwright.future_flag:anything=opaque"]).managedCliArgs,
+      parseCliOptions(["--playwright", "--playwright.future_flag:anything=opaque"]).originArgs,
     ).toEqual({ playwright: ["--future_flag:anything=opaque"] });
     expect(() => parseCliOptions(["--playwright.lang=js"])).toThrow(
       "require the --playwright tool selector",
@@ -135,21 +125,18 @@ describe("CLI options", () => {
     });
   });
 
-  it("renders transparent origin argument help without wrapper policy", () => {
+  it("renders planning and transparent origin-argument help without wrapper policy", () => {
     const help = renderHelp("1.2.3");
     const focused = renderHelp("1.2.3", "playwright");
 
+    expect(help).toContain("--plan");
     expect(help).toContain("--<tool>.raw.arg <value>");
-    expect(help).not.toContain("interactive-only");
-    expect(help).not.toContain("--no-install");
+    expect(help).not.toContain("--yes");
+    expect(help).not.toContain("--prettier");
     expect(focused).toContain("--playwright.help");
-    expect(focused).not.toContain("--playwright.version  forwards");
     expect(focused).toContain("--playwright.raw.arg=--version");
-    expect(focused).toContain("--playwright.raw.arg");
     expect(focused).toContain("does not validate names, values, or repetitions");
     expect(focused).not.toContain("Enum values");
     expect(focused).not.toContain("Boolean flags");
-    expect(focused).not.toContain("[blocked:");
-    expect(focused).not.toContain("[locked");
   });
 });

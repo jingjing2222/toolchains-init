@@ -81,12 +81,15 @@ describe("run command termination", () => {
     } satisfies Partial<CommandError>);
   });
 
-  it("re-raises ordinary termination signals with a nonzero fallback", () => {
-    expect(resolveCommandExit(new CommandError("origin", [], "SIGTERM"))).toEqual({
-      exitCode: expectedSignalExitCode("SIGTERM"),
-      signal: "SIGTERM",
-    });
-  });
+  it.each(["SIGTERM", "SIGUSR2"] as const)(
+    "re-raises safely supported termination signal %s with a nonzero fallback",
+    (signal) => {
+      expect(resolveCommandExit(new CommandError("origin", [], signal))).toEqual({
+        exitCode: expectedSignalExitCode(signal),
+        signal,
+      });
+    },
+  );
 
   it.each(["SIGPIPE", "SIGUSR1"] as const)(
     "uses a silent conventional exit for Node-reserved %s",

@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { defineCliCommandManifest, resolveCliCommand } from "../src/core/cli-command-manifest";
-import { defineToolchain, getToolchainCliTool } from "../src/core/toolchain-adapter";
+import { defineToolchain } from "../src/core/toolchain-adapter";
 import {
   cliCommandManifestData,
   cliCommandManifests,
@@ -20,31 +20,46 @@ import {
 } from "../scripts/update-cli-manifests";
 import packageJson from "../package.json" with { type: "json" };
 
+const retainedToolIds = [
+  "hot-updater",
+  "prisma",
+  "shadcn",
+  "supabase",
+  "playwright",
+  "storybook",
+  "oxfmt",
+  "oxlint",
+  "eslint",
+  "biome",
+  "changesets",
+  "cspell",
+  "secretlint",
+  "yarn-sdks",
+] as const;
+
 const playwrightCliManifest = getCliCommandManifest("playwright");
 if (playwrightCliManifest == null) {
   throw new Error("Missing Playwright CLI command manifest");
 }
 
 describe("CLI command manifests", () => {
-  it("registers every CLI-backed toolchain command", () => {
-    const expectedTools = toolchains
-      .filter((toolchain) => toolchain.cli != null)
-      .map((toolchain) => getToolchainCliTool(toolchain));
-
-    expect(cliCommandManifestData.map((manifest) => manifest.tool)).toEqual(expectedTools);
-    expect(cliCommandManifests.map((manifest) => manifest.tool)).toEqual(expectedTools);
+  it("registers exactly the retained initializer catalog", () => {
+    expect(toolchains.map((toolchain) => toolchain.id)).toEqual(retainedToolIds);
+    expect(cliCommandManifestData.map((manifest) => manifest.tool)).toEqual(retainedToolIds);
+    expect(cliCommandManifests.map((manifest) => manifest.tool)).toEqual(retainedToolIds);
+    expect(cliCommandManifests).toHaveLength(14);
   });
 
-  it("resolves every command for its declared package managers", () => {
+  it("resolves every command for its generated package-manager contract", () => {
     for (const manifest of cliCommandManifests) {
       for (const command of manifest.commands) {
+        expect(command.id).not.toBe("check");
         for (const packageManager of ["npm", "pnpm", "yarn", "bun", "deno"] as const) {
           if (command.packageManagers[packageManager] == null) {
             continue;
           }
 
           const resolved = resolveCliCommand(manifest, command.id, packageManager);
-
           expect(resolved.bin.length).toBeGreaterThan(0);
           expect([resolved.bin, ...resolved.args].join(" ")).not.toContain("@latest");
         }
@@ -52,21 +67,14 @@ describe("CLI command manifests", () => {
     }
   });
 
-  it("derives CLI flags from help output, not a hand-written subset", () => {
+  it("derives focused-help flags from origin help output", () => {
     expect(playwrightCliManifest.commands[0]?.flags).toMatchObject({
       browser: { cliName: "--browser" },
-      noBrowsers: { cliName: "--no-browsers" },
       lang: { cliName: "--lang" },
+      noBrowsers: { cliName: "--no-browsers" },
     });
 
-    const tanStackCliManifest = getCliCommandManifest("tanstack-router");
-    expect(tanStackCliManifest?.commands[0]?.flags).toMatchObject({
-      deployment: { cliName: "--deployment" },
-      routerOnly: { cliName: "--router-only" },
-    });
-
-    const storybookCliManifest = getCliCommandManifest("storybook");
-    expect(storybookCliManifest?.commands[0]?.flags).toMatchObject({
+    expect(getCliCommandManifest("storybook")?.commands[0]?.flags).toMatchObject({
       force: { cliName: "--force" },
       skipInstall: { cliName: "--skip-install" },
       yes: { cliName: "--yes" },
@@ -86,17 +94,15 @@ describe("CLI command manifests", () => {
   --level                    level ('suggestion' | 'warning' | 'error')
   --cwd                      Custom current worker directory             [string]
   --save                     Save the worker directory                   [boolean]
-  --format <format>             file format (choices: "yaml",
-                                "yml", "json", "jsonc", default: "yaml")
-  -t, --template <template>     template (next, start, vite,
-                                react-router, laravel, astro)
+  --format <format>          file format (choices: "yaml",
+                             "yml", "json", "jsonc", default: "yaml")
+  -t, --template <template>  template (next, start, vite,
+                             react-router, laravel, astro)
   --secretlintignore [path:String] path to the ignore file
   --secretlintrcJSON [String] a JSON config string
-  --ignore-rules <rules...>     rules to ignore (choices: "no-resolution",
-                                "cjs-only-exports-default", "named-exports",
-                                default: [])
-  --migrate=SOURCE              migrate from a specified source
-  -c, --config=PATH             path to configuration (.json, .jsonc, knip.(js|ts))
+  --ignore-rules <rules...>  rules to ignore
+  --migrate=SOURCE           migrate from a specified source
+  -c, --config=PATH          path to configuration
 `).map((flag) => [flag.cliName, flag]),
       ),
     ).toEqual({
@@ -120,55 +126,55 @@ describe("CLI command manifests", () => {
   it("keeps wrapped descriptions from creating extra flag names", () => {
     expect(
       parseHelpFlags(`
-  --format <format>             file format (choices: "yaml",
-                                "yml", "json", "jsonc", default: "yaml")
+  --format <format>  file format (choices: "yaml",
+                     "json", "jsonc", default: "yaml")
 `).map((flag) => flag.cliName),
     ).toEqual(["--format"]);
   });
 
   it("rejects ambiguous generated flag identities", () => {
-    const manifest = {
-      commands: [
-        {
-          flags: {
-            first: { cliName: "--same" },
-            second: { cliName: "--same" },
+    expect(() =>
+      defineCliCommandManifest({
+        commands: [
+          {
+            flags: {
+              first: { cliName: "--same" },
+              second: { cliName: "--same" },
+            },
+            id: "init",
+            packageManagers: { npm: ["npx", "example@{version}"] },
           },
-          id: "init",
-          packageManagers: { npm: ["npx", "example@{version}"] },
-        },
-      ],
-      package: "example",
-      schemaVersion: "toolchains-init/cli-command-manifest/v1",
-      sources: [],
-      tool: "example",
-      version: "1.0.0",
-    };
-
-    expect(() => defineCliCommandManifest(manifest)).toThrow("Duplicate CLI flag name");
+        ],
+        package: "example",
+        schemaVersion: "toolchains-init/cli-command-manifest/v1",
+        sources: [],
+        tool: "example",
+        version: "1.0.0",
+      }),
+    ).toThrow("Duplicate CLI flag name");
   });
 
-  it("keeps docs-backed adapter review metadata in generated manifests", () => {
+  it("keeps docs-backed review metadata in every generated manifest", () => {
     for (const manifest of cliCommandManifests) {
       expect(
         manifest.sources.some((source) => source.kind === "docs" && source.review != null),
+        manifest.tool,
       ).toBe(true);
     }
 
-    const mswCliManifest = getCliCommandManifest("msw");
-    expect(mswCliManifest?.sources).toContainEqual(
+    expect(getCliCommandManifest("hot-updater")?.sources).toContainEqual(
       expect.objectContaining({
         kind: "docs",
-        url: "https://mswjs.io/docs/cli/init/",
+        url: "https://hot-updater.dev/docs/get-started/basic-usage",
         review: expect.objectContaining({
-          files: ["src/stacks/msw/adapter.ts", "src/stacks/msw/init.test.ts"],
-          reason: expect.stringContaining("bare msw init command unchanged"),
+          files: ["src/stacks/hot-updater/adapter.ts", "src/stacks/hot-updater/init.test.ts"],
+          reason: expect.stringContaining("hot-updater init command unchanged"),
         }),
       }),
     );
   });
 
-  it("resolves pinned Playwright init commands by package manager", () => {
+  it("resolves pinned Playwright initializer commands by package manager", () => {
     expect(resolveCliCommand(playwrightCliManifest, "init", "npm")).toEqual({
       bin: "npm",
       args: ["init", `playwright@${playwrightCliManifest.version}`, "--"],
@@ -191,102 +197,68 @@ describe("CLI command manifests", () => {
     });
   });
 
-  it("infers package-manager commands from the CLI package shape", () => {
-    const biomeCliManifest = getCliCommandManifest("biome");
-    const eslintCliManifest = getCliCommandManifest("eslint");
-    const knipCliManifest = getCliCommandManifest("knip");
-    const oxfmtCliManifest = getCliCommandManifest("oxfmt");
-    const oxlintCliManifest = getCliCommandManifest("oxlint");
-    const prettierCliManifest = getCliCommandManifest("prettier");
-    const storybookCliManifest = getCliCommandManifest("storybook");
-    const yarnSdksCliManifest = getCliCommandManifest("yarn-sdks");
-
-    expect(biomeCliManifest?.commands[0]?.packageManagers).toMatchObject({
+  it("generates init command identities and the Yarn-only SDK command", () => {
+    expect(getCliCommandManifest("biome")?.commands[0]?.packageManagers).toMatchObject({
       npm: ["npx", "@biomejs/biome@{version}", "init"],
       pnpm: ["pnpm", "dlx", "@biomejs/biome@{version}", "init"],
       yarn: ["yarn", "dlx", "@biomejs/biome@{version}", "init"],
       bun: ["bunx", "@biomejs/biome@{version}", "init"],
       deno: ["deno", "x", "-A", "npm:@biomejs/biome@{version}", "init"],
     });
-    expect(knipCliManifest?.commands[0]?.packageManagers).toMatchObject({
-      npm: ["npx", "knip@{version}"],
-      pnpm: ["pnpm", "dlx", "knip@{version}"],
-      yarn: ["yarn", "dlx", "knip@{version}"],
-      bun: ["bunx", "knip@{version}"],
-      deno: ["deno", "x", "-A", "npm:knip@{version}"],
-    });
-    expect(oxfmtCliManifest?.commands[0]?.packageManagers).toMatchObject({
+    expect(getCliCommandManifest("oxfmt")?.commands[0]?.packageManagers).toMatchObject({
       npm: ["npx", "oxfmt@{version}", "--init"],
       pnpm: ["pnpm", "dlx", "oxfmt@{version}", "--init"],
-      yarn: ["yarn", "dlx", "oxfmt@{version}", "--init"],
-      bun: ["bunx", "oxfmt@{version}", "--init"],
-      deno: ["deno", "x", "-A", "npm:oxfmt@{version}", "--init"],
     });
-    expect(oxlintCliManifest?.commands[0]?.packageManagers).toMatchObject({
+    expect(getCliCommandManifest("oxlint")?.commands[0]?.packageManagers).toMatchObject({
       npm: ["npx", "oxlint@{version}", "--init"],
       pnpm: ["pnpm", "dlx", "oxlint@{version}", "--init"],
-      yarn: ["yarn", "dlx", "oxlint@{version}", "--init"],
-      bun: ["bunx", "oxlint@{version}", "--init"],
-      deno: ["deno", "x", "-A", "npm:oxlint@{version}", "--init"],
     });
-    expect(prettierCliManifest?.commands[0]?.packageManagers).toMatchObject({
-      npm: ["npx", "prettier@{version}", "--check", "."],
-      pnpm: ["pnpm", "dlx", "prettier@{version}", "--check", "."],
-      yarn: ["yarn", "dlx", "prettier@{version}", "--check", "."],
-      bun: ["bunx", "prettier@{version}", "--check", "."],
-      deno: ["deno", "x", "-A", "npm:prettier@{version}", "--check", "."],
-    });
-    expect(eslintCliManifest?.commands[0]?.packageManagers).toMatchObject({
+    expect(getCliCommandManifest("eslint")?.commands[0]?.packageManagers).toMatchObject({
       npm: ["npx", "@eslint/create-config@{version}"],
       pnpm: ["pnpm", "dlx", "@eslint/create-config@{version}"],
-      yarn: ["yarn", "dlx", "@eslint/create-config@{version}"],
-      bun: ["bunx", "@eslint/create-config@{version}"],
-      deno: ["deno", "x", "-A", "npm:@eslint/create-config@{version}"],
     });
-    expect(yarnSdksCliManifest?.commands[0]?.packageManagers).toEqual({
-      npm: ["npx", "@yarnpkg/sdks@{version}", "vscode"],
-      pnpm: ["pnpm", "dlx", "@yarnpkg/sdks@{version}", "vscode"],
-      yarn: ["yarn", "dlx", "@yarnpkg/sdks@{version}", "vscode"],
-      bun: ["bunx", "@yarnpkg/sdks@{version}", "vscode"],
-      deno: ["deno", "x", "-A", "npm:@yarnpkg/sdks@{version}", "vscode"],
-    });
-    expect(yarnSdksCliManifest?.sources.map((source) => source.kind)).toEqual(["npm", "docs"]);
-    expect(storybookCliManifest?.commands[0]?.packageManagers).toEqual({
+    expect(getCliCommandManifest("storybook")?.commands[0]?.packageManagers).toEqual({
       npm: ["npm", "init", "storybook@{version}", "--"],
       pnpm: ["pnpm", "create", "storybook@{version}"],
       yarn: ["yarn", "create", "storybook@{version}"],
       bun: ["bun", "create", "storybook@{version}"],
       deno: ["deno", "x", "-A", "npm:create-storybook@{version}"],
     });
+
+    const yarnSdksManifest = getCliCommandManifest("yarn-sdks");
+    expect(yarnSdksManifest?.commands[0]?.packageManagers).toEqual({
+      yarn: ["yarn", "dlx", "@yarnpkg/sdks@{version}", "vscode"],
+    });
+    expect(yarnSdksManifest?.sources.map((source) => source.kind)).toEqual(["npm", "docs"]);
   });
 
   it("keeps flag-only initializers in the generated command identity", () => {
-    const oxfmtCliManifest = getCliCommandManifest("oxfmt");
-    const oxlintCliManifest = getCliCommandManifest("oxlint");
-    if (oxfmtCliManifest == null || oxlintCliManifest == null) {
+    const oxfmtManifest = getCliCommandManifest("oxfmt");
+    const oxlintManifest = getCliCommandManifest("oxlint");
+    if (oxfmtManifest == null || oxlintManifest == null) {
       throw new Error("Missing Oxc CLI manifests");
     }
 
-    expect(resolveCliCommand(oxfmtCliManifest, "init", "npm")).toEqual({
+    expect(resolveCliCommand(oxfmtManifest, "init", "npm")).toEqual({
       bin: "npx",
-      args: [`oxfmt@${oxfmtCliManifest.version}`, "--init"],
+      args: [`oxfmt@${oxfmtManifest.version}`, "--init"],
     });
-    expect(resolveCliCommand(oxlintCliManifest, "init", "npm")).toEqual({
+    expect(resolveCliCommand(oxlintManifest, "init", "npm")).toEqual({
       bin: "npx",
-      args: [`oxlint@${oxlintCliManifest.version}`, "--init"],
+      args: [`oxlint@${oxlintManifest.version}`, "--init"],
     });
   });
 
-  it("preserves package scopes when inferring create commands", () => {
+  it("preserves package scopes and explicit subcommands in inferred create commands", () => {
     expect(
       resolvePackageManagerCommands(
         {
+          commandArgs: ["--template", "react"],
           commandId: "init",
           distTag: "latest",
           docs: [],
           exportName: "scopedCreateCliManifest",
           help: undefined,
-          commandArgs: ["--template", "react"],
           packageManagers: ["npm", "pnpm", "yarn", "bun", "deno"],
           packageName: "@scope/create-widget",
           runner: "auto",
@@ -297,20 +269,28 @@ describe("CLI command manifests", () => {
         "1.2.3",
       ),
     ).toEqual({
-      npm: ["npm", "init", "@scope/widget@{version}", "--", "--template", "react"],
-      pnpm: ["pnpm", "create", "@scope/widget@{version}", "--template", "react"],
-      yarn: ["yarn", "create", "@scope/widget@{version}", "--template", "react"],
-      bun: ["bun", "create", "@scope/widget@{version}", "--template", "react"],
-      deno: ["deno", "x", "-A", "npm:@scope/create-widget@{version}", "--template", "react"],
+      npm: ["npm", "init", "@scope/widget@{version}", "--", "init", "--template", "react"],
+      pnpm: ["pnpm", "create", "@scope/widget@{version}", "init", "--template", "react"],
+      yarn: ["yarn", "create", "@scope/widget@{version}", "init", "--template", "react"],
+      bun: ["bun", "create", "@scope/widget@{version}", "init", "--template", "react"],
+      deno: [
+        "deno",
+        "x",
+        "-A",
+        "npm:@scope/create-widget@{version}",
+        "init",
+        "--template",
+        "react",
+      ],
     });
   });
 
-  it("appends static command identity to custom runner templates", () => {
+  it("appends static initializer identity to custom runner templates", () => {
     expect(
       resolvePackageManagerCommands(
         {
-          commandArgs: ["--check", "."],
-          commandId: "check",
+          commandArgs: ["--init"],
+          commandId: "init",
           distTag: "latest",
           docs: [],
           exportName: "exampleCliManifest",
@@ -324,10 +304,10 @@ describe("CLI command manifests", () => {
         },
         "1.2.3",
       ),
-    ).toEqual({ npm: ["npx", "example@{version}", "--check", "."] });
+    ).toEqual({ npm: ["npx", "example@{version}", "--init"] });
   });
 
-  it("keeps help output from CLIs that exit non-zero", async () => {
+  it("keeps plausible help output from CLIs that exit nonzero", async () => {
     await expect(
       runHelpCommand([
         process.execPath,
@@ -337,7 +317,7 @@ describe("CLI command manifests", () => {
     ).resolves.toContain("--flag  useful help");
   });
 
-  it("rejects non-help output from CLIs that exit non-zero", async () => {
+  it("rejects non-help output and bounds stalled help probes", async () => {
     await expect(
       runHelpCommand([
         process.execPath,
@@ -345,296 +325,125 @@ describe("CLI command manifests", () => {
         "console.error('configuration is invalid'); process.exit(2)",
       ]),
     ).rejects.toThrow();
-  });
-
-  it("bounds CLI help probes even when a child process stays open", async () => {
     await expect(
       runHelpCommand([process.execPath, "-e", "setTimeout(() => {}, 10_000)"], 50),
     ).rejects.toThrow();
   });
 
-  it("rejects duplicate generated identities before probing external sources", async () => {
-    const biome = toolchains.find((toolchain) => toolchain.feature === "biome");
-    const eslint = toolchains.find((toolchain) => toolchain.feature === "eslint");
-    if (biome?.cli == null || eslint?.cli == null) {
-      throw new Error("Missing CLI-backed test adapters");
-    }
-
-    const discoveredBiome = { adapter: biome, exportName: "biome", stackDir: "biome" };
-    await expect(
-      validateDiscoveredToolchains([
-        discoveredBiome,
-        {
-          adapter: {
-            ...eslint,
-            cli: { ...eslint.cli, tool: getToolchainCliTool(biome) },
-          },
-          exportName: "eslint",
-          stackDir: "eslint",
-        },
-      ]),
-    ).rejects.toThrow("Duplicate CLI tool");
+  it("rejects duplicate ids and adapter export names before external probes", async () => {
+    const biome = getToolchain("biome");
+    const eslint = getToolchain("eslint");
 
     await expect(
       validateDiscoveredToolchains([
-        discoveredBiome,
-        {
-          adapter: { ...eslint, feature: biome.feature },
-          exportName: "eslint",
-          stackDir: "eslint",
-        },
+        discovered(biome),
+        discovered({ ...eslint, id: biome.id }, "eslint", biome.id),
       ]),
-    ).rejects.toThrow("Duplicate feature");
-
+    ).rejects.toThrow("Duplicate toolchain id: biome");
     await expect(
-      validateDiscoveredToolchains([
-        discoveredBiome,
-        { adapter: eslint, exportName: "biome", stackDir: "eslint" },
-      ]),
-    ).rejects.toThrow("Duplicate adapter export name");
-
-    await expect(
-      validateDiscoveredToolchains([
-        discoveredBiome,
-        {
-          adapter: {
-            ...eslint,
-            cli: {
-              ...eslint.cli,
-              exportName: biome.cli.exportName ?? `${biome.feature}CliManifest`,
-            },
-          },
-          exportName: "eslint",
-          stackDir: "eslint",
-        },
-      ]),
-    ).rejects.toThrow("Duplicate manifest export name");
-
-    await expect(
-      validateDiscoveredToolchains([
-        discoveredBiome,
-        {
-          adapter: {
-            ...eslint,
-            cli: {
-              ...eslint.cli,
-              stackDir: biome.cli.stackDir ?? getToolchainCliTool(biome),
-            },
-          },
-          exportName: "eslint",
-          stackDir: "eslint",
-        },
-      ]),
-    ).rejects.toThrow("Duplicate stack path");
+      validateDiscoveredToolchains([discovered(biome), discovered(eslint, "biome", "eslint")]),
+    ).rejects.toThrow("Duplicate adapter export name: biome");
   });
 
-  it("rejects generated stack paths outside a single safe stack directory", async () => {
-    const biome = toolchains.find((toolchain) => toolchain.feature === "biome");
-    if (biome?.cli == null) {
-      throw new Error("Missing Biome adapter");
-    }
+  it("requires ids, directories, exports, capabilities, and selectors to agree", async () => {
+    const biome = getToolchain("biome");
 
     await expect(
-      validateDiscoveredToolchains([
-        {
-          adapter: { ...biome, cli: { ...biome.cli, stackDir: "../outside" } },
-          exportName: "biome",
-          stackDir: "biome",
-        },
-      ]),
-    ).rejects.toThrow("stack path must be one lowercase kebab-case directory");
-  });
-
-  it("rejects features that normalize to the same user-facing selector", async () => {
-    const hotUpdater = toolchains.find((toolchain) => toolchain.feature === "hotUpdater");
-    const biome = toolchains.find((toolchain) => toolchain.feature === "biome");
-    if (hotUpdater == null || biome == null) {
-      throw new Error("Missing selector collision test adapters");
-    }
-
+      validateDiscoveredToolchains([discovered(biome, "biome", "other")]),
+    ).rejects.toThrow("must use the matching stack directory: biome");
     await expect(
-      validateDiscoveredToolchains([
-        { adapter: hotUpdater, exportName: "hotUpdater", stackDir: "hot-updater" },
-        {
-          adapter: { ...biome, feature: "hot-updater" as typeof biome.feature },
-          exportName: "hyphenatedHotUpdater",
-          stackDir: "hyphenated-hot-updater",
-        },
-      ]),
-    ).rejects.toThrow("Duplicate toolchain selector: hot-updater");
-  });
-
-  it("requires canonical lowerCamelCase feature ids", async () => {
-    const biome = toolchains.find((toolchain) => toolchain.feature === "biome");
-    if (biome == null) {
-      throw new Error("Missing feature syntax test adapter");
-    }
-
+      validateDiscoveredToolchains([discovered(biome, "other", "biome")]),
+    ).rejects.toThrow("must export biome, received other");
     await expect(
-      validateDiscoveredToolchains([
-        {
-          adapter: { ...biome, feature: "URLParser" as typeof biome.feature },
-          exportName: "urlParser",
-          stackDir: "url-parser",
-        },
-      ]),
-    ).rejects.toThrow("must use lowerCamelCase");
+      validateDiscoveredToolchains([discovered({ ...biome, id: "Biome" }, "biome", "Biome")]),
+    ).rejects.toThrow("must use lowercase kebab-case");
+    await expect(
+      validateDiscoveredToolchains([discovered({ ...biome, id: "plan" }, "plan", "plan")]),
+    ).rejects.toThrow("Direct CLI selector is reserved: plan");
+    await expect(
+      validateDiscoveredToolchains([discovered({ ...biome, capabilities: [] }, "biome", "biome")]),
+    ).rejects.toThrow("must declare at least one capability");
   });
 
   it("requires complete docs review metadata and existing review files", async () => {
-    const adapter = defineToolchain({
-      feature: "biome",
-      label: "Example",
-      package: "example",
-      command: "init",
-      docs: [
-        {
-          url: "https://example.com/docs",
-          confidence: "high",
-          review: {
-            reason: "Review the initializer contract.",
-            files: ["test/does-not-exist.ts"],
-            mustContain: ["init"],
-            checks: ["Confirm init remains supported."],
+    const biome = getToolchain("biome");
+    const missingFile = {
+      ...biome,
+      origin: {
+        ...biome.origin,
+        docs: [
+          {
+            confidence: "high" as const,
+            url: "https://example.com/docs",
+            review: {
+              reason: "Review the initializer contract.",
+              files: ["test/does-not-exist.ts"],
+              mustContain: ["init"],
+              checks: ["Confirm init remains supported."],
+            },
           },
-        },
-      ],
-    });
+        ],
+      },
+    };
+    await expect(validateDiscoveredToolchains([discovered(missingFile)])).rejects.toThrow(
+      "references a missing review file",
+    );
 
-    await expect(
-      validateDiscoveredToolchains([{ adapter, exportName: "example", stackDir: "example" }]),
-    ).rejects.toThrow("references a missing review file");
-
-    const incomplete = defineToolchain({
-      ...adapter,
-      package: "example",
-      command: "init",
-      docs: [
-        {
-          url: "https://example.com/docs",
-          confidence: "high",
-          review: {
-            reason: "Review the initializer contract.",
-            files: ["test/cli-command-manifest.test.ts"],
-            mustContain: ["init"],
-            checks: [],
+    const incomplete = {
+      ...missingFile,
+      origin: {
+        ...missingFile.origin,
+        docs: [
+          {
+            confidence: "high" as const,
+            url: "https://example.com/docs",
+            review: {
+              reason: "Review the initializer contract.",
+              files: ["test/cli-command-manifest.test.ts"],
+              mustContain: ["init"],
+              checks: [],
+            },
           },
-        },
-      ],
-    });
-    await expect(
-      validateDiscoveredToolchains([
-        { adapter: incomplete, exportName: "example", stackDir: "example" },
-      ]),
-    ).rejects.toThrow("review.checks must contain at least one nonempty value");
-
-    const absoluteReviewFile = defineToolchain({
-      feature: "biome",
-      label: "Example",
-      package: "example",
-      command: "init",
-      docs: [
-        {
-          url: "https://example.com/docs",
-          confidence: "high",
-          review: {
-            reason: "Review the initializer contract.",
-            files: [path.resolve("test/cli-command-manifest.test.ts")],
-            mustContain: ["init"],
-            checks: ["Confirm init remains supported."],
-          },
-        },
-      ],
-    });
-    await expect(
-      validateDiscoveredToolchains([
-        { adapter: absoluteReviewFile, exportName: "example", stackDir: "example" },
-      ]),
-    ).rejects.toThrow("review file must be repo-relative");
+        ],
+      },
+    };
+    await expect(validateDiscoveredToolchains([discovered(incomplete)])).rejects.toThrow(
+      "review.checks must contain at least one nonempty value",
+    );
   });
 
-  it("requires at least one unique package-manager command contract", async () => {
-    const biome = toolchains.find((toolchain) => toolchain.feature === "biome");
-    if (biome?.cli == null) {
-      throw new Error("Missing Biome CLI adapter");
-    }
+  it("requires custom runner templates to exactly cover package managers", async () => {
+    const biome = getToolchain("biome");
+    const runner = { npm: ["npx", "@biomejs/biome@{version}", "init"] } as const;
+    const custom = defineToolchain({ ...biome, origin: { ...biome.origin, runner } });
+    expect(custom.origin.packageManagers).toEqual(["npm"]);
 
     await expect(
       validateDiscoveredToolchains([
-        {
-          adapter: { ...biome, cli: { ...biome.cli, packageManagers: [] } },
-          exportName: "biome",
-          stackDir: "biome",
-        },
-      ]),
-    ).rejects.toThrow("at least one package manager");
-    await expect(
-      validateDiscoveredToolchains([
-        {
-          adapter: { ...biome, cli: { ...biome.cli, packageManagers: ["npm", "npm"] } },
-          exportName: "biome",
-          stackDir: "biome",
-        },
-      ]),
-    ).rejects.toThrow("repeats package manager: npm");
-  });
-
-  it("requires custom runner templates to exactly cover declared package managers", async () => {
-    const biome = toolchains.find((toolchain) => toolchain.feature === "biome");
-    if (biome?.cli == null) {
-      throw new Error("Missing Biome CLI adapter");
-    }
-    const runner = {
-      npm: ["npx", "@biomejs/biome@{version}", "init"],
-    } as const;
-
-    expect(
-      defineToolchain({
-        feature: "biome",
-        label: "Biome",
-        package: "@biomejs/biome",
-        command: "init",
-        runner,
-      }).cli?.packageManagers,
-    ).toEqual(["npm"]);
-    await expect(
-      validateDiscoveredToolchains([
-        {
-          adapter: {
-            ...biome,
-            cli: { ...biome.cli, packageManagers: ["npm", "pnpm"], runner },
-          },
-          exportName: "biome",
-          stackDir: "biome",
-        },
+        discovered({
+          ...custom,
+          origin: { ...custom.origin, packageManagers: ["npm", "pnpm"] },
+        }),
       ]),
     ).rejects.toThrow("no runner template for declared package manager: pnpm");
     await expect(
       validateDiscoveredToolchains([
-        {
-          adapter: {
-            ...biome,
-            cli: {
-              ...biome.cli,
-              packageManagers: ["npm"],
-              runner: { ...runner, pnpm: ["pnpm", "dlx", "@biomejs/biome@{version}"] },
-            },
+        discovered({
+          ...custom,
+          origin: {
+            ...custom.origin,
+            packageManagers: ["npm"],
+            runner: { ...runner, pnpm: ["pnpm", "dlx", "@biomejs/biome@{version}"] },
           },
-          exportName: "biome",
-          stackDir: "biome",
-        },
+        }),
       ]),
     ).rejects.toThrow("undeclared runner template: pnpm");
     await expect(
       validateDiscoveredToolchains([
-        {
-          adapter: {
-            ...biome,
-            cli: { ...biome.cli, packageManagers: ["npm"], runner: { npm: [] } },
-          },
-          exportName: "biome",
-          stackDir: "biome",
-        },
+        discovered({
+          ...custom,
+          origin: { ...custom.origin, packageManagers: ["npm"], runner: { npm: [] } },
+        }),
       ]),
     ).rejects.toThrow("runner template needs a nonempty binary: npm");
   });
@@ -671,7 +480,6 @@ describe("CLI command manifests", () => {
 
       const orphaned = await findOrphanGeneratedFiles([expectedManifest, expectedWrapper], tempDir);
       expect(orphaned).toEqual([orphanManifest, orphanWrapper].sort());
-
       await removeOrphanGeneratedFiles(orphaned);
       await expect(access(orphanManifest)).rejects.toThrow();
       await expect(access(orphanWrapper)).rejects.toThrow();
@@ -681,18 +489,25 @@ describe("CLI command manifests", () => {
     }
   });
 
-  it("keeps CLI identity declarations minimal in stack adapters", () => {
-    const hotUpdater = defineToolchain({
-      feature: "hotUpdater",
-      label: "Hot Updater",
-      package: "hot-updater",
-      command: "init",
+  it("keeps catalog metadata separate from origin command identity", () => {
+    const example = defineToolchain({
+      id: "example",
+      label: "Example",
+      summary: "Example initializer",
+      area: "app",
+      capabilities: ["database-orm"],
+      order: 10,
+      origin: {
+        package: "create-example",
+        command: "init",
+        docs: [],
+      },
     });
 
-    expect(hotUpdater.hint).toBe("");
-    expect(hotUpdater.cli).toMatchObject({
-      package: "hot-updater",
-      command: "init",
+    expect(example).toMatchObject({
+      id: "example",
+      summary: "Example initializer",
+      origin: { package: "create-example", command: "init" },
     });
   });
 
@@ -724,3 +539,21 @@ describe("CLI command manifests", () => {
     });
   });
 });
+
+function getToolchain(id: string) {
+  const toolchain = toolchains.find((candidate) => candidate.id === id);
+  if (toolchain == null) {
+    throw new Error(`Missing test toolchain: ${id}`);
+  }
+  return toolchain;
+}
+
+function discovered(
+  adapter: (typeof toolchains)[number],
+  exportName = adapter.id.replace(/-([a-z0-9])/g, (_, character: string) =>
+    character.toUpperCase(),
+  ),
+  stackDir = adapter.id,
+) {
+  return { adapter, exportName, stackDir };
+}

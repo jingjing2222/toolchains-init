@@ -1,13 +1,13 @@
 {
   "name": "toolchains-init",
   "version": "0.0.9",
-  "description": "Run setup commands for selected toolchains.",
+  "description": "Discover, plan, and run pinned upstream setup CLIs for existing projects.",
   "keywords": [
     "cli",
-    "react",
-    "scaffold",
-    "toolchain",
-    "vite"
+    "developer-tools",
+    "initializer",
+    "setup",
+    "toolchain"
   ],
   "homepage": "https://github.com/jingjing2222/toolchains-init#readme",
   "bugs": {

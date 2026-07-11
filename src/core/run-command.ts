@@ -3,11 +3,23 @@ import os from "node:os";
 import path from "node:path";
 
 const safelyReraisedSignals = new Set<NodeJS.Signals>([
+  "SIGABRT",
+  "SIGALRM",
+  "SIGBUS",
+  "SIGFPE",
   "SIGHUP",
+  "SIGILL",
   "SIGINT",
   "SIGKILL",
   "SIGQUIT",
+  "SIGSEGV",
+  "SIGSYS",
   "SIGTERM",
+  "SIGTRAP",
+  "SIGUSR2",
+  "SIGVTALRM",
+  "SIGXCPU",
+  "SIGXFSZ",
 ]);
 
 export class CommandError extends Error {

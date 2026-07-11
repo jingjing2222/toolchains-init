@@ -1,107 +1,136 @@
-import { cancel, groupMultiselect, intro, isCancel, outro } from "@clack/prompts";
+import { cancel, confirm, groupMultiselect, intro, isCancel, outro } from "@clack/prompts";
 import type { Option } from "@clack/prompts";
 import path from "node:path";
 import pc from "picocolors";
 import type { InitCliOptions } from "../core/cli-options";
-import { runExternalToolchains } from "../core/external-toolchains";
-import { resolveManagedCliPlans } from "../core/managed-cli";
+import { executePlan } from "../core/execute-plan";
+import { buildExecutionPlan, renderExecutionPlan } from "../core/execution-plan";
 import { detectPackageManager } from "../core/package-manager";
-import type { ToolchainAdapter, ToolchainCatalog } from "../core/toolchain-adapter";
-import { getToolchainCliTool } from "../core/toolchain-adapter";
-import type { Feature } from "../core/types";
+import { toolchainAreaLabels } from "../core/toolchain-catalog";
+import type { ToolchainArea, ToolchainDefinition } from "../core/toolchain-adapter";
 import { getSelectedToolchains, toolchains } from "../stacks/index";
 
-const toolchainCatalogs = [
-  ["app", "App Foundation"],
-  ["quality", "Quality & Testing"],
-  ["release", "Release"],
-  ["editor", "Editor"],
-] as const satisfies readonly (readonly [ToolchainCatalog, string])[];
+const areaOrder = [
+  "app",
+  "testing",
+  "quality",
+  "release",
+  "editor",
+] as const satisfies readonly ToolchainArea[];
 
-export async function runInit(cliOptions: InitCliOptions) {
-  const { managedCliArgs, selectedFeatures, yes } = cliOptions;
+export async function runInit(cliOptions: InitCliOptions, runtime: { stdinIsTTY?: boolean } = {}) {
   const cwd = path.resolve(process.cwd(), cliOptions.target ?? ".");
   const packageManager = cliOptions.packageManager ?? detectPackageManager();
+  const stdinIsTTY = runtime.stdinIsTTY ?? process.stdin.isTTY === true;
 
   intro(pc.bgBlue(pc.white(" toolchains-init ")));
 
-  const availableToolchains = (toolchains as readonly ToolchainAdapter[]).filter(
-    (toolchain) => toolchain.cli?.packageManagers?.includes(packageManager) ?? true,
+  const availableToolchains = toolchains.filter(
+    (toolchain) => toolchain.origin.packageManagers?.includes(packageManager) ?? true,
   );
-  let features: Feature[] | null;
-  if (selectedFeatures != null) {
-    const requestedAdapters = getSelectedToolchains(selectedFeatures);
-    const availableFeatureSet = new Set(availableToolchains.map((toolchain) => toolchain.feature));
-    const unavailable = requestedAdapters.filter(
-      (toolchain) => !availableFeatureSet.has(toolchain.feature),
-    );
+  const interactiveSelection = cliOptions.selectedToolIds == null;
+  let selectedIds: readonly string[] | null;
+
+  if (cliOptions.selectedToolIds != null) {
+    const requested = getSelectedToolchains(cliOptions.selectedToolIds);
+    const availableIds = new Set(availableToolchains.map((toolchain) => toolchain.id));
+    const unavailable = requested.filter((toolchain) => !availableIds.has(toolchain.id));
     if (unavailable.length > 0) {
       cancel(
-        `Toolchain${unavailable.length === 1 ? " is" : "s are"} not supported by ${packageManager}: ${unavailable
-          .map((toolchain) => getToolchainCliTool(toolchain))
+        `Initializer${unavailable.length === 1 ? " is" : "s are"} not supported by ${packageManager}: ${unavailable
+          .map((toolchain) => toolchain.id)
           .join(", ")}`,
       );
       process.exitCode = 1;
       return;
     }
-    features = requestedAdapters.map((toolchain) => toolchain.feature);
+    selectedIds = requested.map((toolchain) => toolchain.id);
   } else {
-    if (yes) {
-      cancel("The --yes option requires at least one direct --<tool> selector.");
+    if (!stdinIsTTY) {
+      cancel("Non-interactive runs require at least one explicit --<tool> selector.");
       process.exitCode = 1;
       return;
     }
-    features = await selectFeatures(availableToolchains);
+    selectedIds = await selectToolIds(availableToolchains);
   }
-  if (features == null) {
+
+  if (selectedIds == null) {
     cancel("Initialization cancelled.");
     return;
   }
 
-  const selectedToolchains = getSelectedToolchains(features);
-  const options = { features };
-  const managedCliPlans = resolveManagedCliPlans({
+  const selectedToolchains = getSelectedToolchains(selectedIds);
+  const plan = buildExecutionPlan({
+    cwd,
     packageManager,
     selectedToolchains,
-    userArgs: managedCliArgs,
+    userArgs: cliOptions.originArgs,
   });
 
-  outro(
-    `Wrapper selection complete. Passing control to ${selectedToolchains.length} upstream CLI command${selectedToolchains.length === 1 ? "" : "s"}.`,
-  );
-  await runExternalToolchains(cwd, packageManager, options, managedCliPlans);
+  console.log(renderExecutionPlan(plan));
+
+  if (cliOptions.plan) {
+    outro("Plan complete. No commands were run.");
+    return;
+  }
+
+  if (interactiveSelection) {
+    const accepted = await confirm({
+      message: "Run these initializers?",
+      initialValue: false,
+    });
+    if (isCancel(accepted) || !accepted) {
+      cancel("Initialization cancelled.");
+      return;
+    }
+  }
+
+  outro(`Starting ${plan.steps.length} upstream initializer${plan.steps.length === 1 ? "" : "s"}.`);
+  await executePlan(plan, {
+    onStepStart(step, index) {
+      console.log(`[${index + 1}/${plan.steps.length}] Running ${step.label}`);
+    },
+    onStepComplete(step, index) {
+      console.log(`[${index + 1}/${plan.steps.length}] Completed ${step.label}`);
+    },
+    onStepFailure(step, index, remaining) {
+      console.error(
+        `[${index + 1}/${plan.steps.length}] ${step.label} failed; ${remaining} initializer${remaining === 1 ? "" : "s"} not run.`,
+      );
+    },
+  });
 }
 
-export async function selectFeatures(
-  availableToolchains: readonly ToolchainAdapter[],
-): Promise<Feature[] | null> {
+export async function selectToolIds(
+  availableToolchains: readonly ToolchainDefinition[],
+): Promise<readonly string[] | null> {
   const selected = await groupMultiselect({
-    message: "Which upstream CLI commands should run?",
+    message: "Which upstream initializers should run?",
     options: groupToolchainOptions(availableToolchains),
     required: true,
     initialValues: [],
-    selectableGroups: true,
+    selectableGroups: false,
   });
 
-  return isCancel(selected) ? null : (selected as Feature[]);
+  return isCancel(selected) ? null : (selected as string[]);
 }
 
-function groupToolchainOptions(availableToolchains: readonly ToolchainAdapter[]) {
-  const entries: Array<[string, Option<Feature>[]]> = [];
+function groupToolchainOptions(availableToolchains: readonly ToolchainDefinition[]) {
+  const entries: Array<[string, Option<string>[]]> = [];
 
-  for (const [catalog, label] of toolchainCatalogs) {
+  for (const area of areaOrder) {
     const options = availableToolchains
-      .filter((toolchain) => toolchain.catalog === catalog)
+      .filter((toolchain) => toolchain.area === area)
       .map(
-        (toolchain): Option<Feature> => ({
-          value: toolchain.feature,
+        (toolchain): Option<string> => ({
+          value: toolchain.id,
           label: toolchain.label,
-          hint: toolchain.hint,
+          hint: toolchain.summary,
         }),
       );
 
     if (options.length > 0) {
-      entries.push([label, options]);
+      entries.push([toolchainAreaLabels[area], options]);
     }
   }
 

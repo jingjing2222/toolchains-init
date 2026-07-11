@@ -1,33 +1,24 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { resolveCliCommand } from "../../core/cli-command-manifest";
-import { runExternalToolchains } from "../../core/external-toolchains";
+import { vi } from "vitest";
+import { defineFocusedInitContract } from "../init-test-contract";
 import { playwright, playwrightCliManifest } from "./index";
-import { options } from "../init-test-utils";
 
-const mocks = vi.hoisted(() => ({
-  runCommand: vi.fn(async () => {}),
-}));
+const mocks = vi.hoisted(() => ({ runCommand: vi.fn(async () => {}) }));
 
-vi.mock("../../core/run-command", () => ({
-  runCommand: mocks.runCommand,
-}));
+vi.mock("../../core/run-command", () => ({ runCommand: mocks.runCommand }));
 
-describe("Playwright adapter init", () => {
-  beforeEach(() => {
-    mocks.runCommand.mockClear();
-  });
-
-  it("executes the official Playwright initializer with inherited stdin", async () => {
-    expect(playwright.managedCli).toBe(true);
-    const command = resolveCliCommand(playwrightCliManifest, "init", "npm");
-    expect(command).toEqual({
-      bin: "npm",
-      args: ["init", `playwright@${playwrightCliManifest.version}`, "--"],
-    });
-
-    await runExternalToolchains(".", "npm", options(["playwright"]));
-
-    expect(mocks.runCommand).toHaveBeenCalledTimes(1);
-    expect(mocks.runCommand).toHaveBeenCalledWith(".", command.bin, command.args);
-  });
+defineFocusedInitContract({
+  toolchain: playwright,
+  expectedMetadata: {
+    id: "playwright",
+    area: "testing",
+    capabilities: ["e2e-testing"],
+    origin: { package: "create-playwright", command: "init" },
+  },
+  manifest: playwrightCliManifest,
+  packageManager: "npm",
+  baseCommand: {
+    bin: "npm",
+    args: ["init", `playwright@${playwrightCliManifest.version}`, "--"],
+  },
+  runCommandMock: mocks.runCommand,
 });

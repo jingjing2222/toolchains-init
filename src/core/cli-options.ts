@@ -1,24 +1,18 @@
 import { parseArgs } from "node:util";
+import type { ToolchainCliGroup, ToolchainCliSurface, ToolchainCliUserArgs } from "./cli-surface";
+import { createToolchainCliSurface } from "./cli-surface";
 import type { PackageManager } from "./package-manager";
-import type { Feature } from "./types";
-import type { ToolchainAdapter } from "./toolchain-adapter";
-import {
-  createManagedCliSurface,
-  type ManagedCliGroup,
-  type ManagedCliSurface,
-  type ManagedCliUserArgs,
-} from "./managed-cli";
 import { toolchains } from "../stacks/index";
 
 export type InitCliOptions = {
   help: boolean;
   helpTool: string | null;
-  managedCliArgs: ManagedCliUserArgs;
+  originArgs: ToolchainCliUserArgs;
   packageManager: PackageManager | null;
-  selectedFeatures: readonly Feature[] | null;
+  plan: boolean;
+  selectedToolIds: readonly string[] | null;
   target: string | null;
   version: boolean;
-  yes: boolean;
 };
 
 const packageManagers = ["npm", "pnpm", "yarn", "bun", "deno"] as const;
@@ -32,20 +26,19 @@ type ParseOption = {
 type ParsedValue = boolean | string | string[] | undefined;
 
 export function parseCliOptions(args: string[]): InitCliOptions {
-  const surface = createManagedCliSurface();
+  const surface = createToolchainCliSurface();
   const options: Record<string, ParseOption> = {
     help: { short: "h", type: "boolean" },
     "package-manager": { type: "string" },
+    plan: { type: "boolean" },
     target: { type: "string" },
     version: { short: "v", type: "boolean" },
-    yes: { short: "y", type: "boolean" },
   };
   for (const group of surface.groups) {
     options[group.selector] = { type: "boolean" };
   }
 
-  const preprocessed = preprocessManagedCliArgs(args, surface);
-
+  const preprocessed = preprocessOriginArgs(args, surface);
   const parsed = parseArgs({
     allowPositionals: true,
     args: preprocessed.wrapperArgs,
@@ -57,6 +50,7 @@ export function parseCliOptions(args: string[]): InitCliOptions {
   if (parsed.positionals[0] != null) {
     throw new Error(`Unknown argument: ${parsed.positionals[0]}`);
   }
+
   const counts = new Map<string, number>();
   for (const token of parsed.tokens) {
     if (token.kind !== "option" || options[token.name]?.multiple === true) {
@@ -82,44 +76,38 @@ export function parseCliOptions(args: string[]): InitCliOptions {
     return {
       help,
       helpTool: help && directGroups.length === 1 ? (directGroups[0]?.selector ?? null) : null,
-      managedCliArgs: {},
+      originArgs: {},
       packageManager: null,
-      selectedFeatures: null,
+      plan: false,
+      selectedToolIds: null,
       target: null,
       version,
-      yes: false,
     };
   }
 
-  const selectedSelectors = new Set(directGroups.map((group) => group.selector));
+  const selectedIds = new Set(directGroups.map((group) => group.selector));
   for (const group of preprocessed.groupsWithArgs) {
-    if (!selectedSelectors.has(group.selector)) {
+    if (!selectedIds.has(group.selector)) {
       throw new Error(
         `Origin arguments for --${group.selector} require the --${group.selector} tool selector.`,
       );
     }
   }
 
-  if (values.yes === true && directGroups.length === 0) {
-    throw new Error("The --yes option requires at least one direct --<tool> selector.");
-  }
-
   return {
     help,
     helpTool: null,
-    managedCliArgs: preprocessed.managedCliArgs,
+    originArgs: preprocessed.originArgs,
     packageManager: parsePackageManager(values["package-manager"]),
-    selectedFeatures:
-      directGroups.length > 0 ? directGroups.map((group) => group.toolchain.feature) : null,
+    plan: values.plan === true,
+    selectedToolIds: directGroups.length > 0 ? directGroups.map((group) => group.selector) : null,
     target: parseNonEmptyValue(values.target, "target directory"),
     version,
-    yes: values.yes === true,
   };
 }
 
 export function renderHelp(packageVersion: string, focusedSelector: string | null = null) {
-  const registeredToolchains = toolchains as readonly ToolchainAdapter[];
-  const surface = createManagedCliSurface(registeredToolchains);
+  const surface = createToolchainCliSurface(toolchains);
   if (focusedSelector != null) {
     const group = surface.bySelector.get(focusedSelector);
     if (group != null) {
@@ -131,15 +119,12 @@ export function renderHelp(packageVersion: string, focusedSelector: string | nul
   const toolchainRows = surface.groups
     .map((group) => {
       const selector = `--${group.selector}`.padEnd(selectorWidth + 2);
-      const declaredPackageManagers = group.toolchain.cli?.packageManagers;
+      const declaredPackageManagers = group.toolchain.origin.packageManagers;
       const packageManagerSupport =
         declaredPackageManagers != null && declaredPackageManagers.length < packageManagers.length
           ? ` [package managers: ${declaredPackageManagers.join(", ")}]`
           : "";
-      const details = `${[group.toolchain.label, group.toolchain.hint]
-        .filter(Boolean)
-        .join(" — ")}${packageManagerSupport}`;
-      return `  ${selector}  ${details}`;
+      return `  ${selector}  ${group.toolchain.label} — ${group.toolchain.summary}${packageManagerSupport}`;
     })
     .join("\n");
 
@@ -149,12 +134,12 @@ Usage:
   toolchains-init [--target path] [--<tool> ...] [options]
 
 Options:
-  --<tool>                 Select an upstream CLI command (see Tool selectors)
+  --<tool>                 Select an upstream initializer (see Tool selectors)
   --<tool>.<flag>          Forward an upstream flag without validating it
-  --<tool>.raw.arg <value> Forward one raw argument; repeat to preserve raw argument order
+  --<tool>.raw.arg <value> Forward one raw argument; repeat to preserve argument order
+  --plan                   Print the complete execution plan without running commands
   --target <path>          Working directory for upstream CLIs (default: current directory)
   --package-manager <name> npm, pnpm, yarn, bun, or deno (default: launcher)
-  -y, --yes                Skip wrapper selection prompts (requires explicit tool selectors)
   -h, --help               Show wrapper help; combine with one --<tool> for its arguments
   -v, --version            Show the wrapper version
 
@@ -162,17 +147,15 @@ Tool selectors:
 ${toolchainRows}
 
 Examples:
-  toolchains-init --playwright --playwright.lang=TypeScript --oxlint --yes
+  toolchains-init --playwright --playwright.lang=TypeScript --biome
+  toolchains-init --plan --playwright --biome
   toolchains-init --playwright --help
-  toolchains-init --playwright --playwright.raw.arg=--help --yes
+  toolchains-init --playwright --playwright.raw.arg=--help
 `;
 }
 
-function renderFocusedHelp(packageVersion: string, group: ManagedCliGroup) {
-  const packageLabel =
-    group.manifest == null
-      ? (group.toolchain.cli?.package ?? "upstream CLI")
-      : `${group.manifest.package}@${group.manifest.version}`;
+function renderFocusedHelp(packageVersion: string, group: ToolchainCliGroup) {
+  const packageLabel = `${group.manifest.package}@${group.manifest.version}`;
   const rows = group.flags.map((flag) => {
     return `  --${flag.optionName}  forwards ${flag.cliName}`;
   });
@@ -180,7 +163,6 @@ function renderFocusedHelp(packageVersion: string, group: ManagedCliGroup) {
     rows.length > 0
       ? rows.join("\n")
       : "  No flag names were discovered from this command's help output.";
-  const rawArg = group.rawArgOptionName ?? `${group.selector}.raw.arg`;
 
   return `toolchains-init ${packageVersion}
 
@@ -188,36 +170,36 @@ Tool: --${group.selector}
 Package: ${packageLabel}
 
 Usage:
-  toolchains-init --${group.selector} [--${group.selector}.<flag> ...] [--${rawArg} <value> ...] [options]
+  toolchains-init --${group.selector} [--${group.selector}.<flag> ...] [--${group.rawArgOptionName} <value> ...] [options]
 
 Namespaced upstream flags:
 ${argumentsSection}
 
 Raw passthrough:
-  --${rawArg} <value>  forwards one argument exactly; repeat for multiple arguments
+  --${group.rawArgOptionName} <value>  forwards one argument exactly; repeat for multiple arguments
 
 Discovered names are help only; any --${group.selector}.<flag> name is accepted.
 The wrapper removes only the --${group.selector}. namespace and does not validate names, values, or repetitions.
-Use =value or an adjacent non-option value. Use --${rawArg} for arbitrary tokens such as --, positionals, or dash-prefixed values.
-For example, --${rawArg}=--version forwards --version to the origin CLI.
+Use =value or an adjacent non-option value. Use --${group.rawArgOptionName} for arbitrary tokens such as --, positionals, or dash-prefixed values.
+For example, --${group.rawArgOptionName}=--version forwards --version to the origin CLI.
 `;
 }
 
-function preprocessManagedCliArgs(args: readonly string[], surface: ManagedCliSurface) {
+function preprocessOriginArgs(args: readonly string[], surface: ToolchainCliSurface) {
   const wrapperArgs: string[] = [];
-  const managedCliArgs: Record<string, string[]> = {};
-  const groupsWithArgs = new Set<ManagedCliGroup>();
+  const originArgs: Record<string, string[]> = {};
+  const groupsWithArgs = new Set<ToolchainCliGroup>();
 
   for (let index = 0; index < args.length; index += 1) {
     const token = args[index] ?? "";
-    const namespaced = matchManagedCliToken(token, surface);
+    const namespaced = matchOriginToken(token, surface);
     if (namespaced == null) {
       wrapperArgs.push(token);
       continue;
     }
 
     const { group, suffix } = namespaced;
-    const destination = (managedCliArgs[group.toolchain.feature] ??= []);
+    const destination = (originArgs[group.toolchain.id] ??= []);
     groupsWithArgs.add(group);
 
     if (suffix === "raw.arg") {
@@ -244,10 +226,10 @@ function preprocessManagedCliArgs(args: readonly string[], surface: ManagedCliSu
     }
   }
 
-  return { groupsWithArgs, managedCliArgs, wrapperArgs };
+  return { groupsWithArgs, originArgs, wrapperArgs };
 }
 
-function matchManagedCliToken(token: string, surface: ManagedCliSurface) {
+function matchOriginToken(token: string, surface: ToolchainCliSurface) {
   if (!token.startsWith("--")) {
     return null;
   }
@@ -258,7 +240,7 @@ function matchManagedCliToken(token: string, surface: ManagedCliSurface) {
     return null;
   }
   const group = surface.bySelector.get(body.slice(0, dotIndex));
-  if (group?.rawArgOptionName == null) {
+  if (group == null) {
     return null;
   }
   return { group, suffix: body.slice(dotIndex + 1) };
