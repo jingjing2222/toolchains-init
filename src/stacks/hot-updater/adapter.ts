@@ -1,6 +1,4 @@
-import { resolveCliCommand } from "../../core/cli-command-manifest";
 import { hasPackageDependency, setManifestDevDependency } from "../../core/package-json-utils";
-import { runCommand } from "../../core/run-command";
 import { defineToolchain } from "../../core/toolchain-adapter";
 
 export const hotUpdater = defineToolchain({
@@ -36,14 +34,8 @@ export const hotUpdater = defineToolchain({
   isAvailable({ packageJson }) {
     return hasPackageDependency(packageJson, "react-native");
   },
-  async run({ cwd, packageManager, yes }) {
-    if (yes) {
-      throw new Error("Hot Updater init requires interactive provider setup. Run without --yes.");
-    }
-
-    const { hotUpdaterCliManifest } = await import("./manifest");
-    const command = resolveCliCommand(hotUpdaterCliManifest, "init", packageManager);
-    await runCommand(cwd, command.bin, command.args);
+  managedCli: {
+    phase: "run",
   },
   beforeRun({ cliManifest, packageJson }) {
     setManifestDevDependency(packageJson, cliManifest);

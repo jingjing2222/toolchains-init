@@ -11,7 +11,7 @@ import type {
   PackageManagerCommandTemplates,
   ToolchainAdapter,
 } from "../src/core/toolchain-adapter";
-import { getToolchainId } from "../src/core/toolchain-adapter";
+import { getToolchainCliTool, getToolchainId } from "../src/core/toolchain-adapter";
 
 type CliHelpSource = Extract<CliCommandManifest["sources"][number], { kind: "cli-help" }>;
 type NpmSource = Extract<CliCommandManifest["sources"][number], { kind: "npm" }>;
@@ -125,6 +125,12 @@ export async function validateDiscoveredToolchains(toolchains: readonly Discover
   assertUniqueIdentity(toolchains, "adapter export name", (toolchain) => toolchain.exportName);
   for (const toolchain of toolchains) {
     assertCanonicalFeature(toolchain.adapter.feature);
+    assertDirectSelector(toolchain.adapter);
+    if (toolchain.adapter.managedCli != null && toolchain.adapter.cli == null) {
+      throw new Error(
+        `Managed CLI adapter ${toolchain.adapter.feature} must declare a CLI command`,
+      );
+    }
   }
 
   const cliToolchains = toolchains.filter(
@@ -142,6 +148,11 @@ export async function validateDiscoveredToolchains(toolchains: readonly Discover
   assertUniqueIdentity(manifestInputs, "CLI tool", (input) => input.tool);
   assertUniqueIdentity(manifestInputs, "manifest export name", (input) => input.exportName);
   assertUniqueIdentity(manifestInputs, "stack path", (input) => getStackDir(input));
+  assertUniqueIdentity(toolchains, "direct CLI selector", (toolchain) =>
+    toolchain.adapter.cli == null
+      ? getToolchainId(toolchain.adapter)
+      : getToolchainCliTool(toolchain.adapter),
+  );
 
   await Promise.all(
     cliToolchains.map(async (toolchain) => {
@@ -247,8 +258,17 @@ function assertCanonicalFeature(feature: string) {
   if (!/^[a-z][A-Za-z0-9]*$/.test(feature)) {
     throw new Error(`Toolchain feature must use lowerCamelCase: ${feature}`);
   }
-  if (getToolchainId({ feature }) === "all") {
-    throw new Error('Toolchain selector "all" is reserved');
+}
+
+function assertDirectSelector(adapter: ToolchainAdapter) {
+  const selector = adapter.cli == null ? getToolchainId(adapter) : getToolchainCliTool(adapter);
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(selector)) {
+    throw new Error(`Direct CLI selector must use lowercase kebab-case: ${selector}`);
+  }
+  if (
+    new Set(["help", "no-install", "package-manager", "target", "version", "yes"]).has(selector)
+  ) {
+    throw new Error(`Direct CLI selector is reserved: ${selector}`);
   }
 }
 

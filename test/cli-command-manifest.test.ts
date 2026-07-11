@@ -2,7 +2,7 @@ import { access, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promise
 import os from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { resolveCliCommand } from "../src/core/cli-command-manifest";
+import { defineCliCommandManifest, resolveCliCommand } from "../src/core/cli-command-manifest";
 import { defineToolchain, getToolchainCliTool } from "../src/core/toolchain-adapter";
 import {
   cliCommandManifestData,
@@ -83,6 +83,42 @@ describe("CLI command manifests", () => {
       skipInstall: { cliName: "--skip-install", type: "boolean" },
       yes: { cliName: "--yes", type: "boolean" },
     });
+  });
+
+  it("rejects ambiguous generated flag identities and invalid enum contracts", () => {
+    const manifest = {
+      commands: [
+        {
+          flags: {
+            first: { cliName: "--same", supported: true, type: "boolean" },
+            second: { cliName: "--same", supported: true, type: "string" },
+          },
+          id: "init",
+          interactive: false,
+          packageManagers: { npm: ["npx", "example@{version}"] },
+        },
+      ],
+      package: "example",
+      schemaVersion: "toolchains-init/cli-command-manifest/v1",
+      sources: [],
+      tool: "example",
+      version: "1.0.0",
+    };
+
+    expect(() => defineCliCommandManifest(manifest)).toThrow("Duplicate CLI flag name");
+    expect(() =>
+      defineCliCommandManifest({
+        ...manifest,
+        commands: [
+          {
+            ...manifest.commands[0],
+            flags: {
+              mode: { cliName: "--mode", supported: true, type: "enum", values: [] },
+            },
+          },
+        ],
+      }),
+    ).toThrow("Invalid enum values");
   });
 
   it("keeps docs-backed adapter review metadata in generated manifests", () => {
@@ -389,16 +425,6 @@ describe("CLI command manifests", () => {
         },
       ]),
     ).rejects.toThrow("must use lowerCamelCase");
-
-    await expect(
-      validateDiscoveredToolchains([
-        {
-          adapter: { ...biome, feature: "all" as typeof biome.feature },
-          exportName: "allToolchains",
-          stackDir: "all-toolchains",
-        },
-      ]),
-    ).rejects.toThrow('selector "all" is reserved');
   });
 
   it("requires complete docs review metadata and existing review files", async () => {

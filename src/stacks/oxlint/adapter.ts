@@ -5,7 +5,6 @@ import {
 } from "../../core/editor-settings";
 import fs from "node:fs/promises";
 import path from "node:path";
-import { resolveCliCommand } from "../../core/cli-command-manifest";
 import { setManifestDevDependency } from "../../core/package-json-utils";
 import type { PackageManager } from "../../core/package-manager";
 import { runCommand } from "../../core/run-command";
@@ -41,11 +40,15 @@ export const oxlint = defineToolchain({
     },
   ],
   subcommand: null,
-  async run({ cwd, packageManager }) {
-    const { oxlintCliManifest } = await import("./manifest");
-    const command = resolveCliCommand(oxlintCliManifest, "init", packageManager, { init: true });
-    await runCommand(cwd, command.bin, command.args);
-    await normalizeOxlintConfigForPackageManager(cwd, packageManager);
+  managedCli: {
+    phase: "run",
+    locked() {
+      return { init: true };
+    },
+    async execute({ cwd, command, packageManager, yes }) {
+      await runCommand(cwd, command.bin, command.args, { stdin: yes ? "ignore" : "inherit" });
+      await normalizeOxlintConfigForPackageManager(cwd, packageManager);
+    },
   },
   updatePackageJson({ cliManifest, packageJson }) {
     setManifestDevDependency(packageJson, cliManifest);

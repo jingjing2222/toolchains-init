@@ -9,6 +9,56 @@ export type RunToolchainContext = {
   yes: boolean;
 };
 
+export type ManagedCliFlagValue = boolean | string;
+
+export type ManagedCliFlagValues = Readonly<Record<string, ManagedCliFlagValue>>;
+
+type ToolchainSetupOption = Exclude<keyof ToolchainOptions, "features">;
+
+export type ManagedCliSetupContract = {
+  [Option in ToolchainSetupOption]: ToolchainOptions[Option] extends boolean
+    ? {
+        description: string;
+        option: Option;
+        type: "boolean";
+      }
+    : {
+        description: string;
+        option: Option;
+        type: "enum";
+        values: readonly ToolchainOptions[Option][];
+      };
+}[ToolchainSetupOption];
+
+export type ToolchainOptionOverrides = Partial<Omit<ToolchainOptions, "features">>;
+
+export type ManagedCliPolicyContext = {
+  packageManager: PackageManager;
+  options: ToolchainOptions;
+  yes: boolean;
+};
+
+export type ManagedCliPolicyValue<T> = T | ((context: ManagedCliPolicyContext) => T);
+
+export type ResolvedCliCommand = {
+  bin: string;
+  args: readonly string[];
+};
+
+export type ExecuteManagedCliContext = RunToolchainContext & {
+  command: ResolvedCliCommand;
+};
+
+export type ManagedToolchainCli = {
+  phase: "run" | "afterInstall";
+  defaults?: ManagedCliPolicyValue<ManagedCliFlagValues>;
+  locked?: ManagedCliPolicyValue<ManagedCliFlagValues>;
+  blocked?: ManagedCliPolicyValue<Readonly<Record<string, string>>>;
+  positionals?: ManagedCliPolicyValue<readonly string[]>;
+  setup?: Readonly<Record<string, ManagedCliSetupContract>>;
+  execute?: (context: ExecuteManagedCliContext) => Promise<void>;
+};
+
 export type UpdatePackageJsonContext = {
   cliManifest?: CliCommandManifest;
   packageJson: PackageJson;
@@ -65,6 +115,7 @@ export type ToolchainAdapter = {
   catalog: ToolchainCatalog;
   order?: number;
   cli?: ToolchainCliDefinition;
+  managedCli?: ManagedToolchainCli;
   nonInteractive?: {
     supported: false;
     reason: string;

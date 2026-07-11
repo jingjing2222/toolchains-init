@@ -1,7 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import type { PackageJson, ToolchainOptions } from "./types";
-import { getSelectedToolchains } from "../stacks";
+import { getSelectedToolchains } from "../stacks/index";
 import { updatePackageJson, updatePackageJsonBeforeRun } from "./package-json";
 
 export async function readPackageJson(cwd: string): Promise<PackageJson | null> {

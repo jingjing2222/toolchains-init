@@ -12,12 +12,10 @@ import {
 import type { Option } from "@clack/prompts";
 import path from "node:path";
 import pc from "picocolors";
-import {
-  getRequestedToolchainAdapters,
-  validateNonInteractiveToolchains,
-} from "../core/cli-options";
+import { validateNonInteractiveToolchains } from "../core/cli-options";
 import type { InitCliOptions } from "../core/cli-options";
 import { runExternalToolchains, runPostInstallToolchains } from "../core/external-toolchains";
+import { resolveManagedCliPlans } from "../core/managed-cli";
 import {
   existingTargetFiles,
   readPackageJson,
@@ -25,9 +23,9 @@ import {
   writeToolchain,
 } from "../core/files";
 import { detectPackageManager, runInstall } from "../core/package-manager";
-import { getAvailableToolchains, getSelectedToolchains } from "../stacks";
+import { getAvailableToolchains, getSelectedToolchains } from "../stacks/index";
 import { DEFAULT_ROUTER_MODE, type Feature, type RouterMode } from "../core/types";
-import { getToolchainId } from "../core/toolchain-adapter";
+import { getToolchainCliTool } from "../core/toolchain-adapter";
 import type { ToolchainAdapter, ToolchainCatalog } from "../core/toolchain-adapter";
 
 const toolchainCatalogs = [
@@ -38,7 +36,8 @@ const toolchainCatalogs = [
 ] as const satisfies readonly (readonly [ToolchainCatalog, string])[];
 
 export async function runInit(cliOptions: InitCliOptions) {
-  const { requestedToolchains, routerMode: routerModeFromArgs, skipInstall, yes } = cliOptions;
+  const { managedCliFlags, selectedFeatures, skipInstall, toolchainOptions, yes } = cliOptions;
+  const routerModeFromArgs = toolchainOptions.routerMode ?? null;
   const cwd = path.resolve(process.cwd(), cliOptions.target ?? ".");
 
   intro(pc.bgBlue(pc.white(" toolchains-init ")));
@@ -57,20 +56,17 @@ export async function runInit(cliOptions: InitCliOptions) {
 
   const packageManager = cliOptions.packageManager ?? detectPackageManager();
   const availableToolchains = await getAvailableToolchains({ cwd, packageJson, packageManager });
-  const availableFeatures = availableToolchains.map((toolchain) => toolchain.feature);
   let features: Feature[] | null;
-  if (requestedToolchains === "all") {
-    features = availableFeatures;
-  } else if (requestedToolchains != null) {
-    const requestedAdapters = getRequestedToolchainAdapters(requestedToolchains);
-    const availableFeatureSet = new Set(availableFeatures);
+  if (selectedFeatures != null) {
+    const requestedAdapters = getSelectedToolchains(selectedFeatures);
+    const availableFeatureSet = new Set(availableToolchains.map((toolchain) => toolchain.feature));
     const unavailable = requestedAdapters.filter(
       (toolchain) => !availableFeatureSet.has(toolchain.feature),
     );
     if (unavailable.length > 0) {
       cancel(
         `Toolchain${unavailable.length === 1 ? " is" : "s are"} not available for this target: ${unavailable
-          .map((toolchain) => getToolchainId(toolchain))
+          .map((toolchain) => getToolchainCliTool(toolchain))
           .join(", ")}`,
       );
       process.exitCode = 1;
@@ -78,14 +74,19 @@ export async function runInit(cliOptions: InitCliOptions) {
     }
     features = requestedAdapters.map((toolchain) => toolchain.feature);
   } else {
-    features = yes ? availableFeatures : await selectFeatures(availableToolchains);
+    if (yes) {
+      cancel("The --yes option requires at least one direct --<tool> selector.");
+      process.exitCode = 1;
+      return;
+    }
+    features = await selectFeatures(availableToolchains);
   }
   if (features == null) {
     cancel("Initialization cancelled.");
     return;
   }
   if (routerModeFromArgs != null && !features.includes("router")) {
-    cancel("The --router option requires the router toolchain to be selected.");
+    cancel("The router setup option requires --tanstack-router.");
     process.exitCode = 1;
     return;
   }
@@ -115,6 +116,15 @@ export async function runInit(cliOptions: InitCliOptions) {
     return;
   }
   const options = { features, routerMode };
+  const managedCliPlans = skipInstall
+    ? new Map()
+    : resolveManagedCliPlans({
+        options,
+        packageManager,
+        selectedToolchains,
+        userFlags: managedCliFlags,
+        yes,
+      });
 
   const overwritten = await existingTargetFiles(cwd, options);
   if (overwritten.length > 0 && !yes) {
@@ -135,7 +145,7 @@ export async function runInit(cliOptions: InitCliOptions) {
       await runInstall(packageManager, cwd);
     }
     log.info("Running official initializers.");
-    await runExternalToolchains(cwd, packageManager, options, yes);
+    await runExternalToolchains(cwd, packageManager, options, yes, managedCliPlans);
     log.info("Official initializers completed.");
   }
 
@@ -147,7 +157,7 @@ export async function runInit(cliOptions: InitCliOptions) {
     log.info(`Running ${packageManager} install.`);
     await runInstall(packageManager, cwd);
     log.info("Dependencies installed.");
-    await runPostInstallToolchains(cwd, packageManager, options, yes);
+    await runPostInstallToolchains(cwd, packageManager, options, yes, managedCliPlans);
   }
 
   outro(

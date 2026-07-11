@@ -1,6 +1,6 @@
 ---
 name: add-toolchain-stack
-description: Add or maintain a CLI-backed toolchain stack in the toolchains-init repo. Use when asked to scaffold an adapter, add initializer support, review or repair an automated CLI-manifest cron PR, or revisit adapter behavior after upstream docs markers, focused tests, or CLI execution fail. Preserve generated CLI manifests as the source of truth and keep handwritten adapters stable across routine upstream metadata updates.
+description: Add or maintain a CLI-backed toolchain stack in the toolchains-init repo. Use when asked to scaffold an adapter, expose manifest-generated CLI argument groups, add initializer support, review or repair an automated CLI-manifest cron PR, or revisit adapter behavior after upstream docs markers, focused tests, or CLI execution fail. Preserve generated CLI manifests as the source of truth and keep handwritten adapters stable across routine upstream metadata updates.
 ---
 
 # Add or Maintain a Toolchain Stack
@@ -11,9 +11,10 @@ Keep maintenance boundaries strict:
 
 - Handwritten adapters declare stable product policy and lifecycle behavior.
 - Core owns selection, package-manager orchestration, project detection, and conditional CLI policy.
-- `manifest.generated.json` owns upstream version data, package-manager command templates, and discovered flag names, types, and enum values.
-- Routine cron changes to versions, templates, or newly discovered but unused flags do not require handwritten adapter edits.
-- Reopen adapter policy only when a docs marker or review check changes, a focused test fails, the initializer no longer executes, or a manifest flag the adapter actually uses changes incompatibly.
+- `manifest.generated.json` owns upstream version data, package-manager command templates, and the public managed-argument names, types, and enum values.
+- Core derives `--<manifest.tool>` groups and `--<tool>.<generated-flag>[=value]` options from that manifest. Never add an individual upstream flag to the handwritten parser.
+- Routine cron changes to versions, templates, or additive generated flags do not require handwritten adapter edits.
+- Reopen adapter policy only for a consumed or required flag contract, a removed or type-changed public flag, a docs marker, a focused smoke failure, or an initializer that no longer executes.
 
 Do not turn a generated-only refresh into a broad adapter cleanup.
 
@@ -54,6 +55,17 @@ Replace the final capability switch with `--interactive-only-reason "<specific r
 
 The scaffold is a starting point. Replace generated TODO assertions with tool-specific evidence before merge.
 
+An executable CLI scaffold declares `managedCli: { phase: "run" }`. Its manifest tool becomes the
+public selector and argument namespace automatically:
+
+```bash
+toolchains-init --example --example.template=react --yes
+toolchains-init --example --help
+```
+
+Do not add `template` to the adapter or core parser. It is accepted only when the generated manifest
+declares it.
+
 ## Classify Interaction Correctly
 
 Judge the complete initializer, not its first command or advertised `--yes` flag. From a clean project, account for dependency installation, provider selection, authentication, credentials, follow-up configuration, and post-install hooks.
@@ -76,7 +88,7 @@ nonInteractive: {
 },
 ```
 
-- Keep the default test deterministic: mock execution, resolve the generated command, call `adapter.run` with `yes: false`, and assert the exact `runCommand` call.
+- Keep the default test deterministic: mock command execution, resolve the generated command, exercise the shared core lifecycle with `yes: false`, and assert the exact `runCommand` call.
 - Put real interactive coverage behind an explicit opt-in E2E environment variable when it adds value.
 
 If the unattended assertion has not been proven end to end, classify the adapter as interactive-only.
@@ -86,15 +98,35 @@ If the unattended assertion has not been proven end to end, classify the adapter
 For every CLI-backed adapter:
 
 - Declare CLI metadata and at least one official `docs` source with review metadata.
-- Dynamically import the generated manifest in `run` when needed to avoid registry cycles.
-- Call `resolveCliCommand(manifest, commandId, packageManager, logicalFlags)` and then `runCommand`.
-- Use manifest-backed logical flags for any option the adapter consumes. Do not duplicate discovered CLI spellings, types, enum values, versions, or package-manager templates.
-- Append raw arguments only for positional inputs the manifest contract cannot represent. Add focused docs-backed tests for the exception.
+
+When the initializer executes through the shared managed runner, declare its stable command
+consumer once through `managedCli`:
+
+- `phase` selects the shared lifecycle phase, such as `run` or `afterInstall`.
+- `defaults` are stable values users may override.
+- `locked` are required adapter invariants and reject conflicting user values.
+- `blocked` excludes upstream options that violate the adapter's product boundary.
+- `positionals` contains only stable adapter-owned positional arguments the manifest cannot represent; core inserts them before generated flags.
+- `setup` declares rare wrapper-owned choices under the collision-proof `--<tool>.setup.<name>` namespace and binds each one to a typed `ToolchainOptions` field without a per-tool parser case.
+- `execute` is reserved for commands that need stable work before or after the shared runner.
+
+For managed CLI adapters:
+
+- Let core merge and validate manifest-derived user arguments. Do not enumerate every discovered flag in the adapter or add per-tool parser cases.
+- Use manifest logical keys only for stable `defaults`, `locked`, or `blocked` policy. Never duplicate CLI spellings, types, enum values, versions, or package-manager templates.
+- Keep `positionals` docs-backed. Do not use them as an escape hatch for representable flags.
 - Use core lifecycle hooks for package-json mutations and install phases; do not embed package-manager switch logic in the adapter.
 - Use `packageJson` passed by core and shared dependency helpers. Do not reread project state ad hoc.
-- Put selection-dependent behavior such as router-mode validation in CLI/core, not in a managed adapter.
+- Keep selection on generated `--<manifest.tool>` groups; do not add parallel global selectors or per-tool aliases.
 
 If a generated command is wrong, update CLI metadata or the generator and run `yarn manifests:update`. Never patch generated JSON by hand.
+
+For user-facing verification, use the manifest tool group:
+
+```bash
+toolchains-init --playwright --playwright.browser=chromium --yes
+toolchains-init --tanstack-router --help
+```
 
 ## Make Policy Docs-Backed
 
@@ -115,9 +147,10 @@ After metadata changes, run `yarn manifests:update` and inspect generated diffs.
 Use the PR body and diff to decide scope:
 
 1. Confirm changes are restricted to generated manifests and the automation changeset.
-2. For version, template, or unused-flag drift, run manifest validation and focused tests without editing the adapter.
-3. If the PR reports a changed docs marker, failed review check, focused test failure, used-flag contract break, or initializer execution failure, review only the named policy files and upstream source.
-4. Change handwritten code only when evidence shows the stable contract itself must change.
+2. For version, command-template, or additive-flag drift, run manifest validation and focused tests without editing the adapter. A new flag should appear in its generated public group automatically.
+3. Explicitly review removed or type-changed public flags, even when the adapter did not consume them.
+4. Review the named policy files only when a consumed/default/locked contract changes, a docs marker changes, a focused smoke fails, or the upstream CLI no longer runs.
+5. Change handwritten adapter code only when evidence shows its stable policy must change.
 
 An existing stable adapter should otherwise remain untouched after its initial addition.
 
@@ -153,4 +186,4 @@ Then run:
 yarn verify
 ```
 
-Review the final diff for generated-file ownership, complete unattended behavior, meaningful tests, and docs-backed exceptions. Repeat independent review and fixes until no P1 or P2 findings remain. Report any opt-in E2E that was not run and why.
+Review the final diff for generated-file ownership, manifest-derived public arguments, complete unattended behavior, meaningful tests, and docs-backed exceptions. Verify that adding a synthetic manifest flag changes help and parsing without changing adapter or parser source. Repeat independent review and fixes until no P1 or P2 findings remain. Report any opt-in E2E that was not run and why.

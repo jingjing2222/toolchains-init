@@ -1,6 +1,9 @@
-import { describe, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { runExternalToolchains, runPostInstallToolchains } from "../../core/external-toolchains";
 import { writeToolchain } from "../../core/files";
+import { resolveManagedCliPlans } from "../../core/managed-cli";
+import { tanStackRouter } from "./adapter";
+import { tanStackRouterCliManifest } from "./manifest";
 import {
   adapterInitTimeout,
   createFreshViteProject,
@@ -10,6 +13,24 @@ import {
 } from "../init-test-utils";
 
 describe("TanStack Router adapter init", () => {
+  it.each(["starter", "templateId", "template", "deployment", "addOns", "addOnConfig"])(
+    "blocks %s because router-only mode cannot consume it",
+    (flag) => {
+      const toolchainOptions = options(["router"]);
+
+      expect(() =>
+        resolveManagedCliPlans({
+          manifests: [tanStackRouterCliManifest],
+          options: toolchainOptions,
+          packageManager: "npm",
+          selectedToolchains: [tanStackRouter],
+          userFlags: { router: { [flag]: "example" } },
+          yes: true,
+        }),
+      ).toThrow("is blocked");
+    },
+  );
+
   it(
     "scaffolds router files in lifecycle order",
     async () => {

@@ -5,6 +5,7 @@ import path from "node:path";
 import { promisify } from "node:util";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { resolveCliCommand } from "../../core/cli-command-manifest";
+import { runExternalToolchains } from "../../core/external-toolchains";
 import { updatePackageJsonBeforeRun } from "../../core/package-json";
 import { getAvailableToolchains } from "..";
 import { hotUpdater } from "./adapter";
@@ -40,22 +41,14 @@ describe("Hot Updater adapter init", () => {
     });
     const command = resolveCliCommand(hotUpdaterCliManifest, "init", "npm");
 
-    await hotUpdater.run?.({
-      cwd: ".",
-      packageManager: "npm",
-      options: options(["hotUpdater"]),
-      yes: false,
-    });
+    await runExternalToolchains(".", "npm", options(["hotUpdater"]), false);
 
-    expect(mocks.runCommand).toHaveBeenCalledWith(".", command.bin, command.args);
-    await expect(
-      hotUpdater.run?.({
-        cwd: ".",
-        packageManager: "npm",
-        options: options(["hotUpdater"]),
-        yes: true,
-      }),
-    ).rejects.toThrow("requires interactive provider setup");
+    expect(mocks.runCommand).toHaveBeenCalledWith(".", command.bin, command.args, {
+      stdin: "inherit",
+    });
+    await expect(runExternalToolchains(".", "npm", options(["hotUpdater"]), true)).rejects.toThrow(
+      "initializer is interactive",
+    );
     expect(mocks.runCommand).toHaveBeenCalledTimes(1);
   });
 

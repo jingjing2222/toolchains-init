@@ -1,4 +1,4 @@
-import { getCliCommandManifest, getSelectedToolchains } from "../stacks";
+import { getCliCommandManifest, getSelectedToolchains } from "../stacks/index";
 import { getToolchainCliTool } from "./toolchain-adapter";
 import type { Feature, PackageJson, ToolchainOptions } from "./types";
 import { DEFAULT_ROUTER_MODE } from "./types";

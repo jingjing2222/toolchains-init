@@ -1,6 +1,4 @@
-import { resolveCliCommand } from "../../core/cli-command-manifest";
 import { hasPackageDependency, setManifestDevDependency } from "../../core/package-json-utils";
-import { runCommand } from "../../core/run-command";
 import { defineToolchain } from "../../core/toolchain-adapter";
 
 const workerDirectory = "public";
@@ -51,10 +49,17 @@ export const msw = defineToolchain({
 
     return hasPackageDependency(packageJson, "vite");
   },
-  async run({ cwd, packageManager }) {
-    const { mswCliManifest } = await import("./manifest");
-    const command = resolveCliCommand(mswCliManifest, "init", packageManager);
-    await runCommand(cwd, command.bin, [...command.args, `./${workerDirectory}`, "--save"]);
+  managedCli: {
+    phase: "run",
+    locked() {
+      return { save: true };
+    },
+    blocked: {
+      cwd: "The managed initializer always runs in the selected target directory.",
+    },
+    positionals() {
+      return [`./${workerDirectory}`];
+    },
   },
   updatePackageJson({ cliManifest, packageJson }) {
     setManifestDevDependency(packageJson, cliManifest);

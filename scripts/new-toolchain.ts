@@ -99,6 +99,7 @@ export async function main(argv: readonly string[]) {
       `Adapter: ${pc.cyan(path.relative(process.cwd(), adapterPath))}`,
       `Init test: ${pc.cyan(path.relative(process.cwd(), testPath))}`,
       `Manifest: ${pc.cyan(`${path.relative(process.cwd(), stackDir)}/manifest.generated.json`)}`,
+      `Managed group: ${pc.cyan(`--${options.tool ?? kebabCase(options.feature)}`)}`,
       "Next: replace generated smoke-test TODOs with adapter-specific assertions before merging.",
     ].join("\n"),
   );
@@ -580,13 +581,13 @@ export function renderAdapter(options: NewToolchainOptions) {
   }
 
   const defaultManifestExportName = `${options.feature}CliManifest`;
-  const commandId = options.commandId ?? options.command;
   const properties: Array<readonly [string, unknown]> = [
     ["feature", options.feature],
     ["label", options.label],
     ["catalog", options.catalog],
     ["package", options.packageName],
     ["command", options.command],
+    ["managedCli", { phase: "run" }],
     ["docs", options.docs],
   ];
 
@@ -613,21 +614,10 @@ export function renderAdapter(options: NewToolchainOptions) {
   if (options.subcommand !== undefined) properties.push(["subcommand", options.subcommand]);
   if (options.tool != null) properties.push(["tool", options.tool]);
 
-  return `import { resolveCliCommand } from "../../core/cli-command-manifest";
-import { runCommand } from "../../core/run-command";
-import { defineToolchain } from "../../core/toolchain-adapter";
+  return `import { defineToolchain } from "../../core/toolchain-adapter";
 
 export const ${options.adapterExportName} = defineToolchain({
 ${properties.map(([key, value]) => `  ${key}: ${JSON.stringify(value)},`).join("\n")}
-  async run({ cwd, packageManager }) {
-    const { ${options.manifestExportName} } = await import("./manifest");
-    const command = resolveCliCommand(
-      ${options.manifestExportName},
-      ${JSON.stringify(commandId)},
-      packageManager,
-    );
-    await runCommand(cwd, command.bin, command.args);
-  },
 });
 `;
 }
@@ -639,6 +629,7 @@ export function renderInitTest(options: NewToolchainOptions) {
   if (!options.supportsNonInteractive) {
     return `import { beforeEach, describe, expect, it, vi } from "vitest";
 import { resolveCliCommand } from "../../core/cli-command-manifest";
+import { runExternalToolchains } from "../../core/external-toolchains";
 import { ${options.adapterExportName} } from "./adapter";
 import { ${options.manifestExportName} } from "./manifest";
 import { options } from "../init-test-utils";
@@ -657,6 +648,7 @@ describe("${options.label} adapter init", () => {
   });
 
   it("declares the project-specific initializer as interactive-only", () => {
+    expect(${options.adapterExportName}.managedCli).toEqual({ phase: "run" });
     expect(${options.adapterExportName}.nonInteractive).toEqual({
       supported: false,
       reason: ${JSON.stringify(options.interactiveOnlyReason)},
@@ -671,14 +663,14 @@ describe("${options.label} adapter init", () => {
     );
     const toolchainOptions = options([${JSON.stringify(options.feature)}]);
 
-    await ${options.adapterExportName}.run?.({
-      cwd: ".",
-      packageManager: ${JSON.stringify(packageManager)},
-      options: toolchainOptions,
-      yes: false,
-    });
+    await runExternalToolchains(".", ${JSON.stringify(packageManager)}, toolchainOptions, false);
 
-    expect(mocks.runCommand).toHaveBeenCalledWith(".", command.bin, command.args);
+    expect(mocks.runCommand).toHaveBeenCalledOnce();
+    expect(mocks.runCommand.mock.calls[0]?.slice(0, 3)).toEqual([
+      ".",
+      command.bin,
+      command.args,
+    ]);
   });
 });
 `;
@@ -700,6 +692,7 @@ import {
 
 describe("${options.label} adapter init", () => {
   it("declares a fully unattended initializer", () => {
+    expect(${options.adapterExportName}.managedCli).toEqual({ phase: "run" });
     expect(${options.adapterExportName}.nonInteractive).toBeUndefined();
   });
 
@@ -739,7 +732,7 @@ function printHelp() {
 }
 
 export function renderNewToolchainHelp() {
-  return `Create a CLI-backed stack adapter and generate its manifest.
+  return `Create a managed CLI-backed stack adapter and generate its manifest.
 
 Usage:
   yarn new <feature> --package <package> --command <command> --docs-url <url> \\
@@ -758,7 +751,7 @@ Options:
   --hint <hint>                Optional prompt hint.
   --export <name>              Adapter export name. Defaults to camel-cased feature.
   --manifest-export <name>     Manifest export name. Defaults to <feature>CliManifest.
-  --tool <tool>                Manifest tool id override.
+  --tool <tool>                Manifest tool and public argument-group id override.
   --command-id <id>            Manifest command id override.
   --subcommand <cmd|none>      Runtime subcommand override.
   --dist-tag <tag>             npm dist-tag. Defaults to latest.
@@ -774,6 +767,11 @@ Options:
   --supports-non-interactive   Assert the complete yes:true path needs no stdin.
   --interactive-only-reason <reason>
                                 Mark prompts that prevent unattended execution.
+
+Generated adapter contract:
+  Executable scaffolds declare managedCli: { phase: "run" }.
+  --<manifest.tool> selects the tool; --<tool>.<generated-flag>[=value] forwards an option.
+  Generated manifests own public flag names, types, and enum values; do not hardcode them.
 `;
 }
 

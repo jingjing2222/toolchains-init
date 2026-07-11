@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { resolveCliCommand } from "../../core/cli-command-manifest";
-import { runPostInstallToolchains } from "../../core/external-toolchains";
+import { runExternalToolchains, runPostInstallToolchains } from "../../core/external-toolchains";
 import { writeToolchain } from "../../core/files";
 import { eslint } from "./adapter";
 import { eslintCliManifest } from "./manifest";
@@ -33,14 +33,11 @@ describe("ESLint adapter init", () => {
     });
     const command = resolveCliCommand(eslintCliManifest, "init", "npm");
 
-    await eslint.run?.({
-      cwd: ".",
-      packageManager: "npm",
-      options: options(["eslint"]),
-      yes: false,
-    });
+    await runExternalToolchains(".", "npm", options(["eslint"]), false);
 
-    expect(mocks.runCommand).toHaveBeenCalledWith(".", command.bin, command.args);
+    expect(mocks.runCommand).toHaveBeenCalledWith(".", command.bin, command.args, {
+      stdin: "inherit",
+    });
   });
 
   it(

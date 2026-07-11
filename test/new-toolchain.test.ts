@@ -7,14 +7,13 @@ import {
 } from "../scripts/new-toolchain";
 
 describe("new toolchain scaffolding", () => {
-  it("renders a manifest-backed runnable adapter with docs policy", () => {
+  it("renders a manifest-managed executable adapter with docs policy", () => {
     const source = renderAdapter(scaffoldOptions({ commandId: "setup" }));
 
-    expect(source).toContain('import { resolveCliCommand } from "../../core/cli-command-manifest"');
-    expect(source).toContain('import { runCommand } from "../../core/run-command"');
-    expect(source).toContain('const { hotUpdaterCliManifest } = await import("./manifest")');
-    expect(source).toContain('resolveCliCommand(\n      hotUpdaterCliManifest,\n      "setup"');
-    expect(source).toContain("await runCommand(cwd, command.bin, command.args)");
+    expect(source).toContain('managedCli: {"phase":"run"}');
+    expect(source).not.toContain("resolveCliCommand");
+    expect(source).not.toContain("runCommand");
+    expect(source).not.toContain("async run");
     expect(source).toContain('mustContain":["hot-updater init"]');
     expect(source).toContain("src/stacks/hot-updater/adapter.ts");
     expect(source).not.toContain("nonInteractive:");
@@ -45,6 +44,7 @@ describe("new toolchain scaffolding", () => {
 
     expect(source).toContain('describe("Hot Updater adapter init"');
     expect(source).toContain('const toolchainOptions = options(["hotUpdater"]);');
+    expect(source).toContain('expect(hotUpdater.managedCli).toEqual({ phase: "run" })');
     expect(source).toContain('await runExternalToolchains(cwd, "npm", toolchainOptions, true);');
     expect(source).toContain("await writeToolchain(cwd, packageJson, toolchainOptions);");
     expect(source).toContain('await runPostInstallToolchains(cwd, "npm", toolchainOptions, true);');
@@ -63,11 +63,10 @@ describe("new toolchain scaffolding", () => {
     expect(source).toContain('vi.mock("../../core/run-command"');
     expect(source).toContain("const command = resolveCliCommand(");
     expect(source).toContain("hotUpdaterCliManifest");
-    expect(source).toContain("yes: false");
-    expect(source).toContain(
-      'expect(mocks.runCommand).toHaveBeenCalledWith(".", command.bin, command.args)',
-    );
-    expect(source).not.toContain("runExternalToolchains");
+    expect(source).toContain('runExternalToolchains(".", "npm", toolchainOptions, false)');
+    expect(source).toContain("expect(mocks.runCommand).toHaveBeenCalledOnce()");
+    expect(source).toContain("mocks.runCommand.mock.calls[0]?.slice(0, 3)");
+    expect(source).not.toContain("hotUpdater.run");
   });
 
   it("parses one-command docs and interaction policy arguments", () => {
@@ -149,6 +148,9 @@ describe("new toolchain scaffolding", () => {
     expect(help).toContain("--supports-non-interactive");
     expect(help).toContain("--interactive-only-reason <reason>");
     expect(help).toContain("lowerCamelCase feature id");
+    expect(help).toContain('managedCli: { phase: "run" }');
+    expect(help).toContain("--<manifest.tool> selects the tool");
+    expect(help).toContain("--<tool>.<generated-flag>[=value]");
   });
 });
 

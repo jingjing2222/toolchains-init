@@ -3,9 +3,7 @@ import {
   addVsCodeSettings,
   addZedSettings,
 } from "../../core/editor-settings";
-import { resolveCliCommand } from "../../core/cli-command-manifest";
 import { setManifestDevDependency } from "../../core/package-json-utils";
-import { runCommand } from "../../core/run-command";
 import { defineToolchain } from "../../core/toolchain-adapter";
 
 const oxfmtVsCodeLanguages = ["javascript", "javascriptreact", "typescript", "typescriptreact"];
@@ -37,10 +35,11 @@ export const oxfmt = defineToolchain({
     },
   ],
   subcommand: null,
-  async run({ cwd, packageManager }) {
-    const { oxfmtCliManifest } = await import("./manifest");
-    const command = resolveCliCommand(oxfmtCliManifest, "init", packageManager, { init: true });
-    await runCommand(cwd, command.bin, command.args);
+  managedCli: {
+    phase: "run",
+    locked() {
+      return { init: true };
+    },
   },
   updatePackageJson({ cliManifest, packageJson }) {
     setManifestDevDependency(packageJson, cliManifest);

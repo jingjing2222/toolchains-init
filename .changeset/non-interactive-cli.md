@@ -2,6 +2,8 @@
 "toolchains-init": patch
 ---
 
-Add argument-driven toolchain selection, package-manager overrides, registry-generated help, and side-effect-free validation for non-interactive CLI setup. `--yes` now exits early when a selected official initializer still requires interaction instead of entering that initializer's prompts.
+Add direct `--<tool>` selection and manifest-generated `--<tool>.<flag>` arguments, along with package-manager overrides, focused help, and side-effect-free validation for non-interactive CLI setup. `--yes` now exits early when a selected official initializer still requires interaction instead of entering that initializer's prompts.
 
-Make new CLI-backed adapters manifest-runnable and require docs-backed interaction classification, while tightening manifest automation so routine upstream metadata refreshes leave handwritten adapters unchanged unless a focused contract check fails.
+Require explicit direct selectors for unattended runs. Selection and router mode use only the generated tool namespace; no parallel `--toolchains` or global `--router` compatibility surface is included.
+
+Make new CLI-backed adapters run through a shared manifest resolver and require docs-backed interaction classification. Routine upstream argument additions now update generated help and parsing without handwritten parser or adapter edits; adapter review remains limited to stable policy contracts, docs markers, focused smoke failures, or an initializer that no longer executes.

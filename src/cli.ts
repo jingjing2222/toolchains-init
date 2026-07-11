@@ -8,7 +8,7 @@ async function main() {
   const options = parseCliOptions(process.argv.slice(2));
 
   if (options.help) {
-    console.log(renderHelp(packageVersion));
+    console.log(renderHelp(packageVersion, options.helpTool));
     return;
   }
 

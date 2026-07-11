@@ -1,12 +1,21 @@
 import { spawn } from "node:child_process";
 import path from "node:path";
 
-export function runCommand(cwd: string, command: string, args: string[]) {
+export type RunCommandOptions = {
+  stdin?: "ignore" | "inherit";
+};
+
+export function runCommand(
+  cwd: string,
+  command: string,
+  args: readonly string[],
+  options: RunCommandOptions = {},
+) {
   return new Promise<void>((resolve, reject) => {
     const child = spawn(command, args, {
       cwd,
       env: createCommandEnvironment(cwd),
-      stdio: "inherit",
+      stdio: options.stdin === "ignore" ? (["ignore", "inherit", "inherit"] as const) : "inherit",
     });
     child.on("exit", (code) => {
       if (code === 0) {
