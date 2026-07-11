@@ -108,6 +108,7 @@ For every CLI-backed adapter:
 - Declare CLI metadata and at least one official `docs` source with actionable review metadata.
 - Use `managedCli: true`; it is a marker that the manifest command executes.
 - Put only origin-command identity in `command`, `subcommand`, and `commandArgs`.
+- Do not declare package-manager allowlists for inferred runners. A custom runner's actual template keys are the only supported-manager constraint.
 - Let core resolve the pinned package-manager template and merge typed and raw user arguments.
 - Add prerequisite preparation only before command execution and only with evidence tied to the adapter and its focused test.
 - Leave the files and package state produced by the CLI untouched after execution.

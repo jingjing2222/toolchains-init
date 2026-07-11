@@ -1,5 +1,14 @@
 import { spawn } from "node:child_process";
+import os from "node:os";
 import path from "node:path";
+
+const safelyReraisedSignals = new Set<NodeJS.Signals>([
+  "SIGHUP",
+  "SIGINT",
+  "SIGKILL",
+  "SIGQUIT",
+  "SIGTERM",
+]);
 
 export class CommandError extends Error {
   readonly args: readonly string[];
@@ -18,6 +27,18 @@ export class CommandError extends Error {
     this.exitCode = exited ? result : null;
     this.signal = exited ? null : result;
   }
+}
+
+export function resolveCommandExit(error: CommandError) {
+  if (error.signal == null) {
+    return { exitCode: error.exitCode ?? 1, signal: null };
+  }
+
+  const signalNumber = os.constants.signals[error.signal];
+  return {
+    exitCode: signalNumber == null ? 1 : 128 + signalNumber,
+    signal: safelyReraisedSignals.has(error.signal) ? error.signal : null,
+  };
 }
 
 export function runCommand(cwd: string, command: string, args: readonly string[]) {

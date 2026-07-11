@@ -1,6 +1,12 @@
+import os from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { CommandError, createCommandEnvironment, runCommand } from "../src/core/run-command";
+import {
+  CommandError,
+  createCommandEnvironment,
+  resolveCommandExit,
+  runCommand,
+} from "../src/core/run-command";
 
 describe("run command environment", () => {
   it("strips only the parent Yarn PnP preload outside the PnP project", () => {
@@ -47,6 +53,13 @@ describe("run command environment", () => {
 });
 
 describe("run command termination", () => {
+  it("keeps a numeric child code in the wrapper exit action", () => {
+    expect(resolveCommandExit(new CommandError("origin", [], 37))).toEqual({
+      exitCode: 37,
+      signal: null,
+    });
+  });
+
   it("preserves a child exit code without wrapper output", async () => {
     const result = runCommand(process.cwd(), process.execPath, ["-e", "process.exit(37)"]);
 
@@ -67,4 +80,26 @@ describe("run command termination", () => {
       signal: "SIGTERM",
     } satisfies Partial<CommandError>);
   });
+
+  it("re-raises ordinary termination signals with a nonzero fallback", () => {
+    expect(resolveCommandExit(new CommandError("origin", [], "SIGTERM"))).toEqual({
+      exitCode: expectedSignalExitCode("SIGTERM"),
+      signal: "SIGTERM",
+    });
+  });
+
+  it.each(["SIGPIPE", "SIGUSR1"] as const)(
+    "uses a silent conventional exit for Node-reserved %s",
+    (signal) => {
+      expect(resolveCommandExit(new CommandError("origin", [], signal))).toEqual({
+        exitCode: expectedSignalExitCode(signal),
+        signal: null,
+      });
+    },
+  );
 });
+
+function expectedSignalExitCode(signal: NodeJS.Signals) {
+  const signalNumber = os.constants.signals[signal];
+  return signalNumber == null ? 1 : 128 + signalNumber;
+}

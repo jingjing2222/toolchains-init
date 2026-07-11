@@ -23,7 +23,6 @@ type NewToolchainOptions = {
   hint?: string;
   label: string;
   manifestExportName: string;
-  packageManagers?: PackageManager[];
   packageName: string;
   runner?: string;
   stackDir: string;
@@ -122,7 +121,6 @@ type ParsedArgs = {
   label?: string;
   adapterExportName?: string;
   manifestExportName?: string;
-  packageManagers?: PackageManager[];
   packageName?: string;
   runner?: string;
   stackDir?: string;
@@ -156,7 +154,6 @@ export function parseNewToolchainArgs(argv: readonly string[]): ParsedArgs {
       "manifest-export": { type: "string" },
       "no-help": { type: "boolean" },
       package: { type: "string" },
-      "package-managers": { type: "string" },
       pkg: { type: "string" },
       runner: { type: "string" },
       "stack-dir": { type: "string" },
@@ -200,7 +197,6 @@ export function parseNewToolchainArgs(argv: readonly string[]): ParsedArgs {
     label: values.label,
     adapterExportName: values.export,
     manifestExportName: values["manifest-export"],
-    packageManagers: parsePackageManagers(values["package-managers"]),
     packageName: values.package ?? values.pkg,
     runner: values.runner,
     stackDir: values["stack-dir"],
@@ -264,7 +260,6 @@ async function resolveOptions(parsed: ParsedArgs): Promise<NewToolchainOptions |
   assertIdentifier(manifestExportName, "manifest export");
   assertStackDir(stackDir);
   assertCatalog(parsed.catalog);
-  assertPackageManagers(parsed.packageManagers);
   assertRunner(parsed.runner);
   const docsConfidence = parseDocsConfidence(parsed.docsConfidence);
   const docsReason =
@@ -309,7 +304,6 @@ async function resolveOptions(parsed: ParsedArgs): Promise<NewToolchainOptions |
     hint: parsed.hint,
     label: parsed.label ?? titleCase(feature),
     manifestExportName,
-    packageManagers: parsed.packageManagers,
     packageName,
     runner: parsed.runner,
     stackDir,
@@ -399,19 +393,6 @@ function formatOriginCommand(
   );
 }
 
-function parsePackageManagers(value: string | undefined): PackageManager[] | undefined {
-  if (value == null) {
-    return undefined;
-  }
-
-  const packageManagers = value.split(",").map((manager) => manager.trim());
-  if (packageManagers.length === 0 || packageManagers.some((manager) => manager.length === 0)) {
-    throw new Error("Invalid package manager list: provide at least one comma-separated value.");
-  }
-  assertPackageManagers(packageManagers);
-  return [...new Set(packageManagers)] as PackageManager[];
-}
-
 function rejectDuplicateNewToolchainOptions(tokens: readonly { kind: string; name?: string }[]) {
   const aliases = [
     ["command", "cmd"],
@@ -480,14 +461,6 @@ function assertCatalog(value: string | undefined): asserts value is ToolchainCat
     value !== "editor"
   ) {
     throw new Error(`Invalid catalog: ${value}`);
-  }
-}
-
-function assertPackageManagers(value: string[] | undefined) {
-  const allowed = new Set(["npm", "pnpm", "yarn", "bun", "deno"]);
-  const invalid = value?.find((manager) => !allowed.has(manager));
-  if (invalid != null) {
-    throw new Error(`Invalid package manager: ${invalid}`);
   }
 }
 
@@ -562,8 +535,6 @@ export function renderAdapter(options: NewToolchainOptions) {
     properties.push(["stackDir", options.stackDir]);
   }
   if (!options.help) properties.push(["help", false]);
-  if (options.packageManagers != null)
-    properties.push(["packageManagers", options.packageManagers]);
   if (options.runner != null) properties.push(["runner", options.runner]);
   if (options.subcommand !== undefined) properties.push(["subcommand", options.subcommand]);
   if (options.tool != null) properties.push(["tool", options.tool]);
@@ -577,7 +548,7 @@ ${properties.map(([key, value]) => `  ${key}: ${JSON.stringify(value)},`).join("
 }
 
 export function renderInitTest(options: NewToolchainOptions) {
-  const packageManager = options.packageManagers?.[0] ?? "npm";
+  const packageManager: PackageManager = "npm";
   const commandId = options.commandId ?? options.command;
   const expectedCommand = renderExpectedOriginCommand(options, packageManager);
 
@@ -744,7 +715,6 @@ Options:
   --subcommand <cmd|none>      Runtime subcommand override.
   --command-arg <arg>          Static origin-command token; repeat to preserve order.
   --dist-tag <tag>             npm dist-tag. Defaults to latest.
-  --package-managers <list>    Comma list: npm,pnpm,yarn,bun,deno.
   --runner <auto|create|dlx>   Package manager command inference mode.
   --no-help                    Skip CLI help probing.
   --docs-url <url>             Official CLI/setup docs URL. Required.

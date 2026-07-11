@@ -58,7 +58,6 @@ export type DefineToolchainOptions = Omit<ToolchainAdapter, "catalog" | "cli" | 
         docs?: ToolchainCliDefinition["docs"];
         exportName?: string;
         help?: false;
-        packageManagers?: readonly PackageManager[];
         runner?: ToolchainCliRunner;
         stackDir?: string;
         subcommand?: string | null;
@@ -86,7 +85,6 @@ export function defineToolchain(options: DefineToolchainOptions): ToolchainAdapt
     exportName,
     help,
     package: packageName,
-    packageManagers,
     runner,
     stackDir,
     subcommand,
@@ -94,10 +92,9 @@ export function defineToolchain(options: DefineToolchainOptions): ToolchainAdapt
     ...adapter
   } = options;
   const resolvedPackageManagers =
-    packageManagers ??
-    (runner != null && typeof runner === "object"
+    runner != null && typeof runner === "object"
       ? packageManagerNames.filter((packageManager) => runner[packageManager] != null)
-      : undefined);
+      : undefined;
 
   return {
     ...adapter,

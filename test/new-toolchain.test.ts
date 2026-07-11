@@ -88,15 +88,9 @@ describe("new toolchain scaffolding", () => {
     });
   });
 
-  it("normalizes a non-empty package-manager list", () => {
-    expect(
-      parseNewToolchainArgs(["hotUpdater", "--package-managers", "npm,pnpm,npm"]).packageManagers,
-    ).toEqual(["npm", "pnpm"]);
-    expect(() => parseNewToolchainArgs(["hotUpdater", "--package-managers="])).toThrow(
-      "at least one",
-    );
-    expect(() => parseNewToolchainArgs(["hotUpdater", "--package-managers", "npm,,pnpm"])).toThrow(
-      "at least one",
+  it("rejects wrapper-owned package-manager allowlists", () => {
+    expect(() => parseNewToolchainArgs(["hotUpdater", "--package-managers", "npm,pnpm"])).toThrow(
+      "Unknown option",
     );
   });
 
@@ -130,6 +124,7 @@ describe("new toolchain scaffolding", () => {
     expect(help).toContain("--docs-url <url>");
     expect(help).toContain("--docs-must-contain <text>");
     expect(help).toContain("--command-arg <arg>");
+    expect(help).not.toContain("--package-managers");
     expect(help).toContain("lowerCamelCase feature id");
     expect(help).toContain("managedCli: true");
     expect(help).toContain("--<manifest.tool> selects the tool");

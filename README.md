@@ -40,7 +40,7 @@ Then choose the origin commands you want to run from the prompt.
 | Prisma               | Prisma schema and project configuration        | Official CLI |
 | shadcn               | shadcn project initializer                     | Official CLI |
 | Playwright           | Browser E2E test setup                         | Official CLI |
-| Storybook            | React Vite component workshop setup            | Official CLI |
+| Storybook            | Component workshop initializer                 | Official CLI |
 | MSW                  | Browser API mocking worker setup               | Official CLI |
 | CSpell               | Spell-checker configuration                    | Official CLI |
 | Secretlint           | Secret-scanning configuration                  | Official CLI |
