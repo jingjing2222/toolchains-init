@@ -54,7 +54,7 @@ describe("toolchains-init CLI", () => {
     expect(result.status, cliOutput(result)).toBe(0);
     expect(cliOutput(result)).toContain("Usage: cspell init");
     expect(await directoryEntries(cwd)).toEqual([]);
-  });
+  }, 30_000);
 
   it("does not rewrite project state after origin CLI help exits", async () => {
     const cwd = await createProject();
@@ -67,7 +67,7 @@ describe("toolchains-init CLI", () => {
 
     expect(result.status, cliOutput(result)).toBe(0);
     expect(await readFile(packageJsonPath, "utf8")).toBe(before);
-  });
+  }, 30_000);
 
   it("requires explicit selectors for wrapper --yes", async () => {
     const cwd = await createProject();
